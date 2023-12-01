@@ -1,0 +1,312 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+enum Gender {
+  FEMALE
+  MALE
+  NOT_DEFINED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  OFF
+  SUSPENDED
+}
+
+type Location {
+  name: String!
+  lat: Float!
+  long: Float!
+}
+
+enum Interval {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+type Plan {
+  id: ID!
+  name: String!
+  recurrintg: Boolean!
+  trips: Int!
+  price: Int!
+  interval: Interval!
+  code: String!
+}
+
+enum VehicleCategory {
+  X
+  XL
+  CONFORT
+  GREEN
+  PETS
+  PACKAGE
+  PRIORITY
+}
+
+enum Brand {
+  BMW
+}
+
+enum Facilities {
+  AIR_CONDITIONER
+  PETS_ALLOWED
+  SMOKE_ALLOWED
+}
+
+enum VehicleType {
+  AUTO
+  MOTO
+  BIKE
+}
+
+type Vehicle {
+  id: ID!
+  plate: String
+  category: VehicleCategory!
+  brand: Brand!
+  year: Int!
+  model: String!
+  seats: Int!
+  color: String!
+  type: VehicleType!
+  photos: [String]
+  facilities: [Facilities]
+ }
+ 
+ type Profile {
+  id: ID!
+  name: String
+  last_name: String
+  dob: String
+  phone: String!
+  photo: String!
+  gender: Gender
+  licence: String
+  dni: String
+  user: User!
+}
+
+enum Role {
+  RIDER
+  DRIVER
+  SALE
+  ADMIN
+  CLIENT
+}
+ 
+ type User {
+  id: ID!
+  email: String!
+  password: String
+  pin: String!
+  otp: String!
+  rate: Float
+  available: Boolean
+  status: UserStatus
+  active_vehicle: Vehicle
+  code: String!
+  referer: ID!
+  role: Role!
+  profile: Profile!
+  plan: Plan
+  locations: [Location]
+  vehicles: [Vehicle]
+  favorite_vehicles: [Vehicle]
+  trips: [Trip]
+  reviews: [Review]
+}
+
+enum TripStatus {
+  PICK_UP
+  ON_THE_WAY
+  DROP_OFF
+}
+
+type TripStatusHistory {
+  status: TripStatus!
+  changed_at: String!
+}
+
+enum CouponStatus {
+  NEW
+  ACTIVE
+  INACTIVE
+  REDEEMED
+}
+
+type Coupon {
+  id: ID!
+  code: String!
+  percent: Float
+  amount: Int
+  status: CouponStatus!
+  valid_from: Int
+  valid_until: Int
+}
+
+type Trip {
+  id: ID!
+  current_position: Location!
+  history: [Location]
+  driver: User
+  rider: User!
+  status: TripStatus!
+  status_history: [TripStatusHistory]
+  rate: Int!
+  price: Int!
+  coupon: Coupon
+  start_at: Int!
+  end_at: Int!
+  review: Review
+}
+
+type Client {
+  id: ID!
+  name: String!
+  url: String
+  facebook: String
+  whatsapp: String
+  telegram: String
+  instagram: String
+  ads: [Ads]
+}
+
+enum Impression {
+  CLICK
+}
+
+enum AdsStatus {
+  NEW
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+type Ads {
+  id: ID!
+  name: String!
+  description: String!
+  photo: String!
+  owner: Client!
+  inpression: Impression
+  status: AdsStatus!
+  priority: Int!
+  valid_from: Int!
+  valid_until: Int!
+}
+
+enum MessageStatus {
+  NEW
+  READ
+  DELETED
+}
+
+type Message {
+  id: ID!
+  trip: String!
+  from: String!
+  to: String!
+  message: String!
+  status: MessageStatus! 
+}
+
+type Review {
+  id: ID!
+  from: String!
+  to: String!
+  comment: String
+  rate: Float!
+}
+
+enum ChargeStatus {
+  SUCCEEDED
+  PENDING
+  FAILED
+}
+
+type Charge {
+  id: ID!
+  amount: Int!
+  currency: String!
+  rider: User!
+  description: String!
+  trip: Trip!
+  disputed: Boolean
+  receipt_email: String!
+  status: ChargeStatus!
+  paid: Boolean
+  method: String
+  external_reference: String
+  fees: [Rate]
+}
+
+type Rate {
+  id: ID!
+  code: String!
+  base_price: Int!
+  price_per_min: Int!
+  price_per_km: Int!
+  price_per_passenger: Int
+  price_per_baggage: Int!
+  start_time: Int
+  end_time: Int
+  start_date: Int
+  end_date: Int
+  min_km: Int
+  max_km: Int
+}
+
+type Token {
+  access_token: String!
+  expiry_at: Int!
+}
+
+input UserFilter {
+  ids: [ID]
+  email: String
+  token: String
+  limit: Int
+  name: String
+}
+
+type Query {
+  users(filter: UserFilter): [User!]!
+  trips(user: String): [Trip!]
+  charges(user: String): [Charge!]
+  profile(user: String): Profile
+  lastNAddress(number: Int!): [String]
+}
+
+input UpdateProfile {
+  name: String
+  dob: String
+}
+
+input UpdateTrip {
+  driver: ID
+  status: TripStatus
+}
+
+input LoginRequest {
+  email: String!
+  otp: String
+  pin: String
+}
+
+type Mutation {
+  login(input: LoginRequest!): Token!
+  register(email: String!, otp: String!): Token!
+  otp(email: String!): String!
+  requestTrip(pick_up: Float!, drop_off: Float!): Trip
+  updateProfile(profile: UpdateProfile!): Profile
+  updateTrip(update: UpdateTrip): Trip
+  addFavoritePlace(name: String!, lat: Float!, long: Float!): Location
+  favoritePlaces: [Location]
+  addFavoriteVehicle(plate: String): Vehicle
+  favoriteVehicles: [Vehicle]
+}
