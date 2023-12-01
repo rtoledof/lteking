@@ -5,3 +5,4 @@ vendor/
 *.db 
 cmd/cubawheeler/cubawheeler
 tmp/
+*.log
