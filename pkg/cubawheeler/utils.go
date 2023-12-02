@@ -46,15 +46,12 @@ func (id ID) String() string {
 	return identifier(id).String()
 }
 
-// Scan implements the Scanner interface.
-func (n *ID) Scan(value interface{}) error {
-	str := fmt.Sprintf("%s", value)
-	return n.UnmarshalText([]byte(str))
+func (id *ID) UnmarshalBson(b []byte) error {
+	return id.UnmarshalText(b)
 }
 
-// Value implements the driver Valuer interface.
-func (n ID) Value() (driver.Value, error) {
-	return n.String(), nil
+func (id ID) MarshalBson() ([]byte, error) {
+	return id.MarshalText()
 }
 
 func NewID() ID {
@@ -113,4 +110,9 @@ func NewKeyPair() (ecdsa.PrivateKey, []byte, error) {
 	}
 	pubkey := append(private.PublicKey.X.Bytes(), private.PublicKey.Y.Bytes()...)
 	return *private, pubkey, nil
+}
+
+func NewReferalCode() string {
+	var referCode = rand.Int63n(999999)
+	return fmt.Sprintf("%06d", referCode)
 }

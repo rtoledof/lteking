@@ -10,7 +10,7 @@ type Profile struct {
 	ID       string `json:"id" gorm:"type:varchar(36);primaryKey" faker:"-"`
 	Name     string `json:"name" faker:"name"`
 	LastName string `json:"last_name" faker:"last_name"`
-	UserID   string `faker:"-"`
+	UserID   ID     `faker:"-"`
 	Gender   Gender `json:"gender"`
 	Phone    string `json:"phone" faker:"phone_number"`
 	Photo    string `json:"photo" faker:"url"`

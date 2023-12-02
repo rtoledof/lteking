@@ -1,13 +1,8 @@
 package handlers
 
 import (
-	"fmt"
 	"os"
 	"strconv"
-
-	"gorm.io/gorm"
-
-	"cubawheeler.io/pkg/bolt"
 )
 
 type Config struct {
@@ -15,15 +10,15 @@ type Config struct {
 	Port  int64
 	Path  string
 	Redis string
-	DB    *gorm.DB
+	Mongo string
 }
 
-func LoadConfig(db *gorm.DB) Config {
+func LoadConfig() Config {
 	cfg := Config{
 		Port:  3000,
 		Path:  "./",
 		Redis: "redis://localhost:6379",
-		DB:    db,
+		Mongo: "mongodb://localhost:27017/",
 	}
 
 	if redisAddr, exist := os.LookupEnv("REDIS_ADDR"); exist {
@@ -41,11 +36,10 @@ func LoadConfig(db *gorm.DB) Config {
 	if path, exist := os.LookupEnv("DB_PATH"); exist {
 		cfg.Path = path
 	}
-	db, err := bolt.Open(fmt.Sprintf("%s/cubawheeler.db", cfg.Path))
-	if err != nil {
-		panic(err)
+
+	if mongoServer := os.Getenv("MONGO_URL"); len(mongoServer) > 0 {
+		cfg.Mongo = mongoServer
 	}
-	cfg.DB = db
 
 	return cfg
 }

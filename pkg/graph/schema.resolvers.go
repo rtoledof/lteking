@@ -6,20 +6,51 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/graph/model"
 )
 
+// Owner is the resolver for the owner field.
+func (r *adsResolver) Owner(ctx context.Context, obj *cubawheeler.Ads) (*cubawheeler.Client, error) {
+	panic(fmt.Errorf("not implemented: Owner - owner"))
+}
+
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginRequest) (*cubawheeler.Token, error) {
-	panic(fmt.Errorf("not implemented: Login - login"))
+	user, err := r.user.FindByEmail(ctx, input.Email)
+	if err != nil {
+		return nil, err
+	}
+	token, err := user.GenToken()
+	if err != nil {
+		return nil, err
+	}
+	// TODO: add tokens to redis cache to avoid inecesaries queries if the user is login
+	return token, nil
 }
 
 // Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, email string, otp string) (*cubawheeler.Token, error) {
-	panic(fmt.Errorf("not implemented: Register - register"))
+	_, err := r.user.FindByEmail(ctx, email)
+	if err == nil {
+		return nil, errors.New("email aready in use")
+	}
+	user := &cubawheeler.User{
+		ID:    cubawheeler.NewID(),
+		Email: email,
+		Code:  cubawheeler.NewReferalCode(),
+	}
+	if err := r.user.CreateUser(ctx, user); err != nil {
+		return nil, err
+	}
+	token, err := user.GenToken()
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
 }
 
 // Otp is the resolver for the otp field.
@@ -69,12 +100,24 @@ func (r *profileResolver) Dob(ctx context.Context, obj *cubawheeler.Profile) (*s
 
 // User is the resolver for the user field.
 func (r *profileResolver) User(ctx context.Context, obj *cubawheeler.Profile) (*cubawheeler.User, error) {
-	panic(fmt.Errorf("not implemented: User - user"))
+	user, err := r.user.FindByID(ctx, obj.UserID.String())
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // Users is the resolver for the users field.
-func (r *queryResolver) Users(ctx context.Context, filter *model.UserFilter) ([]*cubawheeler.User, error) {
-	panic(fmt.Errorf("not implemented: Users - users"))
+func (r *queryResolver) Users(ctx context.Context, filter *cubawheeler.UserFilter) ([]*cubawheeler.User, error) {
+	user := cubawheeler.UserForContext(ctx)
+	if user == nil {
+		return nil, errors.New("invalid token")
+	}
+	users, _, err := r.user.FindAll(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // Trips is the resolver for the trips field.
@@ -99,7 +142,17 @@ func (r *queryResolver) LastNAddress(ctx context.Context, number int) ([]*string
 
 // ExpiryAt is the resolver for the expiry_at field.
 func (r *tokenResolver) ExpiryAt(ctx context.Context, obj *cubawheeler.Token) (int, error) {
-	panic(fmt.Errorf("not implemented: ExpiryAt - expiry_at"))
+	return int(obj.AccessTokenExpiresAt), nil
+}
+
+// Driver is the resolver for the driver field.
+func (r *tripResolver) Driver(ctx context.Context, obj *cubawheeler.Trip) (*cubawheeler.User, error) {
+	panic(fmt.Errorf("not implemented: Driver - driver"))
+}
+
+// Rider is the resolver for the rider field.
+func (r *tripResolver) Rider(ctx context.Context, obj *cubawheeler.Trip) (*cubawheeler.User, error) {
+	panic(fmt.Errorf("not implemented: Rider - rider"))
 }
 
 // StatusHistory is the resolver for the status_history field.
@@ -107,9 +160,29 @@ func (r *tripResolver) StatusHistory(ctx context.Context, obj *cubawheeler.Trip)
 	panic(fmt.Errorf("not implemented: StatusHistory - status_history"))
 }
 
+// Coupon is the resolver for the coupon field.
+func (r *tripResolver) Coupon(ctx context.Context, obj *cubawheeler.Trip) (*cubawheeler.Coupon, error) {
+	panic(fmt.Errorf("not implemented: Coupon - coupon"))
+}
+
+// Review is the resolver for the review field.
+func (r *tripResolver) Review(ctx context.Context, obj *cubawheeler.Trip) (*cubawheeler.Review, error) {
+	panic(fmt.Errorf("not implemented: Review - review"))
+}
+
+// ID is the resolver for the id field.
+func (r *userResolver) ID(ctx context.Context, obj *cubawheeler.User) (string, error) {
+	return obj.ID.String(), nil
+}
+
 // Password is the resolver for the password field.
 func (r *userResolver) Password(ctx context.Context, obj *cubawheeler.User) (*string, error) {
 	panic(fmt.Errorf("not implemented: Password - password"))
+}
+
+// Pin is the resolver for the pin field.
+func (r *userResolver) Pin(ctx context.Context, obj *cubawheeler.User) (string, error) {
+	panic(fmt.Errorf("not implemented: Pin - pin"))
 }
 
 // ActiveVehicle is the resolver for the active_vehicle field.
@@ -117,10 +190,23 @@ func (r *userResolver) ActiveVehicle(ctx context.Context, obj *cubawheeler.User)
 	panic(fmt.Errorf("not implemented: ActiveVehicle - active_vehicle"))
 }
 
+// Plan is the resolver for the plan field.
+func (r *userResolver) Plan(ctx context.Context, obj *cubawheeler.User) (*cubawheeler.Plan, error) {
+	panic(fmt.Errorf("not implemented: Plan - plan"))
+}
+
 // Reviews is the resolver for the reviews field.
 func (r *userResolver) Reviews(ctx context.Context, obj *cubawheeler.User) ([]*cubawheeler.Review, error) {
 	panic(fmt.Errorf("not implemented: Reviews - reviews"))
 }
+
+// Model is the resolver for the model field.
+func (r *vehicleResolver) Model(ctx context.Context, obj *cubawheeler.Vehicle) (string, error) {
+	panic(fmt.Errorf("not implemented: Model - model"))
+}
+
+// Ads returns AdsResolver implementation.
+func (r *Resolver) Ads() AdsResolver { return &adsResolver{r} }
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
@@ -140,9 +226,14 @@ func (r *Resolver) Trip() TripResolver { return &tripResolver{r} }
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
 
+// Vehicle returns VehicleResolver implementation.
+func (r *Resolver) Vehicle() VehicleResolver { return &vehicleResolver{r} }
+
+type adsResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type profileResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type tokenResolver struct{ *Resolver }
 type tripResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
+type vehicleResolver struct{ *Resolver }

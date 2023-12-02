@@ -14,31 +14,30 @@ import (
 )
 
 type User struct {
-	gorm.Model
-	ID               string     `json:"id" gorm:"type:varchar(36);primaryKey" faker:"-"`
-	Name             string     `json:"name" gorm:"type:varchar(100);not null" faker:"name"`
-	Password         []byte     `json:"-"`
-	Email            string     `json:"email" gorm:"type:varchar(100);not null;unique" faker:"email"`
-	Pin              string     `json:"pin" gotm:"type:varchar(4)" faker:"number"`
-	OTP              string     `json:"-"`
-	Rate             float64    `json:"rate"`
-	Available        bool       `json:"-"`
-	Status           UserStatus `json:"status"`
-	ActiveVehicle    string     `json:"active_vehicle,omitempty"`
-	Code             string     `json:"referal_code"`
-	Referer          string     `json:"-"`
-	Role             Role       `json:"-"`
-	Plan             string     `json:"plan,omitempty"`
-	Locations        []Location `json:"locations,omitempty" gorm:"-"`
-	Vehicles         []Vehicle  `json:"vehicles,omitempty" gorm:"-"`
-	FavoriteVehicles []Vehicle  `json:"favorite_vehicles,omitempty" `
-	Trips            []Trip     `json:"trips,omitempty" gorm:"-"`
-	Profile          Profile    `json:"profile" faker:-`
+	ID               ID         `json:"id" faker:"-" bson:"_id"`
+	Name             string     `json:"name" faker:"name" bson:"name"`
+	Password         []byte     `json:"-" bson:"password"`
+	Email            string     `json:"email" faker:"email" bson:"email"`
+	Pin              []byte     `json:"pin" faker:"number" bson:"pin"`
+	OTP              string     `json:"-" bson:"otp"`
+	Rate             float64    `json:"rate" bson:"rate"`
+	Available        bool       `json:"-" bson:"available"`
+	Status           UserStatus `json:"status" bson:"status"`
+	ActiveVehicle    string     `json:"active_vehicle,omitempty" bson:"active_vehicle"`
+	Code             string     `json:"referal_code" bson:"referal_code"`
+	Referer          string     `json:"-" bson:"referer"`
+	Role             Role       `json:"-" bson:"role"`
+	Plan             string     `json:"plan,omitempty" bson:"plan"`
+	Locations        []Location `json:"locations,omitempty" bson:"locations"`
+	Vehicles         []Vehicle  `json:"vehicles,omitempty" bson:"vehicles"`
+	FavoriteVehicles []Vehicle  `json:"favorite_vehicles,omitempty" bson:"favoriteVehicles"`
+	Trips            []Trip     `json:"trips,omitempty" bson:"trips"`
+	Profile          Profile    `json:"profile" faker:"-" bson:"profile"`
 }
 
 func (u *User) BeforeSave(*gorm.DB) error {
-	if u.ID == "" {
-		u.ID = NewID().String()
+	if u.ID == nil {
+		u.ID = NewID()
 	}
 	return nil
 }
@@ -52,15 +51,28 @@ func (u *User) EncryptPassword(password string) error {
 	return nil
 }
 
+func (u *User) EncryptPin(pin string) error {
+	var err error
+	u.Pin, err = bcrypt.GenerateFromPassword([]byte(pin), 14)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (u *User) ComparePassword(password string) error {
 	return bcrypt.CompareHashAndPassword(u.Password, []byte(password))
+}
+
+func (u *User) ComparePin(pin string) error {
+	return bcrypt.CompareHashAndPassword(u.Pin, []byte(pin))
 }
 
 func (u *User) GenToken() (*Token, error) {
 	expiresAt := time.Now().Add(time.Hour * 24 * 7)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expiresAt.Unix(),
-		Id:        u.ID,
+		Id:        u.ID.String(),
 		IssuedAt:  time.Now().Unix(),
 		Issuer:    "cubawheeler",
 	})
@@ -71,7 +83,7 @@ func (u *User) GenToken() (*Token, error) {
 	}
 	return &Token{
 		AccessToken:          accessToken,
-		AccessTokenExpiresAt: time.Duration(time.Hour * 24 * 7),
+		AccessTokenExpiresAt: time.Hour * 24 * 7,
 		AccessTokenCreatedAt: time.Now(),
 	}, nil
 }
@@ -79,7 +91,7 @@ func (u *User) GenToken() (*Token, error) {
 type UserService interface {
 	FindByID(context.Context, string) (*User, error)
 	FindByEmail(context.Context, string) (*User, error)
-	FindAll(context.Context, UserFilter) ([]*User, string, error)
+	FindAll(context.Context, *UserFilter) ([]*User, string, error)
 	UpdateOTP(context.Context, string, uint64) error
 	CreateUser(context.Context, *User) error
 }
@@ -89,7 +101,7 @@ type OTPServer interface {
 }
 
 type UserFilter struct {
-	Limit uint
+	Limit int
 	Token string
 	Ids   []string
 	Name  string

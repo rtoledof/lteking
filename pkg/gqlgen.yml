@@ -82,4 +82,6 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.VehicleCategory
   VehicleType: 
     model: cubawheeler.io/pkg/cubawheeler.VehicleType
+  UserFilter: 
+    model: cubawheeler.io/pkg/cubawheeler.UserFilter
 

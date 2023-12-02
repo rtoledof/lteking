@@ -5,7 +5,6 @@ import (
 	"github.com/go-oauth2/oauth2/v4"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/database"
 )
 
 func NewHandler(
@@ -13,9 +12,8 @@ func NewHandler(
 	user cubawheeler.UserService,
 ) *handler.Server {
 	resolver := &Resolver{
-		user:    user,
-		token:   token,
-		profile: database.NewProfileService(database.Db),
+		user:  user,
+		token: token,
 	}
 	return handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: resolver}))
 }

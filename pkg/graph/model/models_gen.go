@@ -26,11 +26,3 @@ type UpdateTrip struct {
 	Driver *string                 `json:"driver,omitempty"`
 	Status *cubawheeler.TripStatus `json:"status,omitempty"`
 }
-
-type UserFilter struct {
-	Ids   []*string `json:"ids,omitempty"`
-	Email *string   `json:"email,omitempty"`
-	Token *string   `json:"token,omitempty"`
-	Limit *int      `json:"limit,omitempty"`
-	Name  *string   `json:"name,omitempty"`
-}
