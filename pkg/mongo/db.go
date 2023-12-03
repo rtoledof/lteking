@@ -2,11 +2,27 @@ package mongo
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func init() {
+	database = os.Getenv("MONGO_DB_NAME")
+	if database == "" {
+		database = "cubawheeler"
+	}
+}
+
+var database string
+
+type Collections string
+
+func (c Collections) String() string {
+	return string(c)
+}
 
 type DB struct {
 	client *mongo.Client

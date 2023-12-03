@@ -2,8 +2,9 @@
 package graph
 
 import (
-	"cubawheeler.io/pkg/cubawheeler"
 	"github.com/go-oauth2/oauth2/v4"
+
+	"cubawheeler.io/pkg/cubawheeler"
 )
 
 // This file will not be regenerated automatically.
@@ -11,8 +12,19 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	user    cubawheeler.UserService
-	token   oauth2.TokenStore
-	profile cubawheeler.ProfileService
-	otp     cubawheeler.OTPServer
+	user     cubawheeler.UserService
+	token    oauth2.TokenStore
+	otp      cubawheeler.OTPServer
+	trip     cubawheeler.TripService
+	review   cubawheeler.ReviewService
+	rate     cubawheeler.RateService
+	profile  cubawheeler.ProfileService
+	plan     cubawheeler.PlanService
+	message  cubawheeler.MessageService
+	location cubawheeler.LocationService
+	coupon   cubawheeler.CouponService
+	client   cubawheeler.ClientService
+	charge   cubawheeler.ChargeService
+	ads      cubawheeler.AdsService
+	vehicle  cubawheeler.VehicleService
 }

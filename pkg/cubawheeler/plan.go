@@ -1,28 +1,48 @@
 package cubawheeler
 
 import (
+	"context"
 	"fmt"
-	"gorm.io/gorm"
 	"io"
 	"strconv"
 )
 
 type Plan struct {
-	gorm.Model
-	ID         string   `json:"id" gorm:"primaryKey;varchar(36);not null"`
-	Name       string   `json:"name"`
-	Recurrintg bool     `json:"recurrintg"`
-	Trips      int      `json:"trips"`
-	Price      int      `json:"price"`
-	Interval   Interval `json:"interval"`
-	Code       string   `json:"code"`
+	ID         string   `json:"id" bson:"_id"`
+	Name       string   `json:"name" bson:"name"`
+	Recurrintg bool     `json:"recurrintg" bson:"recurrintg"`
+	Trips      int      `json:"trips" bson:"trips"`
+	Price      int      `json:"price" bson:"price"`
+	Interval   Interval `json:"interval" bson:"interval"`
+	Code       string   `json:"code" bson:"code"`
 }
 
-func (p *Plan) BeforeSave(*gorm.DB) error {
-	if p.ID == "" {
-		p.ID = NewID().String()
-	}
-	return nil
+type PlanRequest struct {
+	Name       string
+	Recurring  bool
+	TotalTrips int
+	Price      int
+	Interval   Interval
+	Code       string
+}
+
+type PlanFilter struct {
+	Ids        []string
+	Limit      int
+	Token      string
+	Name       string
+	Recurring  bool
+	TotalTrips int
+	Price      int
+	Interval   Interval
+	Code       string
+}
+
+type PlanService interface {
+	Create(context.Context, *PlanRequest) (*Plan, error)
+	Update(context.Context, *PlanRequest) (*Plan, error)
+	FindByID(context.Context, string) (*Plan, error)
+	FindAll(context.Context, *PlanFilter) ([]*Plan, string, error)
 }
 
 type Interval string

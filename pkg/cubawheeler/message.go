@@ -1,18 +1,45 @@
 package cubawheeler
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
 )
 
 type Message struct {
-	ID      string        `json:"id"`
-	Trip    string        `json:"trip"`
-	From    string        `json:"from"`
-	To      string        `json:"to"`
-	Message string        `json:"message"`
-	Status  MessageStatus `json:"status"`
+	ID      string        `json:"id" bson:"_id"`
+	Trip    string        `json:"trip" bson:"trip"`
+	From    string        `json:"from" bson:"from"`
+	To      string        `json:"to" bson:"to"`
+	Message string        `json:"message" bson:"message"`
+	Status  MessageStatus `json:"status" bson:"status"`
+}
+
+type MessageRequest struct {
+	Trip    string
+	From    string
+	To      string
+	Message string
+	Status  MessageStatus
+}
+
+type MessageFilter struct {
+	Limit   int
+	Token   string
+	Ids     []string
+	Trip    string
+	From    string
+	To      string
+	Message string
+	Status  MessageStatus
+}
+
+type MessageService interface {
+	Create(context.Context, *MessageRequest) (*Message, error)
+	Update(context.Context, *MessageRequest) (*Message, error)
+	FindByID(context.Context, string) (*Message, error)
+	FindAll(context.Context, *MessageFilter) ([]*Message, string, error)
 }
 
 type MessageStatus string

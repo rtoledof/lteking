@@ -1,32 +1,45 @@
 package cubawheeler
 
 import (
+	"context"
 	"fmt"
-	"gorm.io/gorm"
 	"io"
 	"strconv"
 )
 
 type Ads struct {
-	gorm.Model
-	ID          string      `json:"id" gorm:"primaryKey;varchar(36);not null"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Photo       string      `json:"photo"`
-	ClientID    string      `json:"owner"`
-	Owner       string      `json:"-" gorm:"foreignKey:ClientID"`
-	Inpression  *Impression `json:"inpression,omitempty"`
-	Status      AdsStatus   `json:"status"`
-	Priority    int         `json:"priority"`
-	ValidFrom   int         `json:"valid_from"`
-	ValidUntil  int         `json:"valid_until"`
+	ID          string      `json:"id" bson:"_id"`
+	Name        string      `json:"name" bson:"name"`
+	Description string      `json:"description" bson:"description"`
+	Photo       string      `json:"photo" bson:"photo"`
+	Owner       string      `json:"-" bson:"owner"`
+	Inpression  *Impression `json:"inpression,omitempty" bson:"inpression"`
+	Status      AdsStatus   `json:"status" bson:"status"`
+	Priority    int         `json:"priority" bson:"priority"`
+	ValidFrom   int         `json:"valid_from" bson:"valid_from"`
+	ValidUntil  int         `json:"valid_until" bson:"valid_until"`
+	Client      string      `json:"-" bson:"client"`
 }
 
-func (a *Ads) BeforeSave(*gorm.DB) error {
-	if a.ID == "" {
-		a.ID = NewID().String()
-	}
-	return nil
+type AdsRequest struct {
+	Limit       int
+	Token       string
+	Ids         []string
+	Name        string
+	Description string
+	Photo       string
+	Owner       string
+	Status      AdsStatus
+	Priority    int
+	ValidFrom   int
+	ValidUntil  int
+}
+
+type AdsService interface {
+	Create(context.Context, *AdsRequest) (*Ads, error)
+	Update(context.Context, *AdsRequest) (*Ads, error)
+	FindById(context.Context, string) (*Ads, error)
+	FindAll(context.Context, *AdsRequest) ([]*Ads, string, error)
 }
 
 type Impression string

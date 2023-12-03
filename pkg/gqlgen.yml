@@ -84,4 +84,37 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.VehicleType
   UserFilter: 
     model: cubawheeler.io/pkg/cubawheeler.UserFilter
-
+  VehicleStatus: 
+    model: cubawheeler.io/pkg/cubawheeler.VehicleStatus
+  TripStatusHistory: 
+    model: cubawheeler.io/pkg/cubawheeler.TripStatusHistory
+  AddPlace: 
+    model: cubawheeler.io/pkg/cubawheeler.AddPlace
+  RequestTrip: 
+    model: cubawheeler.io/pkg/cubawheeler.RequestTrip
+  LoginRequest: 
+    model: cubawheeler.io/pkg/cubawheeler.LoginRequest
+  UpdatePlace: 
+    model: cubawheeler.io/pkg/cubawheeler.UpdatePlace
+  UpdateTrip: 
+    model: cubawheeler.io/pkg/cubawheeler.UpdateTrip
+  UpdateProfile: 
+    model: cubawheeler.io/pkg/cubawheeler.UpdateProfile
+  UpdateVehicle: 
+    model: cubawheeler.io/pkg/cubawheeler.UpdateVehicle
+  LocationInput: 
+    model: cubawheeler.io/pkg/cubawheeler.LocationInput
+  RateRequest: 
+    model: cubawheeler.io/pkg/cubawheeler.RateRequest
+  ChargeRequest: 
+    model: cubawheeler.io/pkg/cubawheeler.ChargeRequest
+  TripFilter: 
+    model: cubawheeler.io/pkg/cubawheeler.TripFilter
+  UserList: 
+    model: cubawheeler.io/pkg/cubawheeler.UserList
+  ChargeList: 
+    model: cubawheeler.io/pkg/cubawheeler.ChargeList
+  TripList: 
+    model: cubawheeler.io/pkg/cubawheeler.TripList
+  ProfileRequest: 
+    model: cubawheeler.io/pkg/cubawheeler.ProfileRequest

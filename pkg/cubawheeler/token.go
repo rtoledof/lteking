@@ -9,21 +9,21 @@ import (
 var _ oauth2.TokenInfo = &Token{}
 
 type Token struct {
-	AccessToken           string                     `json:"access_token"`
-	AccessTokenCreatedAt  time.Time                  `json:"access_token_created_at,omitempty"`
-	AccessTokenExpiresAt  time.Duration              `json:"expires_at"`
-	ClientID              string                     `json:"client_id,omitempty"`
-	Code                  string                     `json:"code,omitempty"`
-	CodeCreateAt          time.Time                  `json:"code_create_at,omitempty"`
-	CodeExpiresIn         time.Duration              `json:"code_expires_in,omitempty"`
-	CodeChallenge         string                     `json:"code_challenge,omitempty"`
-	CodeChallengeMethod   oauth2.CodeChallengeMethod `json:"code_challenge_method,omitempty"`
-	RedirectUrl           string                     `json:"redirect_url,omitempty"`
-	RefreshToken          string                     `json:"refresh_token,omitempty"`
-	RefreshTokenCreateAt  time.Time                  `json:"refresh_token_create_at,omitempty"`
-	RefreshTokenExpiresIn time.Duration              `json:"refresh_token_expires_in,omitempty"`
-	Scope                 string                     `json:"scope,omitempty"`
-	UserID                string                     `json:"user_id,omitempty"`
+	AccessToken           string                     `json:"access_token" bson:"access_token"`
+	AccessTokenCreatedAt  time.Time                  `json:"access_token_created_at" bson:"access_token_created_at"`
+	AccessTokenExpiresAt  time.Duration              `json:"expires_at"  bson:"access_token_expires_at"`
+	ClientID              string                     `json:"client_id,omitempty" bson:"client_id,omitempty"`
+	Code                  string                     `json:"code,omitempty" bson:"code,omitempty"`
+	CodeCreateAt          time.Time                  `json:"code_create_at,omitempty" bson:"code_create_at,omitempty"`
+	CodeExpiresIn         time.Duration              `json:"code_expires_in,omitempty" bson:"code_expires_in,omitempty"`
+	CodeChallenge         string                     `json:"code_challenge,omitempty" bson:"code_challenge,omitempty"`
+	CodeChallengeMethod   oauth2.CodeChallengeMethod `json:"code_challenge_method,omitempty" bson:"code_challenge_method,omitempty"`
+	RedirectUrl           string                     `json:"redirect_url,omitempty" bson:"redirect_url,omitempty"`
+	RefreshToken          string                     `json:"refresh_token,omitempty" bson:"refresh_token,omitempty"`
+	RefreshTokenCreateAt  time.Time                  `json:"refresh_token_create_at,omitempty" bson:"refresh_token_create_at,omitempty"`
+	RefreshTokenExpiresIn time.Duration              `json:"refresh_token_expires_in,omitempty" bson:"refresh_token_expires_in,omitempty"`
+	Scope                 string                     `json:"scope,omitempty" bson:"scope,omitempty"`
+	UserID                string                     `json:"user_id,omitempty" bson:"user_id,omitempty"`
 }
 
 // GetAccess implements oauth2.TokenInfo.

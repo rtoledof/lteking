@@ -12,17 +12,15 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/pusher/pusher-http-go/v5"
 	"github.com/redis/go-redis/v9"
 
 	"cubawheeler.io/pkg/graph"
 	"cubawheeler.io/pkg/mongo"
-	"cubawheeler.io/pkg/oauth"
 )
 
 var tokenAuth *jwtauth.JWTAuth
 var privateKey string
-
-
 
 func init() {
 	tokenAuth = jwtauth.New("HS256", []byte(os.Getenv("JWT_PRIVATE_KEY")), nil)
@@ -33,6 +31,7 @@ type App struct {
 	rdb    *redis.Client
 	mongo  *mongo.DB
 	config Config
+	pusher pusher.Client
 }
 
 func New(cfg Config) *App {
@@ -110,6 +109,7 @@ func (a *App) loader() {
 			"Accept-Language",
 			"Cache-Control",
 			"Connection",
+			"Authorization",
 			"DNT",
 			"Host",
 			"Origin",
@@ -129,10 +129,9 @@ func (a *App) loader() {
 
 	router.Group(func(r chi.Router) {
 		//srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
-		tokenStorer := oauth.NewTokenStore(a.rdb)
 		userSrv := mongo.NewUserService(a.mongo)
 		r.Use(AuthMiddleware(userSrv))
-		grapgqlSrv := graph.NewHandler(tokenStorer, userSrv)
+		grapgqlSrv := graph.NewHandler(a.rdb, a.mongo)
 		r.Handle("/", playground.Handler("GraphQL playground", "/query"))
 		r.Handle("/query", grapgqlSrv)
 	})

@@ -10,11 +10,10 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type User struct {
-	ID               ID         `json:"id" faker:"-" bson:"_id"`
+	ID               string     `json:"id" faker:"-" bson:"_id"`
 	Name             string     `json:"name" faker:"name" bson:"name"`
 	Password         []byte     `json:"-" bson:"password"`
 	Email            string     `json:"email" faker:"email" bson:"email"`
@@ -29,17 +28,16 @@ type User struct {
 	Role             Role       `json:"-" bson:"role"`
 	Plan             string     `json:"plan,omitempty" bson:"plan"`
 	Locations        []Location `json:"locations,omitempty" bson:"locations"`
+	LastLocations    []Location `json:"last_locations,omitempty" bson:"lastLocations,omitempty"`
 	Vehicles         []Vehicle  `json:"vehicles,omitempty" bson:"vehicles"`
 	FavoriteVehicles []Vehicle  `json:"favorite_vehicles,omitempty" bson:"favoriteVehicles"`
 	Trips            []Trip     `json:"trips,omitempty" bson:"trips"`
 	Profile          Profile    `json:"profile" faker:"-" bson:"profile"`
 }
 
-func (u *User) BeforeSave(*gorm.DB) error {
-	if u.ID == nil {
-		u.ID = NewID()
-	}
-	return nil
+type UserList struct {
+	Token string  `json:"token"`
+	Data  []*User `json:"data"`
 }
 
 func (u *User) EncryptPassword(password string) error {
@@ -72,7 +70,7 @@ func (u *User) GenToken() (*Token, error) {
 	expiresAt := time.Now().Add(time.Hour * 24 * 7)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expiresAt.Unix(),
-		Id:        u.ID.String(),
+		Id:        u.Email,
 		IssuedAt:  time.Now().Unix(),
 		Issuer:    "cubawheeler",
 	})
@@ -91,9 +89,13 @@ func (u *User) GenToken() (*Token, error) {
 type UserService interface {
 	FindByID(context.Context, string) (*User, error)
 	FindByEmail(context.Context, string) (*User, error)
-	FindAll(context.Context, *UserFilter) ([]*User, string, error)
+	FindAll(context.Context, *UserFilter) (*UserList, error)
 	UpdateOTP(context.Context, string, uint64) error
 	CreateUser(context.Context, *User) error
+	Me(context.Context) (*Profile, error)
+	AddFavoritePlace(ctx context.Context, input AddPlace) (*Location, error)
+	Trips(ctx context.Context, filter *TripFilter) (*TripList, error)
+	LastNAddress(ctx context.Context, number int) ([]*Location, error)
 }
 
 type OTPServer interface {
@@ -107,6 +109,7 @@ type UserFilter struct {
 	Name  string
 	Email string
 	OTP   int
+	User  string
 }
 
 type Gender string

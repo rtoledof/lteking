@@ -1,33 +1,57 @@
 package cubawheeler
 
 import (
+	"context"
 	"fmt"
-	"gorm.io/gorm"
 	"io"
 	"strconv"
 )
 
 type Vehicle struct {
-	gorm.Model
-	ID         string          `json:"id" gorm:"privateKey;varchar(36);not null"`
-	Plate      *string         `json:"plate,omitempty"`
-	Category   VehicleCategory `json:"category"`
-	Brand      Brand           `json:"brand"`
-	Year       int             `json:"year"`
-	CarModel   string          `json:"model"`
-	Seats      int             `json:"seats"`
-	Color      string          `json:"color"`
-	Type       VehicleType     `json:"type"`
-	Photos     []string        `json:"photos,omitempty"`
-	Facilities []Facilities    `json:"facilities,omitempty"`
-	User       string          `json:"-"`
+	ID         string          `json:"id" bson:"_id"`
+	Plate      *string         `json:"plate,omitempty" bson:"plate"`
+	Category   VehicleCategory `json:"category" bson:"category"`
+	Brand      Brand           `json:"brand" bson:"brand"`
+	Year       int             `json:"year" bson:"year"`
+	CarModel   string          `json:"model" bson:"car_model"`
+	Seats      int             `json:"seats" bson:"seats"`
+	Color      string          `json:"color" bson:"color"`
+	Status     VehicleStatus   `json:"status" bson:"status"`
+	Type       VehicleType     `json:"type" bson:"type"`
+	Photos     []string        `json:"photos,omitempty" bson:"photos"`
+	Facilities []Facilities    `json:"facilities,omitempty" bson:"facilities"`
+	User       string          `json:"-" bson:"user"`
+	CreatedAt  int64           `json:"-" bson:"created_at"`
+	UpdatedAt  int64           `json:"-" bson:"updated_at"`
 }
 
-func (v *Vehicle) BeforeSave(*gorm.DB) error {
-	if v.ID == "" {
-		v.ID = NewID().String()
-	}
-	return nil
+type VehicleFilter struct {
+	Limit int
+	Ids   []string
+	Token string
+	Plate string
+	Brand Brand
+	Model string
+	Color string
+	User  string
+	Type  VehicleType
+}
+
+type UpdateVehicle struct {
+	ID         string
+	Plate      string
+	Category   VehicleCategory
+	Year       int
+	Type       VehicleType
+	Facilities []Facilities
+	User       string
+}
+
+type VehicleService interface {
+	Store(context.Context, *Vehicle) error
+	Update(context.Context, UpdateVehicle) error
+	FindByID(context.Context, string) (*Vehicle, error)
+	FindAll(context.Context, *VehicleFilter) ([]*Vehicle, string, error)
 }
 
 type VehicleCategory string
@@ -203,5 +227,50 @@ func (e *VehicleType) UnmarshalGQL(v interface{}) error {
 }
 
 func (e VehicleType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type VehicleStatus string
+
+const (
+	VehicleStatusNew       VehicleStatus = "NEW"
+	VehicleStatusActive    VehicleStatus = "ACTIVE"
+	VehicleStatusInactive  VehicleStatus = "INACTIVE"
+	VehicleStatusSuspended VehicleStatus = "SUSPENDED"
+)
+
+var AllVehicleStatus = []VehicleStatus{
+	VehicleStatusNew,
+	VehicleStatusActive,
+	VehicleStatusInactive,
+	VehicleStatusSuspended,
+}
+
+func (e VehicleStatus) IsValid() bool {
+	switch e {
+	case VehicleStatusNew, VehicleStatusActive, VehicleStatusInactive, VehicleStatusSuspended:
+		return true
+	}
+	return false
+}
+
+func (e VehicleStatus) String() string {
+	return string(e)
+}
+
+func (e *VehicleStatus) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VehicleStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid VehicleStatus", str)
+	}
+	return nil
+}
+
+func (e VehicleStatus) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

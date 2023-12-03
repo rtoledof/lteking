@@ -64,6 +64,13 @@ enum VehicleType {
   BIKE
 }
 
+enum VehicleStatus {
+  NEW
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
 type Vehicle {
   id: ID!
   plate: String
@@ -72,6 +79,7 @@ type Vehicle {
   year: Int!
   model: String!
   seats: Int!
+  status: VehicleStatus!
   color: String!
   type: VehicleType!
   photos: [String]
@@ -122,6 +130,7 @@ enum Role {
 }
 
 enum TripStatus {
+  NEW
   PICK_UP
   ON_THE_WAY
   DROP_OFF
@@ -151,7 +160,9 @@ type Coupon {
 
 type Trip {
   id: ID!
-  current_position: Location!
+  pick_up: Location!
+  drop_off: Location!
+  route: [Location!]!
   history: [Location]
   driver: User
   rider: User!
@@ -274,17 +285,71 @@ input UserFilter {
   name: String
 }
 
+input TripFilter {
+  limit: Int
+  token: String
+  ids: [String]
+  rider: ID
+  driver: ID
+  status: String
+}
+
+input ChargeRequest {
+  limit: Int!
+  token: String
+  ids: [String]
+  amount: Int
+  currency: String
+  description: String
+  trip: String
+  dispute: Boolean
+  receipt_email: String
+  status: ChargeStatus
+  paid: Boolean
+  method: String
+  reference: String
+  rider: String
+  driver: String
+}
+
+type UserList {
+  token: String!
+  data: [User!]!
+}
+
+type TripList {
+  token: String!
+  data: [Trip!]!
+}
+
+type ChargeList {
+  token: String!
+  data: [Charge!]!
+}
+
 type Query {
-  users(filter: UserFilter): [User!]!
-  trips(user: String): [Trip!]
-  charges(user: String): [Charge!]
-  profile(user: String): Profile
-  lastNAddress(number: Int!): [String]
+  users(filter: UserFilter): UserList!
+
+  trips(filter: TripFilter): TripList!
+  trip(id: String!): Trip!
+
+  charges(filter: ChargeRequest!): ChargeList!
+  charge(id: String): Charge
+
+  me: Profile
+  lastNAddress(number: Int!): [Location!]!
+
+  findVehicle(vehicle: String!): Vehicle!
 }
 
 input UpdateProfile {
   name: String
   dob: String
+  last_name: String
+  phone: String
+  photo: String
+  license: String
+  dni: String
 }
 
 input UpdateTrip {
@@ -298,15 +363,86 @@ input LoginRequest {
   pin: String
 }
 
+input LocationInput {
+  lat: Float!
+  long: Float!
+}
+
+input RequestTrip {
+  pick_up_lat: Float!
+  pick_up_long: Float!
+  drop_off_lat: Float!
+  drop_off_long: Float!
+  route: [LocationInput!]!
+}
+
+input AddPlace {
+  name: String!
+  lat: Float!
+  long: Float!
+}
+
+input UpdateVehicle {
+  id: ID!
+  palte: String
+  category: VehicleCategory
+  year: Int
+  vehicleType: VehicleType
+  facilities: [Facilities]
+}
+
+input UpdatePlace {
+  name: String!
+  location: LocationInput
+}
+
+input RateRequest {
+  id: ID!
+  code: String!
+  base_price: Int!
+  price_per_min: Int
+  price_per_km: Int
+  price_per_passenger: Int
+  price_per_baggage: Int
+  start_time: Int
+  end_time: Int
+  start_date: Int
+  end_date: Int
+  min_km: Int
+  max_km: Int
+}
+
+input ProfileRequest {
+  name: String
+  last_name: String
+  dob: String
+  phone: String
+  photo: String
+  gender: Gender
+  licence: String
+  dni: String
+}
+
 type Mutation {
   login(input: LoginRequest!): Token!
   register(email: String!, otp: String!): Token!
   otp(email: String!): String!
-  requestTrip(pick_up: Float!, drop_off: Float!): Trip
-  updateProfile(profile: UpdateProfile!): Profile
-  updateTrip(update: UpdateTrip): Trip
-  addFavoritePlace(name: String!, lat: Float!, long: Float!): Location
-  favoritePlaces: [Location]
+
+  updateProfile(profile: UpdateProfile!): Profile!
+  changePin(old: String, pin: String!): Profile!
+
+  requestTrip(input: RequestTrip!): Trip!
+  updateTrip(update: UpdateTrip): Trip!
+  cancelTrip(trip: String!): Trip!
+
+  addFavoritePlace(place: AddPlace!): Location
+  favoritePlaces: [Location!]!
+  updatePlace(input: UpdatePlace): Location!
+
   addFavoriteVehicle(plate: String): Vehicle
   favoriteVehicles: [Vehicle]
+  updateVehicle(input: UpdateVehicle): Vehicle!
+
+  addRate(input: RateRequest!): Rate!
+  updateRate(input: RateRequest!): Rate!
 }

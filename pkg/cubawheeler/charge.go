@@ -1,25 +1,57 @@
 package cubawheeler
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
 )
 
 type Charge struct {
-	ID                string       `json:"id"`
-	Amount            int          `json:"amount"`
-	Currency          string       `json:"currency"`
-	Rider             *User        `json:"rider"`
-	Description       string       `json:"description"`
-	Trip              *Trip        `json:"trip"`
-	Disputed          *bool        `json:"disputed,omitempty"`
-	ReceiptEmail      string       `json:"receipt_email"`
-	Status            ChargeStatus `json:"status"`
-	Paid              *bool        `json:"paid,omitempty"`
-	Method            *string      `json:"method,omitempty"`
-	ExternalReference *string      `json:"external_reference,omitempty"`
-	Fees              []*Rate      `json:"fees,omitempty"`
+	ID                string       `json:"id" bson:"_id"`
+	Amount            int          `json:"amount" bson:"amount"`
+	Currency          string       `json:"currency" bson:"currency"`
+	Rider             string       `json:"-" bson:"rider"`
+	Description       string       `json:"description" bson:"description"`
+	Trip              string       `json:"-" bson:"trip"`
+	Disputed          *bool        `json:"disputed,omitempty" bson:"disputed"`
+	ReceiptEmail      string       `json:"receipt_email" bson:"receipt_email"`
+	Status            ChargeStatus `json:"status" bson:"status"`
+	Paid              *bool        `json:"paid,omitempty" bson:"paid"`
+	Method            *string      `json:"method,omitempty" bson:"method"`
+	ExternalReference *string      `json:"external_reference,omitempty" bson:"external_reference"`
+	Fees              []*Rate      `json:"fees,omitempty" `
+}
+
+type ChargeRequest struct {
+	Limit        int
+	Token        string
+	Ids          []string
+	Amount       int
+	Currency     string
+	Description  string
+	Trip         string
+	Disputed     *bool
+	ReceiptEmail string
+	Status       *ChargeStatus
+	Paid         *bool
+	Method       *string
+	Reference    *string
+	Fees         []string
+	Rider        *string
+	Driver       *string
+}
+
+type ChargeList struct {
+	Token string    `json:"token"`
+	Data  []*Charge `json:"data"`
+}
+
+type ChargeService interface {
+	Create(context.Context, *ChargeRequest) (*Charge, error)
+	Update(context.Context, *ChargeRequest) (*Charge, error)
+	FindByID(context.Context, string) (*Charge, error)
+	FindAll(context.Context, ChargeRequest) (*ChargeList, error)
 }
 
 type ChargeStatus string

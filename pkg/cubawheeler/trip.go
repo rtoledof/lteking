@@ -1,51 +1,87 @@
 package cubawheeler
 
 import (
+	"context"
 	"fmt"
-	"gorm.io/gorm"
 	"io"
 	"strconv"
 )
 
 type Trip struct {
-	gorm.Model
-	ID              string               `json:"id" gotm:"privateKey;varchar(36);not null"`
-	CurrentPosition *Location            `json:"current_position gorm:"-"`
-	History         []Location           `json:"history,omitempty" gorm:"many2many:trip_history"`
-	Driver          string               `json:"driver,omitempty"`
-	Rider           string               `json:"rider"`
-	Status          TripStatus           `json:"status"`
-	StatusHistory   []*TripStatusHistory `json:"status_history,omitempty"`
-	Rate            int                  `json:"rate"`
-	Price           int                  `json:"price"`
-	Coupon          string               `json:"coupon,omitempty"`
-	StartAt         int                  `json:"start_at"`
-	EndAt           int                  `json:"end_at"`
-	Review          string               `json:"review,omitempty"`
-	User            string               `json:"user"`
+	ID            string               `json:"id" bson:"_id"`
+	PickUp        *Location            `json:"pick_up" bson:"pick_up"`
+	DropOff       *Location            `json:"drop_off" bson:"drop_off"`
+	Route         []Location           `json:"route" bson:"route"`
+	History       []Location           `json:"history,omitempty" bson:"history,omitempty"`
+	Driver        string               `json:"driver,omitempty" bson:"driver,omitempty"`
+	Rider         string               `json:"rider" bson:"rider"`
+	Status        TripStatus           `json:"status" bson:"status"`
+	StatusHistory []*TripStatusHistory `json:"status_history,omitempty" bson:"status_history,omitempty"`
+	Rate          int                  `json:"rate" bson:"rate"`
+	Price         int                  `json:"price" bson:"price"`
+	Coupon        string               `json:"coupon,omitempty" bson:"coupon,omitempty"`
+	StartAt       int                  `json:"start_at" bson:"start_at"`
+	EndAt         int                  `json:"end_at" bson:"end_at"`
+	Review        string               `json:"review,omitempty" bson:"review"`
+	CreatedAt     int64                `json:"created_at" bson:"created_at"`
+	UpdatedAt     int64                `json:"updated_at" bson:"updated_at"`
 }
 
-func (t *Trip) BeforeSave(*gorm.DB) error {
-	if t.ID == "" {
-		t.ID = NewID().String()
-	}
-	return nil
+type TripList struct {
+	Token string  `json:"token"`
+	Data  []*Trip `json:"data"`
+}
+
+type UpdateTrip struct {
+	Trip   string
+	Driver string
+	Status TripStatus
+	Price  int
+}
+
+type TripFilter struct {
+	Limit  *int      `json:"limit,omitempty"`
+	Token  *string   `json:"token,omitempty"`
+	Ids    []*string `json:"ids,omitempty"`
+	Rider  *string   `json:"rider,omitempty"`
+	Driver *string   `json:"driver,omitempty"`
+	Status *string   `json:"status,omitempty"`
+}
+
+type RequestTrip struct {
+	PickUp  *LocationInput   `json:"pick_up"`
+	DropOff *LocationInput   `json:"drop_off"`
+	Route   []*LocationInput `json:"route"`
+}
+
+type TripService interface {
+	Create(context.Context, *Trip) error
+	Update(context.Context, *UpdateTrip) (*Trip, error)
+	FindByID(context.Context, string) (*Trip, error)
+	FindAll(context.Context, *TripFilter) (*TripList, error)
+}
+
+type AddPlace struct {
+	Name     string         `json:"name"`
+	Location *LocationInput `json:"location"`
 }
 
 type TripStatusHistory struct {
-	Status    TripStatus `json:"status"`
-	ChangedAt string     `json:"changed_at"`
+	Status    TripStatus `json:"status" bson:"status"`
+	ChangedAt string     `json:"changed_at" bson:"changed_at"`
 }
 
 type TripStatus string
 
 const (
+	TripStatusNew      TripStatus = "NEW"
 	TripStatusPickUp   TripStatus = "PICK_UP"
 	TripStatusOnTheWay TripStatus = "ON_THE_WAY"
 	TripStatusDropOff  TripStatus = "DROP_OFF"
 )
 
 var AllTripStatus = []TripStatus{
+	TripStatusNew,
 	TripStatusPickUp,
 	TripStatusOnTheWay,
 	TripStatusDropOff,
@@ -53,7 +89,7 @@ var AllTripStatus = []TripStatus{
 
 func (e TripStatus) IsValid() bool {
 	switch e {
-	case TripStatusPickUp, TripStatusOnTheWay, TripStatusDropOff:
+	case TripStatusNew, TripStatusPickUp, TripStatusOnTheWay, TripStatusDropOff:
 		return true
 	}
 	return false

@@ -11,7 +11,7 @@ type contextKey struct {
 }
 
 // UserForContext finds the user from the context. REQUIRES Middleware to have run.
-func UserForContext(ctx context.Context) *User {
+func UserFromContext(ctx context.Context) *User {
 	raw, _ := ctx.Value(userCtxKey).(*User)
 	return raw
 }

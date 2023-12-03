@@ -1,19 +1,41 @@
 package cubawheeler
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
 )
 
 type Coupon struct {
-	ID         string       `json:"id"`
-	Code       string       `json:"code"`
-	Percent    *float64     `json:"percent,omitempty"`
-	Amount     *int         `json:"amount,omitempty"`
-	Status     CouponStatus `json:"status"`
-	ValidFrom  *int         `json:"valid_from,omitempty"`
-	ValidUntil *int         `json:"valid_until,omitempty"`
+	ID         string       `json:"id" bson:"_id"`
+	Code       string       `json:"code" bson:"code"`
+	Percent    *float64     `json:"percent,omitempty" bson:"percent,omitempty"`
+	Amount     *int         `json:"amount,omitempty" bson:"amount,omitempty"`
+	Status     CouponStatus `json:"status" bson:"status"`
+	ValidFrom  *int         `json:"valid_from,omitempty" bson:"valid_from,omitempty"`
+	ValidUntil *int         `json:"valid_until,omitempty" bson:"valid_until,omitempty"`
+	CreatedAt  uint         `json:"-" bson:"created_at"`
+	UpdatedAt  uint         `json:"updated_at" bson:"updated_at"`
+}
+
+type CouponRequest struct {
+	Limit      int
+	Token      string
+	Ids        []string
+	Code       string
+	Percent    *float64
+	Amount     *int
+	Status     CouponStatus
+	ValidFrom  *int
+	ValidUntil *int
+}
+
+type CouponService interface {
+	Create(context.Context, *CouponRequest) (*Coupon, error)
+	Update(context.Context, *CouponRequest) (*Coupon, error)
+	FindByID(context.Context, string) (*Coupon, error)
+	FindAll(context.Context, *CouponRequest) ([]*Coupon, string, error)
 }
 
 type CouponStatus string

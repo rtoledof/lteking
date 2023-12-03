@@ -50,7 +50,7 @@ func AuthMiddleware(srv cubawheeler.UserService) func(http.Handler) http.Handler
 				return
 			}
 
-			user, err := srv.FindByID(r.Context(), claim["jti"].(string))
+			user, err := srv.FindByEmail(r.Context(), claim["jti"].(string))
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
