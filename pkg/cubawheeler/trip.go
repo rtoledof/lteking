@@ -52,10 +52,14 @@ type RequestTrip struct {
 	PickUp  *LocationInput   `json:"pick_up"`
 	DropOff *LocationInput   `json:"drop_off"`
 	Route   []*LocationInput `json:"route"`
+	Hours   int              `json:"hours"`
+	Min     int              `json:"min"`
+	Sec     int              `json:"se"`
+	Kms     float64          `json:"kms"`
 }
 
 type TripService interface {
-	Create(context.Context, *Trip) error
+	Create(context.Context, *RequestTrip) (*Trip, error)
 	Update(context.Context, *UpdateTrip) (*Trip, error)
 	FindByID(context.Context, string) (*Trip, error)
 	FindAll(context.Context, *TripFilter) (*TripList, error)

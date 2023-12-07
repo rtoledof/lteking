@@ -5,6 +5,7 @@ import "context"
 // A private key for context that only this package can access. This is important
 // to prevent collisions between different context uses
 var userCtxKey = &contextKey{"user"}
+var clientCtxKey = &contextKey{"client"}
 
 type contextKey struct {
 	name string
@@ -19,4 +20,9 @@ func UserFromContext(ctx context.Context) *User {
 // NewContextWithUser create a new context adding the user to it
 func NewContextWithUser(ctx context.Context, user *User) context.Context {
 	return context.WithValue(ctx, userCtxKey, user)
+}
+
+// NewContextWithClient create a new context adding the user to it
+func NewContextWithClient(ctx context.Context, client *Application) context.Context {
+	return context.WithValue(ctx, clientCtxKey, client)
 }

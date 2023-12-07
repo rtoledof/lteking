@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"github.com/99designs/gqlgen/graphql"
 )
 
 type vehicleResolver struct{ *Resolver }
@@ -38,4 +39,8 @@ func (r *updateVehicleResolver) Palte(ctx context.Context, obj *cubawheeler.Upda
 // VehicleType is the resolver for the vehicleType field.
 func (r *updateVehicleResolver) VehicleType(ctx context.Context, obj *cubawheeler.UpdateVehicle, data *cubawheeler.VehicleType) error {
 	return nil
+}
+
+func (r *updateVehicleResolver) Pictures(ctx context.Context, obj *cubawheeler.UpdateVehicle, data []*graphql.Upload) error {
+	panic("implement me")
 }

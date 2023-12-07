@@ -12,6 +12,7 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   OFF
+  ON_REVIEW
   SUSPENDED
 }
 
@@ -71,6 +72,19 @@ enum VehicleStatus {
   SUSPENDED
 }
 
+enum ApplicationType {
+  RIDER
+  DRIVER
+}
+
+type Application {
+  id: ID!
+  name: String!
+  type: ApplicationType!
+  client: String!
+  secret: String!
+}
+
 type Vehicle {
   id: ID!
   plate: String
@@ -85,6 +99,12 @@ type Vehicle {
   photos: [String]
   facilities: [Facilities]
  }
+
+ enum ProfileStatus {
+  INCOMPLETED
+  ON_REVIEW
+  COMPLETED
+ }
  
  type Profile {
   id: ID!
@@ -95,8 +115,11 @@ type Vehicle {
   photo: String!
   gender: Gender
   licence: String
+  circulation: String
+  technic_inspection: String
   dni: String
   user: User!
+  status: ProfileStatus
 }
 
 enum Role {
@@ -283,6 +306,8 @@ input UserFilter {
   token: String
   limit: Int
   name: String
+  otp: String
+  pin: String
 }
 
 input TripFilter {
@@ -327,6 +352,19 @@ type ChargeList {
   data: [Charge!]!
 }
 
+input ApplicationFilter {
+  ids: [ID]
+  limit: Int!
+  token: String
+  name: String
+  client: String
+}
+
+type ApplicationList {
+  token: String
+  data: [Application]
+}
+
 type Query {
   users(filter: UserFilter): UserList!
 
@@ -340,6 +378,8 @@ type Query {
   lastNAddress(number: Int!): [Location!]!
 
   findVehicle(vehicle: String!): Vehicle!
+
+  findApplications(input: ApplicationFilter): ApplicationList!
 }
 
 input UpdateProfile {
@@ -373,6 +413,10 @@ input RequestTrip {
   pick_up_long: Float!
   drop_off_lat: Float!
   drop_off_long: Float!
+  hours: Int!
+  min: Int!
+  seconds: Int!
+  kms: Float!
   route: [LocationInput!]!
 }
 
@@ -389,6 +433,7 @@ input UpdateVehicle {
   year: Int
   vehicleType: VehicleType
   facilities: [Facilities]
+  pictures: [Upload]
 }
 
 input UpdatePlace {
@@ -412,6 +457,8 @@ input RateRequest {
   max_km: Int
 }
 
+scalar Upload
+
 input ProfileRequest {
   name: String
   last_name: String
@@ -419,13 +466,21 @@ input ProfileRequest {
   phone: String
   photo: String
   gender: Gender
-  licence: String
+  licence: Upload
+  circulation: Upload
+  technic_inspection: Upload
   dni: String
+}
+
+input ApplicationRequest {
+  name: String!
+  type: ApplicationType!
+  client: String!
+  secret: String!
 }
 
 type Mutation {
   login(input: LoginRequest!): Token!
-  register(email: String!, otp: String!): Token!
   otp(email: String!): String!
 
   updateProfile(profile: UpdateProfile!): Profile!
@@ -434,6 +489,7 @@ type Mutation {
   requestTrip(input: RequestTrip!): Trip!
   updateTrip(update: UpdateTrip): Trip!
   cancelTrip(trip: String!): Trip!
+  acceptTrip(trip: String!): Trip!
 
   addFavoritePlace(place: AddPlace!): Location
   favoritePlaces: [Location!]!
@@ -445,4 +501,7 @@ type Mutation {
 
   addRate(input: RateRequest!): Rate!
   updateRate(input: RateRequest!): Rate!
+
+  createApplication(input: ApplicationRequest!): Application!
+  updateApplicationCredentials(application: String!): Application!
 }

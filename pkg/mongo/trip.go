@@ -29,18 +29,43 @@ func NewTripService(db *DB) *TripService {
 	}
 }
 
-func (s *TripService) Create(ctx context.Context, trip *cubawheeler.Trip) error {
-	user := cubawheeler.UserFromContext(ctx)
-	if user == nil {
-		return errors.New("invalid token provided")
+func (s *TripService) Create(ctx context.Context, input *cubawheeler.RequestTrip) (*cubawheeler.Trip, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, errors.New("invalid token provided")
 	}
-	trip.ID = cubawheeler.NewID().String()
-	trip.CreatedAt = time.Now().UTC().UnixNano()
+	priceXsec := 1
+	priceXm := 100
+	trip := cubawheeler.Trip{
+		ID: cubawheeler.NewID().String(),
+		PickUp: &cubawheeler.Location{
+			Lat:  input.PickUp.Lat,
+			Long: input.PickUp.Long,
+		},
+		DropOff: &cubawheeler.Location{
+			Lat:  input.DropOff.Lat,
+			Long: input.DropOff.Long,
+		},
+		Rider:     usr.ID,
+		Price:     priceXsec * (input.Sec + input.Min*60 + input.Hours*60*60) * priceXm * (int(input.Kms * 1000)),
+		Status:    cubawheeler.TripStatusNew,
+		CreatedAt: time.Now().UTC().Unix(),
+	}
+
+	for _, l := range input.Route {
+		trip.Route = append(trip.History, cubawheeler.Location{
+			Lat:  l.Lat,
+			Long: l.Long,
+		})
+	}
 	_, err := s.collection.InsertOne(ctx, trip)
 	if err != nil {
-		return fmt.Errorf("unable to store the trip: %w", err)
+		return nil, fmt.Errorf("unable to store the trip: %w", err)
 	}
-	return nil
+
+	s.tripChan <- &trip
+
+	return &trip, nil
 }
 
 func (s *TripService) Update(ctx context.Context, trip *cubawheeler.UpdateTrip) (*cubawheeler.Trip, error) {

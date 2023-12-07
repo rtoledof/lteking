@@ -2,13 +2,14 @@ package mongo
 
 import (
 	"context"
-	"cubawheeler.io/pkg/cubawheeler"
 	"errors"
 	"fmt"
+	"time"
+
+	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 )
 
 var _ cubawheeler.VehicleService = &VehicleService{}
@@ -103,7 +104,7 @@ func findAllVehicles(ctx context.Context, collection *mongo.Collection, filter *
 	}
 	f := bson.D{}
 	if len(filter.Ids) > 0 {
-		f = append(f, primitive.E{"_id", primitive.A{"$in", filter.Ids}})
+		f = append(f, primitive.E{Key: "_id", Value: primitive.A{"$in", filter.Ids}})
 	}
 	if len(filter.Token) > 0 {
 		f = append(f, bson.E{"_id", primitive.E{"$gt", filter.Token}})

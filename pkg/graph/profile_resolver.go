@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"github.com/99designs/gqlgen/graphql"
 )
 
 type profileResolver struct{ *Resolver }
@@ -20,6 +21,11 @@ func (r *profileResolver) User(ctx context.Context, obj *cubawheeler.Profile) (*
 		return nil, err
 	}
 	return user, nil
+}
+
+// Status is the resolver for the status field.
+func (r *profileResolver) Status(ctx context.Context, obj *cubawheeler.Profile) (*cubawheeler.ProfileStatus, error) {
+	return &obj.Status, nil
 }
 
 type updateProfileResolver struct{ *Resolver }
@@ -45,5 +51,25 @@ func (r *updateProfileResolver) License(ctx context.Context, obj *cubawheeler.Up
 // Dni is the resolver for the dni field.
 func (r *updateProfileResolver) Dni(ctx context.Context, obj *cubawheeler.UpdateProfile, data *string) error {
 	obj.Dni = data
+	return nil
+}
+
+type profileRequestResolver struct{ *Resolver }
+
+// Licence is the resolver for the licence field.
+func (r *profileRequestResolver) Licence(ctx context.Context, obj *cubawheeler.ProfileRequest, data *graphql.Upload) error {
+	obj.Licence = data
+	return nil
+}
+
+// Circulation is the resolver for the circulation field.
+func (r *profileRequestResolver) Circulation(ctx context.Context, obj *cubawheeler.ProfileRequest, data *graphql.Upload) error {
+	obj.Circulation = data
+	return nil
+}
+
+// TechnicInspection is the resolver for the technic_inspection field.
+func (r *profileRequestResolver) TechnicInspection(ctx context.Context, obj *cubawheeler.ProfileRequest, data *graphql.Upload) error {
+	obj.TechnicInspection = data
 	return nil
 }

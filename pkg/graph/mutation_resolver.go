@@ -2,7 +2,6 @@ package graph
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"cubawheeler.io/pkg/cubawheeler"
@@ -12,7 +11,7 @@ type mutationResolver struct{ *Resolver }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.Token, error) {
-	user, err := r.user.FindByEmail(ctx, input.Email)
+	user, err := r.user.Login(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -24,27 +23,6 @@ func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginReq
 	return token, nil
 }
 
-// Register is the resolver for the register field.
-func (r *mutationResolver) Register(ctx context.Context, email string, otp string) (*cubawheeler.Token, error) {
-	_, err := r.user.FindByEmail(ctx, email)
-	if err == nil {
-		return nil, errors.New("email aready in use")
-	}
-	user := &cubawheeler.User{
-		ID:    cubawheeler.NewID().String(),
-		Email: email,
-		Code:  cubawheeler.NewReferalCode(),
-	}
-	if err := r.user.CreateUser(ctx, user); err != nil {
-		return nil, err
-	}
-	token, err := user.GenToken()
-	if err != nil {
-		return nil, err
-	}
-	return token, nil
-}
-
 // Otp is the resolver for the otp field.
 func (r *mutationResolver) Otp(ctx context.Context, email string) (string, error) {
 	return "000000", nil
@@ -52,31 +30,7 @@ func (r *mutationResolver) Otp(ctx context.Context, email string) (string, error
 
 // RequestTrip is the resolver for the requestTrip field.
 func (r *mutationResolver) RequestTrip(ctx context.Context, input cubawheeler.RequestTrip) (*cubawheeler.Trip, error) {
-	usr := cubawheeler.UserFromContext(ctx)
-	if usr == nil {
-		return nil, errors.New("invalid token provided")
-	}
-	trip := cubawheeler.Trip{
-		PickUp: &cubawheeler.Location{
-			Lat:  input.PickUp.Lat,
-			Long: input.PickUp.Long,
-		},
-		DropOff: &cubawheeler.Location{
-			Lat:  input.DropOff.Lat,
-			Long: input.DropOff.Long,
-		},
-		Rider:  usr.ID,
-		Status: cubawheeler.TripStatusNew,
-	}
-
-	for _, l := range input.Route {
-		trip.Route = append(trip.History, cubawheeler.Location{
-			Lat:  l.Lat,
-			Long: l.Long,
-		})
-	}
-
-	panic(fmt.Errorf("not implemented: RequestTrip - requestTrip"))
+	return r.trip.Create(ctx, &input)
 }
 
 // UpdateProfile is the resolver for the updateProfile field.
@@ -84,12 +38,12 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, profile cubawheele
 	return r.profile.Update(ctx, &cubawheeler.ProfileRequest{
 		Name:     profile.Name,
 		LastName: profile.LastName,
-		DOB:      profile.DOB,
+		Dob:      profile.DOB,
 		Phone:    profile.Phone,
 		Photo:    profile.Photo,
 		Gender:   profile.Gender,
-		Licence:  profile.Licence,
-		Dni:      profile.Dni,
+		// Licence:  profile.Licence,
+		Dni: profile.Dni,
 	})
 }
 
@@ -150,4 +104,19 @@ func (r *mutationResolver) UpdateRate(ctx context.Context, input cubawheeler.Rat
 
 func (r *mutationResolver) ChangePin(ctx context.Context, old *string, pin string) (*cubawheeler.Profile, error) {
 	return r.profile.ChangePin(ctx, old, pin)
+}
+
+// AcceptTrip is the resolver for the acceptTrip field.
+func (r *mutationResolver) AcceptTrip(ctx context.Context, trip string) (*cubawheeler.Trip, error) {
+	panic(fmt.Errorf("not implemented: AcceptTrip - acceptTrip"))
+}
+
+// CreateApplication is the resolver for the createApplication field.
+func (r *mutationResolver) CreateApplication(ctx context.Context, input cubawheeler.ApplicationRequest) (*cubawheeler.Application, error) {
+	panic(fmt.Errorf("not implemented: CreateApplication - createApplication"))
+}
+
+// UpdateApplicationCredentials is the resolver for the updateApplicationCredentials field.
+func (r *mutationResolver) UpdateApplicationCredentials(ctx context.Context, application string) (*cubawheeler.Application, error) {
+	panic(fmt.Errorf("not implemented: UpdateApplicationCredentials - updateApplicationCredentials"))
 }

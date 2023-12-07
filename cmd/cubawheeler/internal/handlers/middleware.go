@@ -33,7 +33,7 @@ func handler(f fn) http.HandlerFunc {
 	}
 }
 
-// Middleware decodes the share session cookie and packs the session into context
+// AuthMiddleware decodes the share session cookie and packs the session into context
 func AuthMiddleware(srv cubawheeler.UserService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -57,6 +57,32 @@ func AuthMiddleware(srv cubawheeler.UserService) func(http.Handler) http.Handler
 			}
 
 			next.ServeHTTP(w, r.WithContext(cubawheeler.NewContextWithUser(r.Context(), user)))
+		})
+	}
+}
+
+// ClientMiddleware decodes the share session cookie and packs the session into context
+func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			user, pass, ok := r.BasicAuth()
+			if !ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			app, err := srv.FindByClient(r.Context(), user)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			if app.Secret != pass {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			next.ServeHTTP(w, r.WithContext(cubawheeler.NewContextWithClient(r.Context(), app)))
 		})
 	}
 }

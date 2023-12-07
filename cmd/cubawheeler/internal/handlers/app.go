@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"cubawheeler.io/pkg/seed"
 	"fmt"
 	"net/http"
 	"os"
@@ -32,6 +33,7 @@ type App struct {
 	mongo  *mongo.DB
 	config Config
 	pusher pusher.Client
+	seed   seed.Seed
 }
 
 func New(cfg Config) *App {
@@ -44,6 +46,12 @@ func New(cfg Config) *App {
 	}
 
 	app.loader()
+	if s := os.Getenv("SEED"); len(s) > 0 {
+		app.seed = seed.NewSeed(app.mongo)
+		if err := app.seed.Up(); err != nil {
+			fmt.Println("unable to upload seeds")
+		}
+	}
 
 	return app
 }
@@ -130,7 +138,9 @@ func (a *App) loader() {
 	router.Group(func(r chi.Router) {
 		//srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
 		userSrv := mongo.NewUserService(a.mongo)
+		appSrv := mongo.NewApplicationService(a.mongo)
 		r.Use(AuthMiddleware(userSrv))
+		r.Use(ClientMiddleware(appSrv))
 		grapgqlSrv := graph.NewHandler(a.rdb, a.mongo)
 		r.Handle("/", playground.Handler("GraphQL playground", "/query"))
 		r.Handle("/query", grapgqlSrv)

@@ -3,11 +3,12 @@ package cubawheeler
 import "context"
 
 type Location struct {
-	ID   string  `json:"id" bson:"_id"`
-	Name string  `json:"name" bson:"name"`
-	Lat  float64 `json:"lat" bson:"lat"`
-	Long float64 `json:"long" bson:"long"`
-	User string  `json:"-" bson:"user_id"`
+	ID        string  `json:"id" bson:"_id"`
+	Name      string  `json:"name" bson:"name"`
+	Lat       float64 `json:"lat" bson:"lat"`
+	Long      float64 `json:"long" bson:"long"`
+	User      string  `json:"-" bson:"user_id"`
+	CreatedAt uint    `json:"created_at" bson:"created_at"`
 }
 
 type LocationRequest struct {
@@ -25,6 +26,10 @@ type LocationService interface {
 	Update(context.Context, *LocationRequest) (*Location, error)
 	FindByID(context.Context, string) (*Location, error)
 	FindAll(context.Context, *LocationRequest) ([]*Location, string, error)
+}
+
+type LastLocations interface {
+	Locations(context.Context, int) ([]*Location, error)
 }
 
 type UpdatePlace struct {

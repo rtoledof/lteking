@@ -18,7 +18,7 @@ type User struct {
 	Password         []byte     `json:"-" bson:"password"`
 	Email            string     `json:"email" faker:"email" bson:"email"`
 	Pin              []byte     `json:"pin" faker:"number" bson:"pin"`
-	OTP              string     `json:"-" bson:"otp"`
+	Otp              []byte     `json:"-" bson:"otp"`
 	Rate             float64    `json:"rate" bson:"rate"`
 	Available        bool       `json:"-" bson:"available"`
 	Status           UserStatus `json:"status" bson:"status"`
@@ -42,7 +42,7 @@ type UserList struct {
 
 func (u *User) EncryptPassword(password string) error {
 	var err error
-	u.Password, err = bcrypt.GenerateFromPassword([]byte(password), 14)
+	u.Password, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,16 @@ func (u *User) EncryptPassword(password string) error {
 
 func (u *User) EncryptPin(pin string) error {
 	var err error
-	u.Pin, err = bcrypt.GenerateFromPassword([]byte(pin), 14)
+	u.Pin, err = bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *User) EncryptOtp(otp string) error {
+	var err error
+	u.Otp, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
@@ -64,6 +73,10 @@ func (u *User) ComparePassword(password string) error {
 
 func (u *User) ComparePin(pin string) error {
 	return bcrypt.CompareHashAndPassword(u.Pin, []byte(pin))
+}
+
+func (u *User) CompareOtp(pin string) error {
+	return bcrypt.CompareHashAndPassword(u.Otp, []byte(u.Otp))
 }
 
 func (u *User) GenToken() (*Token, error) {
@@ -96,6 +109,7 @@ type UserService interface {
 	AddFavoritePlace(ctx context.Context, input AddPlace) (*Location, error)
 	Trips(ctx context.Context, filter *TripFilter) (*TripList, error)
 	LastNAddress(ctx context.Context, number int) ([]*Location, error)
+	Login(context.Context, LoginRequest) (*User, error)
 }
 
 type OTPServer interface {
@@ -108,7 +122,8 @@ type UserFilter struct {
 	Ids   []string
 	Name  string
 	Email string
-	OTP   int
+	Otp   string
+	Pin   string
 	User  string
 }
 
@@ -209,6 +224,7 @@ const (
 	UserStatusInactive  UserStatus = "INACTIVE"
 	UserStatusOff       UserStatus = "OFF"
 	UserStatusSuspended UserStatus = "SUSPENDED"
+	UserStatusOnReview  UserStatus = "ON_REVIEW"
 )
 
 var AllUserStatus = []UserStatus{
@@ -216,11 +232,12 @@ var AllUserStatus = []UserStatus{
 	UserStatusInactive,
 	UserStatusOff,
 	UserStatusSuspended,
+	UserStatusOnReview,
 }
 
 func (e UserStatus) IsValid() bool {
 	switch e {
-	case UserStatusActive, UserStatusInactive, UserStatusOff, UserStatusSuspended:
+	case UserStatusActive, UserStatusInactive, UserStatusOff, UserStatusSuspended, UserStatusOnReview:
 		return true
 	}
 	return false

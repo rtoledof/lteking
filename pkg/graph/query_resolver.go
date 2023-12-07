@@ -51,3 +51,8 @@ func (r *queryResolver) Trip(ctx context.Context, id string) (*cubawheeler.Trip,
 func (r *queryResolver) FindVehicle(ctx context.Context, vehicle string) (*cubawheeler.Vehicle, error) {
 	return r.vehicle.FindByID(ctx, vehicle)
 }
+
+// FindApplications is the resolver for the findApplications field.
+func (r *queryResolver) FindApplications(ctx context.Context, input *cubawheeler.ApplicationFilter) (*cubawheeler.ApplicationList, error) {
+	panic(fmt.Errorf("not implemented: FindApplications - findApplications"))
+}

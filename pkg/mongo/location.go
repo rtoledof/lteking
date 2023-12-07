@@ -4,14 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
 var _ cubawheeler.LocationService = &LocationService{}
+var _ cubawheeler.LastLocations = &LocationService{}
+
+const LocationsCollections Collections = "locations"
+const LastLocationsCollections Collections = "last_locations"
 
 type LocationService struct {
 	db         *DB
@@ -21,7 +25,7 @@ type LocationService struct {
 func NewLocationService(db *DB) *LocationService {
 	return &LocationService{
 		db:         db,
-		collection: db.client.Database(database).Collection("locations"),
+		collection: db.client.Database(database).Collection(LocationsCollections.String()),
 	}
 }
 
@@ -67,6 +71,11 @@ func (s *LocationService) FindAll(ctx context.Context, request *cubawheeler.Loca
 	return findAllLocations(ctx, s.collection, request)
 }
 
+func (s *LocationService) Locations(ctx context.Context, n int) ([]*cubawheeler.Location, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func findAllLocations(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.LocationRequest) ([]*cubawheeler.Location, string, error) {
 	var locations []*cubawheeler.Location
 	var token string
@@ -95,3 +104,9 @@ func findAllLocations(ctx context.Context, collection *mongo.Collection, filter 
 	cur.Close(ctx)
 	return locations, token, nil
 }
+
+//
+//func findLastNLocations(ctx context.Context, client *mongo.Client, n int) ([]*cubawheeler.Location, error) {
+//	collection := client.Database(database).Collection(LastLocationsCollections.String())
+//
+//}

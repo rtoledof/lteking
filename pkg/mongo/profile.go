@@ -51,31 +51,42 @@ func (s *ProfileService) Update(ctx context.Context, request *cubawheeler.Profil
 	params := bson.D{}
 	if request.Name != nil {
 		params = append(params, primitive.E{Key: "name", Value: *request.Name})
+		profile.Name = *request.Name
 	}
 	if request.LastName != nil {
 		params = append(params, primitive.E{Key: "last_name", Value: *request.LastName})
+		profile.LastName = *request.LastName
 	}
-	if request.DOB != nil {
-		params = append(params, primitive.E{Key: "dob", Value: *request.DOB})
+	if request.Dob != nil {
+		params = append(params, primitive.E{Key: "dob", Value: *request.Dob})
+		profile.DOB = *request.Dob
 	}
 	if request.Phone != nil {
 		params = append(params, primitive.E{Key: "phone", Value: *request.Phone})
+		profile.Phone = *request.Phone
 	}
 	if request.Photo != nil {
 		params = append(params, primitive.E{Key: "photo", Value: *request.Photo})
+		profile.Phone = *request.Phone
 	}
 	if request.Gender != nil {
 		params = append(params, primitive.E{Key: "gender", Value: *request.Gender})
+		profile.Gender = *request.Gender
 	}
 	if request.Licence != nil {
 		params = append(params, primitive.E{Key: "licence", Value: *request.Licence})
+		profile.Licence = *&request.Licence.Filename
 	}
 	if request.Dni != nil {
 		params = append(params, primitive.E{Key: "dni", Value: *request.Dni})
+		profile.Dni = *request.Dni
 	}
-	if request.Pin != nil {
-		params = append(params, primitive.E{Key: "dni", Value: *request.Dni})
+
+	if profile.IsCompleted(usr.Role) {
+		profile.Status = cubawheeler.ProfileStatusCompleted
+		params = append(params, primitive.E{Key: "status", Value: profile.Status})
 	}
+
 	_, err = s.collection.UpdateOne(ctx,
 		bson.D{
 			{Key: "_id", Value: profile.ID},
@@ -87,6 +98,12 @@ func (s *ProfileService) Update(ctx context.Context, request *cubawheeler.Profil
 		return nil, fmt.Errorf("unable to update user profile: %w", err)
 	}
 	profile, _ = s.FindByUser(ctx)
+	if profile.IsCompleted(usr.Role) {
+		usr.Status = cubawheeler.UserStatusActive
+		if err := updateUser(ctx, s.db.client, usr, bson.D{{Key: "status", Value: usr.Status}}); err != nil {
+			return nil, err
+		}
+	}
 
 	return profile, nil
 }
@@ -179,6 +196,7 @@ func createProfile(ctx context.Context, db *DB, request *cubawheeler.ProfileRequ
 	profile := &cubawheeler.Profile{
 		ID:     cubawheeler.NewID().String(),
 		UserId: usr.ID,
+		Status: cubawheeler.ProfileStatusIncompleted,
 	}
 	collection := db.client.Database(database).Collection(string(ProfileCollection))
 	_, err := collection.InsertOne(ctx, profile)

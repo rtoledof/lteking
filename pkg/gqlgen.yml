@@ -118,3 +118,15 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.TripList
   ProfileRequest: 
     model: cubawheeler.io/pkg/cubawheeler.ProfileRequest
+  ProfileStatus: 
+    model: cubawheeler.io/pkg/cubawheeler.ProfileStatus
+  Application: 
+    model: cubawheeler.io/pkg/cubawheeler.Application
+  ApplicationFilter: 
+    model: cubawheeler.io/pkg/cubawheeler.ApplicationFilter
+  ApplicationList: 
+    model: cubawheeler.io/pkg/cubawheeler.ApplicationList
+  ApplicationRequest: 
+    model: cubawheeler.io/pkg/cubawheeler.ApplicationRequest
+  ApplicationType: 
+    model: cubawheeler.io/pkg/cubawheeler.ApplicationType

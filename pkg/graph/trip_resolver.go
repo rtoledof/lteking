@@ -40,27 +40,38 @@ func (r *tripResolver) Review(ctx context.Context, obj *cubawheeler.Trip) (*cuba
 
 type requestTripResolver struct{ *Resolver }
 
+// Seconds implements RequestTripResolver.
+func (*requestTripResolver) Seconds(ctx context.Context, obj *cubawheeler.RequestTrip, data int) error {
+	obj.Sec = data
+	return nil
+}
+
 // PickUpLat is the resolver for the pick_up_lat field.
 func (r *requestTripResolver) PickUpLat(ctx context.Context, obj *cubawheeler.RequestTrip, data float64) error {
+	obj.PickUp.Lat = data
 	return nil
 }
 
 // PickUpLong is the resolver for the pick_up_long field.
 func (r *requestTripResolver) PickUpLong(ctx context.Context, obj *cubawheeler.RequestTrip, data float64) error {
+	obj.PickUp.Long = data
 	return nil
 }
 
 // DropOffLat is the resolver for the drop_off_lat field.
 func (r *requestTripResolver) DropOffLat(ctx context.Context, obj *cubawheeler.RequestTrip, data float64) error {
+	obj.DropOff.Lat = data
 	return nil
 }
 
 // DropOffLong is the resolver for the drop_off_long field.
 func (r *requestTripResolver) DropOffLong(ctx context.Context, obj *cubawheeler.RequestTrip, data float64) error {
+	obj.DropOff.Long = data
 	return nil
 }
 
 // Route is the resolver for the route field.
 func (r *requestTripResolver) Route(ctx context.Context, obj *cubawheeler.RequestTrip, data []*cubawheeler.LocationInput) error {
+	obj.Route = append(obj.Route, data...)
 	return nil
 }

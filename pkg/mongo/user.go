@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +16,8 @@ import (
 
 var _ cubawheeler.UserService = &UserService{}
 
+const UsersCollection Collections = "users"
+
 type UserService struct {
 	db         *DB
 	collection *mongo.Collection
@@ -23,8 +26,43 @@ type UserService struct {
 func NewUserService(db *DB) *UserService {
 	return &UserService{
 		db:         db,
-		collection: db.client.Database("cubawheeler").Collection("users"),
+		collection: db.client.Database(database).Collection(UsersCollection.String()),
 	}
+}
+
+func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.User, error) {
+	user, err := s.FindByEmail(ctx, input.Email)
+	if err != nil && errors.Is(err, e.ErrNotFound) {
+		user = &cubawheeler.User{
+			ID:     cubawheeler.NewID().String(),
+			Email:  input.Email,
+			Status: cubawheeler.UserStatusInactive,
+			Otp:    []byte("000000"),
+		}
+		// TODO: generate a new OTP for the user
+		err = s.CreateUser(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+		user, err = s.FindByID(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+	if user != nil && user.Status == cubawheeler.UserStatusInactive && input.Otp != nil {
+		if !bytes.Equal(user.Otp, []byte(*input.Otp)) {
+			return nil, e.ErrAccessDenied
+		}
+		user.Status = cubawheeler.UserStatusOnReview
+		user.Otp = nil
+		if err := updateUser(ctx, s.db.client, user, bson.D{{Key: "status", Value: user.Status}, {Key: "otp", Value: nil}}); err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+
+	return user, nil
 }
 
 func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) error {
@@ -60,14 +98,7 @@ func (s *UserService) FindByID(ctx context.Context, id string) (*cubawheeler.Use
 }
 
 func (s *UserService) FindByEmail(ctx context.Context, email string) (*cubawheeler.User, error) {
-	users, _, err := findAllUsers(ctx, s.collection, &cubawheeler.UserFilter{
-		Email: email,
-		Limit: 1,
-	})
-	if err != nil || len(users) == 0 {
-		return nil, errors.New("user not found")
-	}
-	return users[0], nil
+	return findUserByEmail(ctx, s.db.client, email)
 }
 
 func (s *UserService) FindAll(ctx context.Context, filter *cubawheeler.UserFilter) (*cubawheeler.UserList, error) {
@@ -152,6 +183,18 @@ func (s *UserService) UpdateOTP(ctx context.Context, otp string, u2 uint64) erro
 	panic("implement me")
 }
 
+func findUserByEmail(ctx context.Context, client *mongo.Client, email string) (*cubawheeler.User, error) {
+	collection := client.Database(database).Collection(UsersCollection.String())
+	users, _, err := findAllUsers(ctx, collection, &cubawheeler.UserFilter{Email: email, Limit: 1})
+	if err != nil {
+		return nil, err
+	}
+	if len(users) == 0 {
+		return nil, e.ErrNotFound
+	}
+	return users[0], nil
+}
+
 func findAllUsers(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.UserFilter) ([]*cubawheeler.User, string, error) {
 	var users []*cubawheeler.User
 	var token string
@@ -161,6 +204,12 @@ func findAllUsers(ctx context.Context, collection *mongo.Collection, filter *cub
 	}
 	if filter.Email != "" {
 		f = append(f, primitive.E{Key: "email", Value: filter.Email})
+	}
+	if len(filter.Otp) > 0 {
+		f = append(f, primitive.E{Key: "otp", Value: filter.Otp})
+	}
+	if len(filter.Pin) > 0 {
+		f = append(f, primitive.E{Key: "pin", Value: filter.Email})
 	}
 	cur, err := collection.Find(ctx, f)
 	if err != nil {
@@ -196,6 +245,15 @@ func updateAddFavoritesPlaces(ctx context.Context, collection *mongo.Collection,
 	_, err := collection.UpdateOne(ctx, bson.D{{"_id", usr.ID}}, f)
 	if err != nil {
 		return fmt.Errorf("unable to update the location: %w", err)
+	}
+	return nil
+}
+
+func updateUser(ctx context.Context, client *mongo.Client, user *cubawheeler.User, data bson.D) error {
+	collection := client.Database(database).Collection(UsersCollection.String())
+	_, err := collection.UpdateOne(ctx, bson.D{{"email", user.Email}}, bson.D{{"$set", data}})
+	if err != nil {
+		return fmt.Errorf("unable to update the user: %v: %w", err, e.ErrInternal)
 	}
 	return nil
 }
