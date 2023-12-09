@@ -13864,7 +13864,7 @@ func (ec *executionContext) unmarshalInputLoginRequest(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
-			it.Otp = data
+			it.Otp = *data
 		}
 	}
 

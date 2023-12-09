@@ -94,7 +94,6 @@ type UserService interface {
 	FindByID(context.Context, string) (*User, error)
 	FindByEmail(context.Context, string) (*User, error)
 	FindAll(context.Context, *UserFilter) (*UserList, error)
-	Otp(ctx context.Context, email string) (string, error)
 	CreateUser(context.Context, *User) error
 	Me(context.Context) (*Profile, error)
 	AddFavoritePlace(context.Context, AddPlace) (*Location, error)
@@ -105,6 +104,11 @@ type UserService interface {
 	AddFavoriteVehicle(ctx context.Context, plate *string) (*Vehicle, error)
 	FavoriteVehicles(ctx context.Context) ([]*Vehicle, error)
 	UpdatePlace(ctx context.Context, input *UpdatePlace) (*Location, error)
+}
+
+type OtpService interface {
+	Create(context.Context, string) error
+	Otp(context.Context, string, string) error
 }
 
 type OTPServer interface {

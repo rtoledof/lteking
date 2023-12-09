@@ -11,7 +11,6 @@ import (
 
 	"cubawheeler.io/pkg/cubawheeler"
 	e "cubawheeler.io/pkg/errors"
-	"cubawheeler.io/pkg/mailer"
 )
 
 var _ cubawheeler.UserService = &UserService{}
@@ -40,7 +39,7 @@ func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest)
 		user = &cubawheeler.User{
 			ID:     cubawheeler.NewID().String(),
 			Email:  input.Email,
-			Status: cubawheeler.UserStatusInactive,
+			Status: cubawheeler.UserStatusOnReview,
 		}
 
 		switch app.Type {
@@ -51,32 +50,12 @@ func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest)
 		}
 		// TODO: generate a new OTP for the user
 
-		user.Otp = cubawheeler.NewOtp()
-		go func() {
-			textTemplate := fmt.Sprintf("Your otp is: %s", user.Otp)
-			htmlTemplate := fmt.Sprintf(fmt.Sprintf("<H2>Your Otp is: %s</H2>", user.Otp))
-
-			mailer.GenMessage("no-reply@cubawheeler.com", user.Email, textTemplate, htmlTemplate)
-		}()
-
 		err = s.CreateUser(ctx, user)
 		if err != nil {
 			return nil, err
 		}
 		user, err = findUserByEmail(ctx, s.db, user.Email)
 		if err != nil {
-			return nil, err
-		}
-		return user, nil
-	}
-	if input.Otp != nil {
-		if user.Otp != *input.Otp {
-			return nil, e.ErrInvalidInput
-		}
-		user.Status = cubawheeler.UserStatusOnReview
-
-		user.Otp = ""
-		if err := updateUser(ctx, s.db, user, bson.D{{Key: "status", Value: user.Status}, {Key: "otp", Value: nil}}); err != nil {
 			return nil, err
 		}
 		return user, nil
@@ -241,24 +220,6 @@ func (s *UserService) LastNAddress(ctx context.Context, number int) ([]*cubawhee
 		return nil, errors.New("invalid token profived")
 	}
 	panic("implement me")
-}
-
-func (s *UserService) Otp(ctx context.Context, email string) (string, error) {
-	user, err := findUserByEmail(ctx, s.db, email)
-	if err != nil {
-		return "", fmt.Errorf("nil user in context: %w", e.ErrInvalidInput)
-	}
-	user.Otp = cubawheeler.NewOtp()
-	go func() {
-		textTemplate := fmt.Sprintf("Your otp is: %s", user.Otp)
-		htmlTemplate := fmt.Sprintf(fmt.Sprintf("<H2>Your Otp is: %s</H2>", user.Otp))
-
-		mailer.GenMessage("no-reply@cubawheeler.com", user.Email, textTemplate, htmlTemplate)
-	}()
-	if err = updateUser(ctx, s.db, user, bson.D{{Key: "otp", Value: user.Otp}}); err != nil {
-		return "", err
-	}
-	return user.Otp, nil
 }
 
 func findUserByEmail(ctx context.Context, db *DB, email string) (*cubawheeler.User, error) {

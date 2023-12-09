@@ -33,6 +33,9 @@ func (r *mutationResolver) AcceptOrder(ctx context.Context, order string) (*cuba
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.Token, error) {
+	if err := r.otp.Otp(ctx, input.Otp, input.Email); err != nil {
+		return nil, err
+	}
 	user, err := r.user.Login(ctx, input)
 	if err != nil {
 		return nil, err
@@ -48,7 +51,7 @@ func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginReq
 // Otp is the resolver for the otp field.
 func (r *mutationResolver) Otp(ctx context.Context, email string) (string, error) {
 	// TODO: generate a new otp and send the email
-	return r.user.Otp(ctx, email)
+	return "", r.otp.Create(ctx, email)
 }
 
 // UpdateProfile is the resolver for the updateProfile field.

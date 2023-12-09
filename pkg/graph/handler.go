@@ -1,10 +1,12 @@
 package graph
 
 import (
-	"cubawheeler.io/pkg/mongo"
-	"cubawheeler.io/pkg/oauth"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/redis/go-redis/v9"
+
+	"cubawheeler.io/pkg/mongo"
+	"cubawheeler.io/pkg/oauth"
+	otp "cubawheeler.io/pkg/redis"
 )
 
 func NewHandler(
@@ -23,6 +25,7 @@ func NewHandler(
 		location: mongo.NewLocationService(db),
 		plan:     mongo.NewPlanService(db),
 		message:  mongo.NewMessageService(db),
+		otp:      otp.NewOtpService(client),
 	}
 	return handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: resolver}))
 }

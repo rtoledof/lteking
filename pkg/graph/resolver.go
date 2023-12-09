@@ -14,7 +14,7 @@ import (
 type Resolver struct {
 	user     cubawheeler.UserService
 	token    oauth2.TokenStore
-	otp      cubawheeler.OTPServer
+	otp      cubawheeler.OtpService
 	order    cubawheeler.OrderService
 	review   cubawheeler.ReviewService
 	rate     cubawheeler.RateService
