@@ -31,7 +31,7 @@ func NewProfileService(db *DB) *ProfileService {
 	}
 }
 
-func (s *ProfileService) Create(ctx context.Context, request *cubawheeler.ProfileRequest) (*cubawheeler.Profile, error) {
+func (s *ProfileService) Create(ctx context.Context, request *cubawheeler.UpdateProfile) (*cubawheeler.Profile, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
@@ -39,7 +39,7 @@ func (s *ProfileService) Create(ctx context.Context, request *cubawheeler.Profil
 	return createProfile(ctx, s.db, request, usr)
 }
 
-func (s *ProfileService) Update(ctx context.Context, request *cubawheeler.ProfileRequest) (*cubawheeler.Profile, error) {
+func (s *ProfileService) Update(ctx context.Context, request *cubawheeler.UpdateProfile) (*cubawheeler.Profile, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
@@ -75,7 +75,7 @@ func (s *ProfileService) Update(ctx context.Context, request *cubawheeler.Profil
 	}
 	if request.Licence != nil {
 		params = append(params, primitive.E{Key: "licence", Value: *request.Licence})
-		profile.Licence = *&request.Licence.Filename
+		profile.Licence = *request.Licence
 	}
 	if request.Dni != nil {
 		params = append(params, primitive.E{Key: "dni", Value: *request.Dni})
@@ -100,7 +100,7 @@ func (s *ProfileService) Update(ctx context.Context, request *cubawheeler.Profil
 	profile, _ = s.FindByUser(ctx)
 	if profile.IsCompleted(usr.Role) {
 		usr.Status = cubawheeler.UserStatusActive
-		if err := updateUser(ctx, s.db.client, usr, bson.D{{Key: "status", Value: usr.Status}}); err != nil {
+		if err := updateUser(ctx, s.db, usr, bson.D{{Key: "status", Value: usr.Status}}); err != nil {
 			return nil, err
 		}
 	}
@@ -119,7 +119,7 @@ func (s *ProfileService) ChangePin(ctx context.Context, old *string, pin string)
 	if err := usr.EncryptPin(pin); err != nil {
 		return nil, err
 	}
-	return s.Update(ctx, &cubawheeler.ProfileRequest{})
+	return s.Update(ctx, &cubawheeler.UpdateProfile{})
 }
 
 func (s *ProfileService) FindAll(ctx context.Context, filter *cubawheeler.ProfileFilter) ([]*cubawheeler.Profile, string, error) {
@@ -192,7 +192,7 @@ func findAllProfiles(ctx context.Context, collection *mongo.Collection, filter *
 	return profiles, token, err
 }
 
-func createProfile(ctx context.Context, db *DB, request *cubawheeler.ProfileRequest, usr *cubawheeler.User) (*cubawheeler.Profile, error) {
+func createProfile(ctx context.Context, db *DB, request *cubawheeler.UpdateProfile, usr *cubawheeler.User) (*cubawheeler.Profile, error) {
 	profile := &cubawheeler.Profile{
 		ID:     cubawheeler.NewID().String(),
 		UserId: usr.ID,

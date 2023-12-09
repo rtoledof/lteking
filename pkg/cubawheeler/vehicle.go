@@ -49,8 +49,9 @@ type UpdateVehicle struct {
 
 type VehicleService interface {
 	Store(context.Context, *Vehicle) error
-	Update(context.Context, UpdateVehicle) error
+	Update(context.Context, UpdateVehicle) (*Vehicle, error)
 	FindByID(context.Context, string) (*Vehicle, error)
+	FindByPlate(context.Context, string) (*Vehicle, error)
 	FindAll(context.Context, *VehicleFilter) ([]*Vehicle, string, error)
 }
 

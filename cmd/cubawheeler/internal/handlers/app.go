@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"cubawheeler.io/pkg/mailer"
 	"cubawheeler.io/pkg/seed"
 	"fmt"
+	"gopkg.in/gomail.v2"
 	"net/http"
 	"os"
 	"time"
@@ -34,6 +36,7 @@ type App struct {
 	config Config
 	pusher pusher.Client
 	seed   seed.Seed
+	dialer *gomail.Dialer
 }
 
 func New(cfg Config) *App {
@@ -43,6 +46,12 @@ func New(cfg Config) *App {
 		rdb:    client,
 		config: cfg,
 		mongo:  mongo.NewDB(cfg.Mongo),
+		dialer: gomail.NewDialer(
+			cfg.SMTPServer,
+			int(cfg.SMTPPort),
+			cfg.SMTPUSer,
+			cfg.SMTPPassword,
+		),
 	}
 
 	app.loader()
@@ -102,6 +111,14 @@ func (a *App) Start(ctx context.Context) error {
 }
 
 func (a *App) loader() {
+
+	mailer.NewMailer(
+		a.config.SMTPServer,
+		a.config.SMTPUSer,
+		a.config.SMTPPassword,
+		int(a.config.SMTPPort),
+	)
+
 	router := chi.NewRouter()
 
 	router.Use(middleware.Logger)

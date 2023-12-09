@@ -33,7 +33,7 @@ type Plan {
   id: ID!
   name: String!
   recurrintg: Boolean!
-  trips: Int!
+  orders: Int!
   price: Int!
   interval: Interval!
   code: String!
@@ -148,19 +148,19 @@ enum Role {
   locations: [Location]
   vehicles: [Vehicle]
   favorite_vehicles: [Vehicle]
-  trips: [Trip]
+  orders: [Order]
   reviews: [Review]
 }
 
-enum TripStatus {
+enum OrderStatus {
   NEW
   PICK_UP
   ON_THE_WAY
   DROP_OFF
 }
 
-type TripStatusHistory {
-  status: TripStatus!
+type OrderStatusHistory {
+  status: OrderStatus!
   changed_at: String!
 }
 
@@ -181,22 +181,34 @@ type Coupon {
   valid_until: Int
 }
 
-type Trip {
+type Point {
+  lat: Float!
+  long: Float!
+}
+
+type OrderItem {
   id: ID!
-  pick_up: Location!
-  drop_off: Location!
-  route: [Location!]!
-  history: [Location]
-  driver: User
-  rider: User!
-  status: TripStatus!
-  status_history: [TripStatusHistory]
+  pick_up: Point
+  drop_off: Point
+  route: [Point!]!
+  seconds: Int!
+  m: Float!
+}
+
+type Order {
+  id: ID!
   rate: Int!
   price: Int!
+  rider: User!
+  driver: User
+  status: OrderStatus!
+  status_history: [OrderStatusHistory]
+  history: [Point]
   coupon: Coupon
   start_at: Int!
   end_at: Int!
-  review: Review
+  review: [Review]
+  items: [OrderItem!]!
 }
 
 type Client {
@@ -242,7 +254,7 @@ enum MessageStatus {
 
 type Message {
   id: ID!
-  trip: String!
+  order: ID!
   from: String!
   to: String!
   message: String!
@@ -269,7 +281,7 @@ type Charge {
   currency: String!
   rider: User!
   description: String!
-  trip: Trip!
+  order: Order!
   disputed: Boolean
   receipt_email: String!
   status: ChargeStatus!
@@ -310,7 +322,7 @@ input UserFilter {
   pin: String
 }
 
-input TripFilter {
+input OrderFilter {
   limit: Int
   token: String
   ids: [String]
@@ -326,7 +338,7 @@ input ChargeRequest {
   amount: Int
   currency: String
   description: String
-  trip: String
+  order: String
   dispute: Boolean
   receipt_email: String
   status: ChargeStatus
@@ -342,9 +354,9 @@ type UserList {
   data: [User!]!
 }
 
-type TripList {
+type OrderList {
   token: String!
-  data: [Trip!]!
+  data: [Order!]!
 }
 
 type ChargeList {
@@ -368,8 +380,8 @@ type ApplicationList {
 type Query {
   users(filter: UserFilter): UserList!
 
-  trips(filter: TripFilter): TripList!
-  trip(id: String!): Trip!
+  orders(filter: OrderFilter): OrderList!
+  order(id: String!): Order!
 
   charges(filter: ChargeRequest!): ChargeList!
   charge(id: String): Charge
@@ -386,38 +398,37 @@ input UpdateProfile {
   name: String
   dob: String
   last_name: String
+  gender: Gender
   phone: String
   photo: String
   license: String
+  circulation: Upload
+  technic_inspection: Upload
   dni: String
 }
 
-input UpdateTrip {
+input UpdateOrder {
   driver: ID
-  status: TripStatus
+  items: [Item]
+  status: OrderStatus
 }
 
 input LoginRequest {
   email: String!
-  otp: String
-  pin: String
+  otp: String!
 }
 
-input LocationInput {
+input PointInput {
   lat: Float!
-  long: Float!
+  lon: Float!
 }
 
-input RequestTrip {
-  pick_up_lat: Float!
-  pick_up_long: Float!
-  drop_off_lat: Float!
-  drop_off_long: Float!
-  hours: Int!
-  min: Int!
+input Item {
+  pick_up: PointInput!
+  drop_off: PointInput!
   seconds: Int!
-  kms: Float!
-  route: [LocationInput!]!
+  m: Float!
+  route: [PointInput!]!
 }
 
 input AddPlace {
@@ -438,7 +449,7 @@ input UpdateVehicle {
 
 input UpdatePlace {
   name: String!
-  location: LocationInput
+  location: PointInput
 }
 
 input RateRequest {
@@ -459,19 +470,6 @@ input RateRequest {
 
 scalar Upload
 
-input ProfileRequest {
-  name: String
-  last_name: String
-  dob: String
-  phone: String
-  photo: String
-  gender: Gender
-  licence: Upload
-  circulation: Upload
-  technic_inspection: Upload
-  dni: String
-}
-
 input ApplicationRequest {
   name: String!
   type: ApplicationType!
@@ -486,10 +484,10 @@ type Mutation {
   updateProfile(profile: UpdateProfile!): Profile!
   changePin(old: String, pin: String!): Profile!
 
-  requestTrip(input: RequestTrip!): Trip!
-  updateTrip(update: UpdateTrip): Trip!
-  cancelTrip(trip: String!): Trip!
-  acceptTrip(trip: String!): Trip!
+  createOrder(input: [Item!]): Order!
+  updatOrder(update: UpdateOrder): Order!
+  cancelOrder(order: String!): Order!
+  acceptOrder(order: String!): Order!
 
   addFavoritePlace(place: AddPlace!): Location
   favoritePlaces: [Location!]!

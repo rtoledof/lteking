@@ -9,6 +9,10 @@ import (
 
 type updatePlaceResolver struct{ *Resolver }
 
+func (r *updatePlaceResolver) Location(ctx context.Context, obj *cubawheeler.UpdatePlace, data *cubawheeler.PointInput) error {
+	panic("implemet me")
+}
+
 // Palte implements UpdateVehicleResolver.
 func (*updatePlaceResolver) Palte(ctx context.Context, obj *cubawheeler.UpdateVehicle, data *string) error {
 	panic("unimplemented")
@@ -22,10 +26,4 @@ func (*updatePlaceResolver) Pictures(ctx context.Context, obj *cubawheeler.Updat
 // VehicleType implements UpdateVehicleResolver.
 func (*updatePlaceResolver) VehicleType(ctx context.Context, obj *cubawheeler.UpdateVehicle, data *cubawheeler.VehicleType) error {
 	panic("unimplemented")
-}
-
-// Location is the resolver for the location field.
-func (r *updatePlaceResolver) Location(ctx context.Context, obj *cubawheeler.UpdatePlace, data *cubawheeler.LocationInput) error {
-	obj.Location = data
-	return nil
 }

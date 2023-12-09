@@ -1,7 +1,6 @@
 package mongo
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 
 	"cubawheeler.io/pkg/cubawheeler"
 	e "cubawheeler.io/pkg/errors"
+	"cubawheeler.io/pkg/mailer"
 )
 
 var _ cubawheeler.UserService = &UserService{}
@@ -31,35 +31,59 @@ func NewUserService(db *DB) *UserService {
 }
 
 func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.User, error) {
+	app := cubawheeler.ClientFromContext(ctx)
 	user, err := s.FindByEmail(ctx, input.Email)
 	if err != nil && errors.Is(err, e.ErrNotFound) {
+		if app == nil {
+			return nil, fmt.Errorf("no application provided: %w", e.ErrAccessDenied)
+		}
 		user = &cubawheeler.User{
 			ID:     cubawheeler.NewID().String(),
 			Email:  input.Email,
 			Status: cubawheeler.UserStatusInactive,
-			Otp:    []byte("000000"),
+		}
+
+		switch app.Type {
+		case cubawheeler.ApplicationTypeDriver:
+			user.Role = cubawheeler.RoleDriver
+		default:
+			user.Role = cubawheeler.RoleRider
 		}
 		// TODO: generate a new OTP for the user
+
+		user.Otp = cubawheeler.NewOtp()
+		go func() {
+			textTemplate := fmt.Sprintf("Your otp is: %s", user.Otp)
+			htmlTemplate := fmt.Sprintf(fmt.Sprintf("<H2>Your Otp is: %s</H2>", user.Otp))
+
+			mailer.GenMessage("no-reply@cubawheeler.com", user.Email, textTemplate, htmlTemplate)
+		}()
+
 		err = s.CreateUser(ctx, user)
 		if err != nil {
 			return nil, err
 		}
-		user, err = s.FindByID(ctx, user.ID)
+		user, err = findUserByEmail(ctx, s.db, user.Email)
 		if err != nil {
 			return nil, err
 		}
 		return user, nil
 	}
-	if user != nil && user.Status == cubawheeler.UserStatusInactive && input.Otp != nil {
-		if !bytes.Equal(user.Otp, []byte(*input.Otp)) {
-			return nil, e.ErrAccessDenied
+	if input.Otp != nil {
+		if user.Otp != *input.Otp {
+			return nil, e.ErrInvalidInput
 		}
 		user.Status = cubawheeler.UserStatusOnReview
-		user.Otp = nil
-		if err := updateUser(ctx, s.db.client, user, bson.D{{Key: "status", Value: user.Status}, {Key: "otp", Value: nil}}); err != nil {
+
+		user.Otp = ""
+		if err := updateUser(ctx, s.db, user, bson.D{{Key: "status", Value: user.Status}, {Key: "otp", Value: nil}}); err != nil {
 			return nil, err
 		}
 		return user, nil
+	}
+
+	if !user.IsActive() {
+		return nil, e.ErrAccessDenied
 	}
 
 	return user, nil
@@ -70,7 +94,7 @@ func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) er
 	if err != nil {
 		return fmt.Errorf("unable to store the user: %w", err)
 	}
-	if _, err := createProfile(ctx, s.db, &cubawheeler.ProfileRequest{}, user); err != nil {
+	if _, err := createProfile(ctx, s.db, &cubawheeler.UpdateProfile{}, user); err != nil {
 		return err
 	}
 	return nil
@@ -84,21 +108,11 @@ func (s *UserService) FindByID(ctx context.Context, id string) (*cubawheeler.Use
 	if usr.Role != cubawheeler.RoleAdmin {
 		return usr, nil
 	}
-	users, _, err := findAllUsers(ctx, s.collection, &cubawheeler.UserFilter{
-		Ids:   []string{id},
-		Limit: 1,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(users) == 0 {
-		return nil, errors.New("user not found")
-	}
-	return users[0], nil
+	return findUserByID(ctx, s.db, id)
 }
 
 func (s *UserService) FindByEmail(ctx context.Context, email string) (*cubawheeler.User, error) {
-	return findUserByEmail(ctx, s.db.client, email)
+	return findUserByEmail(ctx, s.db, email)
 }
 
 func (s *UserService) FindAll(ctx context.Context, filter *cubawheeler.UserFilter) (*cubawheeler.UserList, error) {
@@ -133,11 +147,62 @@ func (s *UserService) AddFavoritePlace(ctx context.Context, input cubawheeler.Ad
 		location.Lat = input.Location.Lat
 		location.Long = input.Location.Long
 	}
-	usr.Locations = append(usr.Locations, location)
-	if err := updateAddFavoritesPlaces(ctx, s.collection, usr); err != nil {
+	usr.Locations = append(usr.Locations, &location)
+	if err := updateAddFavoritesPlaces(ctx, s.db, usr); err != nil {
 		return nil, fmt.Errorf("unable to store the favorite palces: %w", err)
 	}
 	return &location, nil
+}
+
+func (s *UserService) FavoritePlaces(ctx context.Context) ([]*cubawheeler.Location, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, fmt.Errorf("nil user in context: %w", e.ErrAccessDenied)
+	}
+	return usr.Locations, nil
+}
+
+func (s *UserService) AddFavoriteVehicle(ctx context.Context, plate *string) (*cubawheeler.Vehicle, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, fmt.Errorf("nil user in context: %w", e.ErrAccessDenied)
+	}
+	vehicle, err := findVehicleByPlate(ctx, s.db, *plate)
+	if err != nil {
+		return nil, err
+	}
+	usr.FavoriteVehicles = append(usr.FavoriteVehicles, vehicle)
+	if err := updateUser(ctx, s.db, usr, bson.D{{Key: "favorite_vehicles", Value: usr.FavoriteVehicles}}); err != nil {
+		return nil, err
+	}
+	return vehicle, nil
+}
+
+func (s *UserService) UpdatePlace(ctx context.Context, input *cubawheeler.UpdatePlace) (*cubawheeler.Location, error) {
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("unable to update the place: %w", e.ErrAccessDenied)
+	}
+	var location cubawheeler.Location
+	for i := range user.Locations {
+		place := user.Locations[i]
+		if place.Name == input.Name {
+			place.Lat = input.Location.Lat
+			place.Long = input.Location.Long
+			location.Lat = place.Lat
+			user.Locations[i] = place
+			break
+		}
+	}
+	return &location, nil
+}
+
+func (s *UserService) FavoriteVehicles(ctx context.Context) ([]*cubawheeler.Vehicle, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, fmt.Errorf("nil user in context: %w", e.ErrAccessDenied)
+	}
+	return usr.FavoriteVehicles, nil
 }
 
 func (s *UserService) Me(ctx context.Context) (*cubawheeler.Profile, error) {
@@ -156,18 +221,18 @@ func (s *UserService) Me(ctx context.Context) (*cubawheeler.Profile, error) {
 	return profiles[0], nil
 }
 
-func (s *UserService) Trips(ctx context.Context, filter *cubawheeler.TripFilter) (*cubawheeler.TripList, error) {
+func (s *UserService) Orders(ctx context.Context, filter *cubawheeler.OrderFilter) (*cubawheeler.OrderList, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, e.ErrNotFound
 	}
 
-	tripsCollection := s.db.client.Database(database).Collection("trips")
-	trips, token, err := findAllTrips(ctx, tripsCollection, filter)
+	ordersCollection := s.db.client.Database(database).Collection(OrderCollection.String())
+	orders, token, err := findOrders(ctx, ordersCollection, filter)
 	if err != nil {
 		return nil, err
 	}
-	return &cubawheeler.TripList{Data: trips, Token: token}, nil
+	return &cubawheeler.OrderList{Data: orders, Token: token}, nil
 }
 
 func (s *UserService) LastNAddress(ctx context.Context, number int) ([]*cubawheeler.Location, error) {
@@ -178,19 +243,47 @@ func (s *UserService) LastNAddress(ctx context.Context, number int) ([]*cubawhee
 	panic("implement me")
 }
 
-func (s *UserService) UpdateOTP(ctx context.Context, otp string, u2 uint64) error {
-	//TODO implement me
-	panic("implement me")
+func (s *UserService) Otp(ctx context.Context, email string) (string, error) {
+	user, err := findUserByEmail(ctx, s.db, email)
+	if err != nil {
+		return "", fmt.Errorf("nil user in context: %w", e.ErrInvalidInput)
+	}
+	user.Otp = cubawheeler.NewOtp()
+	go func() {
+		textTemplate := fmt.Sprintf("Your otp is: %s", user.Otp)
+		htmlTemplate := fmt.Sprintf(fmt.Sprintf("<H2>Your Otp is: %s</H2>", user.Otp))
+
+		mailer.GenMessage("no-reply@cubawheeler.com", user.Email, textTemplate, htmlTemplate)
+	}()
+	if err = updateUser(ctx, s.db, user, bson.D{{Key: "otp", Value: user.Otp}}); err != nil {
+		return "", err
+	}
+	return user.Otp, nil
 }
 
-func findUserByEmail(ctx context.Context, client *mongo.Client, email string) (*cubawheeler.User, error) {
-	collection := client.Database(database).Collection(UsersCollection.String())
+func findUserByEmail(ctx context.Context, db *DB, email string) (*cubawheeler.User, error) {
+	collection := db.client.Database(database).Collection(UsersCollection.String())
 	users, _, err := findAllUsers(ctx, collection, &cubawheeler.UserFilter{Email: email, Limit: 1})
 	if err != nil {
 		return nil, err
 	}
 	if len(users) == 0 {
 		return nil, e.ErrNotFound
+	}
+	return users[0], nil
+}
+
+func findUserByID(ctx context.Context, db *DB, id string) (*cubawheeler.User, error) {
+	collection := db.client.Database(database).Collection(UsersCollection.String())
+	users, _, err := findAllUsers(ctx, collection, &cubawheeler.UserFilter{
+		Ids:   []string{id},
+		Limit: 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(users) == 0 {
+		return nil, errors.New("user not found")
 	}
 	return users[0], nil
 }
@@ -240,7 +333,8 @@ func findAllUsers(ctx context.Context, collection *mongo.Collection, filter *cub
 	return users, token, nil
 }
 
-func updateAddFavoritesPlaces(ctx context.Context, collection *mongo.Collection, usr *cubawheeler.User) error {
+func updateAddFavoritesPlaces(ctx context.Context, db *DB, usr *cubawheeler.User) error {
+	collection := db.client.Database(database).Collection(UsersCollection.String())
 	f := bson.D{{"$set", bson.E{"locations", usr.Locations}}}
 	_, err := collection.UpdateOne(ctx, bson.D{{"_id", usr.ID}}, f)
 	if err != nil {
@@ -249,8 +343,8 @@ func updateAddFavoritesPlaces(ctx context.Context, collection *mongo.Collection,
 	return nil
 }
 
-func updateUser(ctx context.Context, client *mongo.Client, user *cubawheeler.User, data bson.D) error {
-	collection := client.Database(database).Collection(UsersCollection.String())
+func updateUser(ctx context.Context, db *DB, user *cubawheeler.User, data bson.D) error {
+	collection := db.client.Database(database).Collection(UsersCollection.String())
 	_, err := collection.UpdateOne(ctx, bson.D{{"email", user.Email}}, bson.D{{"$set", data}})
 	if err != nil {
 		return fmt.Errorf("unable to update the user: %v: %w", err, e.ErrInternal)

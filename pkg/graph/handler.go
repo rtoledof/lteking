@@ -18,7 +18,7 @@ func NewHandler(
 		charge:   mongo.NewChargeService(db),
 		coupon:   mongo.NewCouponService(db),
 		profile:  mongo.NewProfileService(db),
-		trip:     mongo.NewTripService(db),
+		order:    mongo.NewOrderService(db),
 		vehicle:  mongo.NewVehicleService(db),
 		location: mongo.NewLocationService(db),
 		plan:     mongo.NewPlanService(db),

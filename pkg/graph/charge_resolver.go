@@ -6,6 +6,8 @@ import (
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
+var _ ChargeResolver = &chargeResolver{}
+
 type chargeResolver struct{ *Resolver }
 
 // ID is the resolver for the id field.
@@ -19,9 +21,11 @@ func (r *chargeResolver) Rider(ctx context.Context, obj *cubawheeler.Charge) (*c
 }
 
 // Trip is the resolver for the trip field.
-func (r *chargeResolver) Trip(ctx context.Context, obj *cubawheeler.Charge) (*cubawheeler.Trip, error) {
-	return r.trip.FindByID(ctx, obj.Trip)
+func (r *chargeResolver) Order(ctx context.Context, obj *cubawheeler.Charge) (*cubawheeler.Order, error) {
+	return r.order.FindByID(ctx, obj.Trip)
 }
+
+var _ ChargeRequestResolver = &chargeRequestResolver{}
 
 type chargeRequestResolver struct{ *Resolver }
 
@@ -29,4 +33,8 @@ type chargeRequestResolver struct{ *Resolver }
 func (r *chargeRequestResolver) Dispute(ctx context.Context, obj *cubawheeler.ChargeRequest, data *bool) error {
 	obj.Disputed = data
 	return nil
+}
+
+func (r *chargeRequestResolver) Order(ctx context.Context, obj *cubawheeler.ChargeRequest, data *string) error {
+	panic("implement me")
 }

@@ -7,6 +7,8 @@ import (
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
+var _ QueryResolver = &queryResolver{}
+
 type queryResolver struct{ *Resolver }
 
 // Users is the resolver for the users field.
@@ -15,11 +17,11 @@ func (r *queryResolver) Users(ctx context.Context, filter *cubawheeler.UserFilte
 }
 
 // Trips is the resolver for the trips field.
-func (r *queryResolver) Trips(ctx context.Context, filter *cubawheeler.TripFilter) (*cubawheeler.TripList, error) {
+func (r *queryResolver) Orders(ctx context.Context, filter *cubawheeler.OrderFilter) (*cubawheeler.OrderList, error) {
 	if filter == nil {
-		filter = &cubawheeler.TripFilter{}
+		filter = &cubawheeler.OrderFilter{}
 	}
-	return r.user.Trips(ctx, filter)
+	return r.user.Orders(ctx, filter)
 }
 
 // Charges is the resolver for the charges field.
@@ -43,8 +45,8 @@ func (r *queryResolver) Charge(ctx context.Context, id *string) (*cubawheeler.Ch
 }
 
 // Trip is the resolver for the trip field.
-func (r *queryResolver) Trip(ctx context.Context, id string) (*cubawheeler.Trip, error) {
-	return r.trip.FindByID(ctx, id)
+func (r *queryResolver) Order(ctx context.Context, id string) (*cubawheeler.Order, error) {
+	return r.order.FindByID(ctx, id)
 }
 
 // FindVehicle is the resolver for the findVehicle field.

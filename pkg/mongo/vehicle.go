@@ -6,13 +6,17 @@ import (
 	"fmt"
 	"time"
 
-	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"cubawheeler.io/pkg/cubawheeler"
+	e "cubawheeler.io/pkg/errors"
 )
 
 var _ cubawheeler.VehicleService = &VehicleService{}
+
+var VehiclesCollection Collections = "vehicles"
 
 type VehicleService struct {
 	db         *DB
@@ -36,20 +40,28 @@ func (s *VehicleService) Store(ctx context.Context, vehicle *cubawheeler.Vehicle
 	return nil
 }
 
-func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVehicle) error {
+func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVehicle) (*cubawheeler.Vehicle, error) {
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("unable to update the vehicle: %w", e.ErrAccessDenied)
+	}
 	vehicles, _, err := findAllVehicles(ctx, s.collection, &cubawheeler.VehicleFilter{
 		Ids:   []string{input.ID},
 		Limit: 1,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(vehicles) > 0 {
-		return errors.New("vehicle not found")
+		return nil, errors.New("vehicle not found")
+	}
+	vehicle := vehicles[0]
+	if vehicle.User != user.ID && user.Role != cubawheeler.RoleAdmin {
+		return nil, fmt.Errorf("access denied: %v: %w", err, e.ErrAccessDenied)
 	}
 	f := bson.D{}
 	params := bson.D{}
-	vehicle := vehicles[0]
+
 	if len(input.Plate) > 0 {
 		vehicle.Plate = &input.Plate
 		params = append(params, bson.E{"plate", vehicle.Plate})
@@ -73,9 +85,9 @@ func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVeh
 	f = append(bson.D{{"$set", params}})
 	_, err = s.collection.UpdateOne(ctx, bson.D{{"_id", input.ID}}, f)
 	if err != nil {
-		return fmt.Errorf("unable to update the vehicle")
+		return nil, fmt.Errorf("unable to update the vehicle")
 	}
-	return nil
+	return vehicle, nil
 }
 
 func (s *VehicleService) FindByID(ctx context.Context, id string) (*cubawheeler.Vehicle, error) {
@@ -88,8 +100,24 @@ func (s *VehicleService) FindByID(ctx context.Context, id string) (*cubawheeler.
 	return vehicles[0], nil
 }
 
+func (s *VehicleService) FindByPlate(ctx context.Context, plate string) (*cubawheeler.Vehicle, error) {
+	return findVehicleByPlate(ctx, s.db, plate)
+}
+
 func (s *VehicleService) FindAll(ctx context.Context, filter *cubawheeler.VehicleFilter) ([]*cubawheeler.Vehicle, string, error) {
 	return findAllVehicles(ctx, s.collection, filter)
+}
+
+func findVehicleByPlate(ctx context.Context, db *DB, plate string) (*cubawheeler.Vehicle, error) {
+	collection := db.client.Database(database).Collection(VehiclesCollection.String())
+	vehicles, _, err := findAllVehicles(ctx, collection, &cubawheeler.VehicleFilter{Plate: plate, Limit: 1})
+	if err != nil {
+		return nil, err
+	}
+	if len(vehicles) == 0 {
+		return nil, e.ErrNotFound
+	}
+	return vehicles[0], nil
 }
 
 func findAllVehicles(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.VehicleFilter) ([]*cubawheeler.Vehicle, string, error) {

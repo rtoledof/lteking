@@ -13,69 +13,63 @@ import (
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
-var _ cubawheeler.TripService = &TripService{}
+var _ cubawheeler.OrderService = &OrderService{}
 
-type TripService struct {
+var OrderCollection Collections = "orders"
+
+type OrderService struct {
 	db         *DB
 	collection *mongo.Collection
-	tripChan   chan *cubawheeler.Trip
+	orderChan  chan *cubawheeler.Order
 }
 
-func NewTripService(db *DB) *TripService {
-	return &TripService{
+func NewOrderService(db *DB) *OrderService {
+	return &OrderService{
 		db:         db,
-		tripChan:   make(chan *cubawheeler.Trip, 10000),
-		collection: db.client.Database(database).Collection("trips"),
+		orderChan:  make(chan *cubawheeler.Order, 10000),
+		collection: db.client.Database(database).Collection(OrderCollection.String()),
 	}
 }
 
-func (s *TripService) Create(ctx context.Context, input *cubawheeler.RequestTrip) (*cubawheeler.Trip, error) {
+func (s *OrderService) Create(ctx context.Context, input []cubawheeler.OrderItem) (*cubawheeler.Order, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
 	}
 	priceXsec := 1
 	priceXm := 100
-	trip := cubawheeler.Trip{
-		ID: cubawheeler.NewID().String(),
-		PickUp: &cubawheeler.Location{
-			Lat:  input.PickUp.Lat,
-			Long: input.PickUp.Long,
-		},
-		DropOff: &cubawheeler.Location{
-			Lat:  input.DropOff.Lat,
-			Long: input.DropOff.Long,
-		},
+	order := cubawheeler.Order{
+		ID:        cubawheeler.NewID().String(),
+		Items:     input,
 		Rider:     usr.ID,
-		Price:     priceXsec * (input.Sec + input.Min*60 + input.Hours*60*60) * priceXm * (int(input.Kms * 1000)),
-		Status:    cubawheeler.TripStatusNew,
+		Status:    cubawheeler.OrderStatusNew,
 		CreatedAt: time.Now().UTC().Unix(),
 	}
 
-	for _, l := range input.Route {
-		trip.Route = append(trip.History, cubawheeler.Location{
-			Lat:  l.Lat,
-			Long: l.Long,
-		})
+	var price uint64
+	for _, v := range order.Items {
+		price += v.Seconds*uint64(priceXsec) + uint64(priceXm)*v.Meters
 	}
-	_, err := s.collection.InsertOne(ctx, trip)
+	order.Price = price
+
+	_, err := s.collection.InsertOne(ctx, order)
 	if err != nil {
 		return nil, fmt.Errorf("unable to store the trip: %w", err)
 	}
 
-	s.tripChan <- &trip
+	s.orderChan <- &order
 
-	return &trip, nil
+	return &order, nil
 }
 
-func (s *TripService) Update(ctx context.Context, trip *cubawheeler.UpdateTrip) (*cubawheeler.Trip, error) {
+func (s *OrderService) Update(ctx context.Context, trip *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *TripService) FindByID(ctx context.Context, id string) (*cubawheeler.Trip, error) {
+func (s *OrderService) FindByID(ctx context.Context, id string) (*cubawheeler.Order, error) {
 	limit := 1
-	trips, _, err := findAllTrips(ctx, s.collection, &cubawheeler.TripFilter{
+	trips, _, err := findOrders(ctx, s.collection, &cubawheeler.OrderFilter{
 		Ids:   []*string{&id},
 		Limit: &limit,
 	})
@@ -85,15 +79,15 @@ func (s *TripService) FindByID(ctx context.Context, id string) (*cubawheeler.Tri
 	return trips[0], nil
 }
 
-func (s *TripService) FindAll(ctx context.Context, filter *cubawheeler.TripFilter) (*cubawheeler.TripList, error) {
-	trips, token, err := findAllTrips(ctx, s.collection, filter)
+func (s *OrderService) FindAll(ctx context.Context, filter *cubawheeler.OrderFilter) (*cubawheeler.OrderList, error) {
+	trips, token, err := findOrders(ctx, s.collection, filter)
 	if err != nil {
 		return nil, err
 	}
-	return &cubawheeler.TripList{Data: trips, Token: token}, nil
+	return &cubawheeler.OrderList{Data: trips, Token: token}, nil
 }
 
-func findAllTrips(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.TripFilter) ([]*cubawheeler.Trip, string, error) {
+func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.OrderFilter) ([]*cubawheeler.Order, string, error) {
 	user := cubawheeler.UserFromContext(ctx)
 	if user == nil {
 		return nil, "", errors.New("invalid token provided")
@@ -104,7 +98,7 @@ func findAllTrips(ctx context.Context, collection *mongo.Collection, filter *cub
 	case cubawheeler.RoleDriver:
 		filter.Driver = &user.ID
 	}
-	var trips []*cubawheeler.Trip
+	var trips []*cubawheeler.Order
 	var token string
 	f := bson.D{}
 	if filter.Rider != nil {
@@ -122,7 +116,7 @@ func findAllTrips(ctx context.Context, collection *mongo.Collection, filter *cub
 		return nil, "", err
 	}
 	for cur.Next(ctx) {
-		var trip cubawheeler.Trip
+		var trip cubawheeler.Order
 		err := cur.Decode(&trip)
 		if err != nil {
 			return nil, "", err

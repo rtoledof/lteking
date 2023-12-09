@@ -87,6 +87,13 @@ func (s *ApplicationService) FindApplications(ctx context.Context, input *cubawh
 
 // UpdateApplicationCredentials implements cubawheeler.ApplicationService.
 func (s *ApplicationService) UpdateApplicationCredentials(ctx context.Context, application string) (*cubawheeler.Application, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, e.ErrAccessDenied
+	}
+	if usr.Role != cubawheeler.RoleAdmin {
+		return nil, e.ErrAccessDenied
+	}
 	applications, _, err := findApplications(ctx, s.db, cubawheeler.ApplicationFilter{
 		Ids:   []*string{&application},
 		Limit: 1,

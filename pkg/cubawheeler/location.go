@@ -2,6 +2,11 @@ package cubawheeler
 
 import "context"
 
+type Point struct {
+	Lat float64 `json:"lat" bson:"lat"`
+	Lon float64 `json:"lon" bson:"lon"`
+}
+
 type Location struct {
 	ID        string  `json:"id" bson:"_id"`
 	Name      string  `json:"name" bson:"name"`

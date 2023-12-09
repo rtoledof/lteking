@@ -15,7 +15,7 @@ type Resolver struct {
 	user     cubawheeler.UserService
 	token    oauth2.TokenStore
 	otp      cubawheeler.OTPServer
-	trip     cubawheeler.TripService
+	order    cubawheeler.OrderService
 	review   cubawheeler.ReviewService
 	rate     cubawheeler.RateService
 	profile  cubawheeler.ProfileService
@@ -27,4 +27,5 @@ type Resolver struct {
 	charge   cubawheeler.ChargeService
 	ads      cubawheeler.AdsService
 	vehicle  cubawheeler.VehicleService
+	app      cubawheeler.ApplicationService
 }

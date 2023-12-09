@@ -57,19 +57,19 @@ func (r *updateProfileResolver) Dni(ctx context.Context, obj *cubawheeler.Update
 type profileRequestResolver struct{ *Resolver }
 
 // Licence is the resolver for the licence field.
-func (r *profileRequestResolver) Licence(ctx context.Context, obj *cubawheeler.ProfileRequest, data *graphql.Upload) error {
-	obj.Licence = data
+func (r *profileRequestResolver) Licence(ctx context.Context, obj *cubawheeler.UpdateProfile, data *graphql.Upload) error {
+	obj.Licence = &data.Filename
 	return nil
 }
 
 // Circulation is the resolver for the circulation field.
-func (r *profileRequestResolver) Circulation(ctx context.Context, obj *cubawheeler.ProfileRequest, data *graphql.Upload) error {
+func (r *profileRequestResolver) Circulation(ctx context.Context, obj *cubawheeler.UpdateProfile, data *graphql.Upload) error {
 	obj.Circulation = data
 	return nil
 }
 
 // TechnicInspection is the resolver for the technic_inspection field.
-func (r *profileRequestResolver) TechnicInspection(ctx context.Context, obj *cubawheeler.ProfileRequest, data *graphql.Upload) error {
+func (r *profileRequestResolver) TechnicInspection(ctx context.Context, obj *cubawheeler.UpdateProfile, data *graphql.Upload) error {
 	obj.TechnicInspection = data
 	return nil
 }

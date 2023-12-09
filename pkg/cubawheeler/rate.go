@@ -34,8 +34,12 @@ type RateRequest struct {
 	MaxKm             *int   `json:"max_km,omitempty"`
 }
 
+type RateFilter struct {
+	Ids []string
+}
+
 type RateService interface {
-	Create(context.Context, *RateRequest) (*Rate, error)
+	Create(context.Context, RateRequest) (*Rate, error)
 	Update(context.Context, *RateRequest) (*Rate, error)
 	FindID(context.Context, string) (*Rate, error)
 	FindAll(context.Context, *RateRequest) ([]Rate, string, error)

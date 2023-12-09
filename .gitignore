@@ -6,3 +6,5 @@ vendor/
 cmd/cubawheeler/cubawheeler
 tmp/
 *.log
+.env*
+.DS_Store

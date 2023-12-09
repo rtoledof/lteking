@@ -36,8 +36,8 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.Plan
   Location: 
     model: cubawheeler.io/pkg/cubawheeler.Location
-  Trip: 
-    model: cubawheeler.io/pkg/cubawheeler.Trip
+  Order: 
+    model: cubawheeler.io/pkg/cubawheeler.Order
   Coupon: 
     model: cubawheeler.io/pkg/cubawheeler.Coupon
   Review: 
@@ -74,8 +74,8 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.MessageStatus
   Role: 
     model: cubawheeler.io/pkg/cubawheeler.Role
-  TripStatus: 
-    model: cubawheeler.io/pkg/cubawheeler.TripStatus
+  OrderStatus: 
+    model: cubawheeler.io/pkg/cubawheeler.OrderStatus
   UserStatus: 
     model: cubawheeler.io/pkg/cubawheeler.UserStatus
   VehicleCategory: 
@@ -86,8 +86,8 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.UserFilter
   VehicleStatus: 
     model: cubawheeler.io/pkg/cubawheeler.VehicleStatus
-  TripStatusHistory: 
-    model: cubawheeler.io/pkg/cubawheeler.TripStatusHistory
+  OrderStatusHistory: 
+    model: cubawheeler.io/pkg/cubawheeler.OrderStatusHistory
   AddPlace: 
     model: cubawheeler.io/pkg/cubawheeler.AddPlace
   RequestTrip: 
@@ -96,8 +96,8 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.LoginRequest
   UpdatePlace: 
     model: cubawheeler.io/pkg/cubawheeler.UpdatePlace
-  UpdateTrip: 
-    model: cubawheeler.io/pkg/cubawheeler.UpdateTrip
+  UpdateOrder: 
+    model: cubawheeler.io/pkg/cubawheeler.UpdateOrder
   UpdateProfile: 
     model: cubawheeler.io/pkg/cubawheeler.UpdateProfile
   UpdateVehicle: 
@@ -108,14 +108,14 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.RateRequest
   ChargeRequest: 
     model: cubawheeler.io/pkg/cubawheeler.ChargeRequest
-  TripFilter: 
-    model: cubawheeler.io/pkg/cubawheeler.TripFilter
+  OrderFilter: 
+    model: cubawheeler.io/pkg/cubawheeler.OrderFilter
   UserList: 
     model: cubawheeler.io/pkg/cubawheeler.UserList
   ChargeList: 
     model: cubawheeler.io/pkg/cubawheeler.ChargeList
-  TripList: 
-    model: cubawheeler.io/pkg/cubawheeler.TripList
+  OrderList: 
+    model: cubawheeler.io/pkg/cubawheeler.OrderList
   ProfileRequest: 
     model: cubawheeler.io/pkg/cubawheeler.ProfileRequest
   ProfileStatus: 
@@ -130,3 +130,11 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.ApplicationRequest
   ApplicationType: 
     model: cubawheeler.io/pkg/cubawheeler.ApplicationType
+  OrderItem: 
+    model: cubawheeler.io/pkg/cubawheeler.OrderItem
+  Point: 
+    model: cubawheeler.io/pkg/cubawheeler.Point
+  Item: 
+    model: cubawheeler.io/pkg/cubawheeler.Item
+  PointInput: 
+    model: cubawheeler.io/pkg/cubawheeler.PointInput

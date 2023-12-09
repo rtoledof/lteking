@@ -116,3 +116,8 @@ func NewReferalCode() string {
 	var referCode = rand.Int63n(999999)
 	return fmt.Sprintf("%06d", referCode)
 }
+
+func NewOtp() string {
+	var otp = rand.Int63n(9999)
+	return fmt.Sprintf("%04d", otp)
+}

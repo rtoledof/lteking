@@ -39,14 +39,16 @@ func (p *Profile) IsCompleted(role Role) bool {
 }
 
 type UpdateProfile struct {
-	Name     *string `json:"name"`
-	LastName *string `json:"last_name"`
-	DOB      *string `json:"dob"`
-	Phone    *string `json:"phone"`
-	Photo    *string `json:"photo"`
-	Gender   *Gender `json:"gender"`
-	Licence  *string `json:"licence"`
-	Dni      *string `json:"dni"`
+	Name              *string         `json:"name"`
+	LastName          *string         `json:"last_name"`
+	Dob               *string         `json:"dob"`
+	Phone             *string         `json:"phone"`
+	Photo             *string         `json:"photo"`
+	Gender            *Gender         `json:"gender"`
+	Licence           *string         `json:"licence"`
+	Dni               *string         `json:"dni"`
+	Circulation       *graphql.Upload `json:"circulation,omitempty"`
+	TechnicInspection *graphql.Upload `json:"technic_inspection,omitempty"`
 }
 
 type ProfileFilter struct {
@@ -57,19 +59,6 @@ type ProfileFilter struct {
 	Licence string
 	Gender  Gender
 	User    string
-}
-
-type ProfileRequest struct {
-	Name              *string         `json:"name,omitempty"`
-	LastName          *string         `json:"last_name,omitempty"`
-	Dob               *string         `json:"dob,omitempty"`
-	Phone             *string         `json:"phone,omitempty"`
-	Photo             *string         `json:"photo,omitempty"`
-	Gender            *Gender         `json:"gender,omitempty"`
-	Licence           *graphql.Upload `json:"licence,omitempty"`
-	Circulation       *graphql.Upload `json:"circulation,omitempty"`
-	TechnicInspection *graphql.Upload `json:"technic_inspection,omitempty"`
-	Dni               *string         `json:"dni,omitempty"`
 }
 
 type ProfileStatus string
@@ -116,8 +105,8 @@ func (e ProfileStatus) MarshalGQL(w io.Writer) {
 }
 
 type ProfileService interface {
-	Create(context.Context, *ProfileRequest) (*Profile, error)
-	Update(context.Context, *ProfileRequest) (*Profile, error)
+	Create(context.Context, *UpdateProfile) (*Profile, error)
+	Update(context.Context, *UpdateProfile) (*Profile, error)
 	FindByUser(context.Context) (*Profile, error)
 	FindAll(context.Context, *ProfileFilter) ([]*Profile, string, error)
 	ChangePin(ctx context.Context, old *string, pin string) (*Profile, error)

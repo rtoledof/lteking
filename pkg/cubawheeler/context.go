@@ -11,9 +11,15 @@ type contextKey struct {
 	name string
 }
 
-// UserForContext finds the user from the context. REQUIRES Middleware to have run.
+// UserFromContext finds the user from the context. REQUIRES Middleware to have run.
 func UserFromContext(ctx context.Context) *User {
 	raw, _ := ctx.Value(userCtxKey).(*User)
+	return raw
+}
+
+// ClientFromContext finds the user from the context. REQUIRES Middleware to have run.
+func ClientFromContext(ctx context.Context) *Application {
+	raw, _ := ctx.Value(clientCtxKey).(*Application)
 	return raw
 }
 

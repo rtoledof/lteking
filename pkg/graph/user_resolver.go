@@ -7,7 +7,14 @@ import (
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
+var _ UserResolver = &userResolver{}
+
 type userResolver struct{ *Resolver }
+
+func (r *userResolver) Orders(ctx context.Context, obj *cubawheeler.User) ([]*cubawheeler.Order, error) {
+	//TODO implement me
+	panic("implement me")
+}
 
 // ID is the resolver for the id field.
 func (r *userResolver) ID(ctx context.Context, obj *cubawheeler.User) (string, error) {

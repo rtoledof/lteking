@@ -13,31 +13,35 @@ import (
 )
 
 type User struct {
-	ID               string     `json:"id" faker:"-" bson:"_id"`
-	Name             string     `json:"name" faker:"name" bson:"name"`
-	Password         []byte     `json:"-" bson:"password"`
-	Email            string     `json:"email" faker:"email" bson:"email"`
-	Pin              []byte     `json:"pin" faker:"number" bson:"pin"`
-	Otp              []byte     `json:"-" bson:"otp"`
-	Rate             float64    `json:"rate" bson:"rate"`
-	Available        bool       `json:"-" bson:"available"`
-	Status           UserStatus `json:"status" bson:"status"`
-	ActiveVehicle    string     `json:"active_vehicle,omitempty" bson:"active_vehicle"`
-	Code             string     `json:"referal_code" bson:"referal_code"`
-	Referer          string     `json:"-" bson:"referer"`
-	Role             Role       `json:"-" bson:"role"`
-	Plan             string     `json:"plan,omitempty" bson:"plan"`
-	Locations        []Location `json:"locations,omitempty" bson:"locations"`
-	LastLocations    []Location `json:"last_locations,omitempty" bson:"lastLocations,omitempty"`
-	Vehicles         []Vehicle  `json:"vehicles,omitempty" bson:"vehicles"`
-	FavoriteVehicles []Vehicle  `json:"favorite_vehicles,omitempty" bson:"favoriteVehicles"`
-	Trips            []Trip     `json:"trips,omitempty" bson:"trips"`
-	Profile          Profile    `json:"profile" faker:"-" bson:"profile"`
+	ID               string      `json:"id" faker:"-" bson:"_id"`
+	Name             string      `json:"name" faker:"name" bson:"name"`
+	Password         []byte      `json:"-" bson:"password"`
+	Email            string      `json:"email" faker:"email" bson:"email"`
+	Pin              []byte      `json:"pin" faker:"number" bson:"pin"`
+	Otp              string      `json:"-" bson:"otp,omitempty"`
+	Rate             float64     `json:"rate" bson:"rate"`
+	Available        bool        `json:"-" bson:"available"`
+	Status           UserStatus  `json:"status" bson:"status"`
+	ActiveVehicle    string      `json:"active_vehicle,omitempty" bson:"active_vehicle"`
+	Code             string      `json:"referal_code" bson:"referal_code"`
+	Referer          string      `json:"-" bson:"referer"`
+	Role             Role        `json:"-" bson:"role"`
+	Plan             string      `json:"plan,omitempty" bson:"plan"`
+	Locations        []*Location `json:"locations,omitempty" bson:"locations"`
+	LastLocations    []*Location `json:"last_locations,omitempty" bson:"last_locations,omitempty"`
+	Vehicles         []*Vehicle  `json:"vehicles,omitempty" bson:"vehicles"`
+	FavoriteVehicles []*Vehicle  `json:"favorite_vehicles,omitempty" bson:"favorite_vehicles,omitempty"`
+	Orders           []*Order    `json:"orders,omitempty" bson:"orders,omitempty"`
+	Profile          Profile     `json:"profile" faker:"-" bson:"profile"`
 }
 
 type UserList struct {
 	Token string  `json:"token"`
 	Data  []*User `json:"data"`
+}
+
+func (u *User) IsActive() bool {
+	return u.Status == UserStatusActive || u.Status == UserStatusOnReview
 }
 
 func (u *User) EncryptPassword(password string) error {
@@ -58,25 +62,12 @@ func (u *User) EncryptPin(pin string) error {
 	return nil
 }
 
-func (u *User) EncryptOtp(otp string) error {
-	var err error
-	u.Otp, err = bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (u *User) ComparePassword(password string) error {
 	return bcrypt.CompareHashAndPassword(u.Password, []byte(password))
 }
 
 func (u *User) ComparePin(pin string) error {
 	return bcrypt.CompareHashAndPassword(u.Pin, []byte(pin))
-}
-
-func (u *User) CompareOtp(pin string) error {
-	return bcrypt.CompareHashAndPassword(u.Otp, []byte(u.Otp))
 }
 
 func (u *User) GenToken() (*Token, error) {
@@ -103,13 +94,17 @@ type UserService interface {
 	FindByID(context.Context, string) (*User, error)
 	FindByEmail(context.Context, string) (*User, error)
 	FindAll(context.Context, *UserFilter) (*UserList, error)
-	UpdateOTP(context.Context, string, uint64) error
+	Otp(ctx context.Context, email string) (string, error)
 	CreateUser(context.Context, *User) error
 	Me(context.Context) (*Profile, error)
-	AddFavoritePlace(ctx context.Context, input AddPlace) (*Location, error)
-	Trips(ctx context.Context, filter *TripFilter) (*TripList, error)
-	LastNAddress(ctx context.Context, number int) ([]*Location, error)
+	AddFavoritePlace(context.Context, AddPlace) (*Location, error)
+	FavoritePlaces(context.Context) ([]*Location, error)
+	Orders(context.Context, *OrderFilter) (*OrderList, error)
+	LastNAddress(context.Context, int) ([]*Location, error)
 	Login(context.Context, LoginRequest) (*User, error)
+	AddFavoriteVehicle(ctx context.Context, plate *string) (*Vehicle, error)
+	FavoriteVehicles(ctx context.Context) ([]*Vehicle, error)
+	UpdatePlace(ctx context.Context, input *UpdatePlace) (*Location, error)
 }
 
 type OTPServer interface {

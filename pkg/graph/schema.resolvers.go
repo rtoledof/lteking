@@ -10,8 +10,23 @@ func (r *Resolver) Ads() AdsResolver { return &adsResolver{r} }
 // Charge returns ChargeResolver implementation.
 func (r *Resolver) Charge() ChargeResolver { return &chargeResolver{r} }
 
+// Message returns MessageResolver implementation.
+func (r *Resolver) Message() MessageResolver { return &messageResolver{r} }
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
+// Order returns OrderResolver implementation.
+func (r *Resolver) Order() OrderResolver { return &orderResolver{r} }
+
+// OrderItem returns OrderItemResolver implementation.
+func (r *Resolver) OrderItem() OrderItemResolver { return &orderItemResolver{r} }
+
+// Plan returns PlanResolver implementation.
+func (r *Resolver) Plan() PlanResolver { return &planResolver{r} }
+
+// Point returns PointResolver implementation.
+func (r *Resolver) Point() PointResolver { return &pointResolver{r} }
 
 // Profile returns ProfileResolver implementation.
 func (r *Resolver) Profile() ProfileResolver { return &profileResolver{r} }
@@ -21,9 +36,6 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 // Token returns TokenResolver implementation.
 func (r *Resolver) Token() TokenResolver { return &tokenResolver{r} }
-
-// Trip returns TripResolver implementation.
-func (r *Resolver) Trip() TripResolver { return &tripResolver{r} }
 
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
@@ -37,8 +49,8 @@ func (r *Resolver) AddPlace() AddPlaceResolver { return &addPlaceResolver{r} }
 // ChargeRequest returns ChargeRequestResolver implementation.
 func (r *Resolver) ChargeRequest() ChargeRequestResolver { return &chargeRequestResolver{r} }
 
-// RequestTrip returns RequestTripResolver implementation.
-func (r *Resolver) RequestTrip() RequestTripResolver { return &requestTripResolver{r} }
+// UpdatePlace returns UpdatePlaceResolver implementation.
+func (r *Resolver) UpdatePlace() UpdatePlaceResolver { return &updatePlaceResolver{r} }
 
 // UpdateProfile returns UpdateProfileResolver implementation.
 func (r *Resolver) UpdateProfile() UpdateProfileResolver { return &updateProfileResolver{r} }

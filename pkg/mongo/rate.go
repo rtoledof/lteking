@@ -23,7 +23,7 @@ func NewRateService(db *DB) *RateService {
 	}
 }
 
-func (s *RateService) Create(ctx context.Context, request *cubawheeler.RateRequest) (*cubawheeler.Rate, error) {
+func (s *RateService) Create(ctx context.Context, request cubawheeler.RateRequest) (*cubawheeler.Rate, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
@@ -65,4 +65,8 @@ func (s *RateService) FindID(ctx context.Context, id string) (*cubawheeler.Rate,
 func (s *RateService) FindAll(ctx context.Context, request *cubawheeler.RateRequest) ([]cubawheeler.Rate, string, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func findRates(ctx context.Context, db *DB, filter *cubawheeler.Rate) {
+
 }
