@@ -41,6 +41,7 @@ type Config struct {
 type ResolverRoot interface {
 	Ads() AdsResolver
 	Charge() ChargeResolver
+	GeoLocation() GeoLocationResolver
 	Message() MessageResolver
 	Mutation() MutationResolver
 	Order() OrderResolver
@@ -63,6 +64,14 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Address struct {
+		City    func(childComplexity int) int
+		State   func(childComplexity int) int
+		Street1 func(childComplexity int) int
+		Street2 func(childComplexity int) int
+		ZipCode func(childComplexity int) int
+	}
+
 	Ads struct {
 		Description func(childComplexity int) int
 		ID          func(childComplexity int) int
@@ -131,10 +140,16 @@ type ComplexityRoot struct {
 		ValidUntil func(childComplexity int) int
 	}
 
+	GeoLocation struct {
+		Coordinates func(childComplexity int) int
+		Type        func(childComplexity int) int
+	}
+
 	Location struct {
-		Lat  func(childComplexity int) int
-		Long func(childComplexity int) int
-		Name func(childComplexity int) int
+		Address     func(childComplexity int) int
+		Geolocation func(childComplexity int) int
+		Name        func(childComplexity int) int
+		User        func(childComplexity int) int
 	}
 
 	Message struct {
@@ -151,6 +166,7 @@ type ComplexityRoot struct {
 		AddFavoritePlace             func(childComplexity int, place cubawheeler.AddPlace) int
 		AddFavoriteVehicle           func(childComplexity int, plate *string) int
 		AddRate                      func(childComplexity int, input cubawheeler.RateRequest) int
+		AuthPusher                   func(childComplexity int, socketID string, channelName string) int
 		CancelOrder                  func(childComplexity int, order string) int
 		ChangePin                    func(childComplexity int, old *string, pin string) int
 		CreateApplication            func(childComplexity int, input cubawheeler.ApplicationRequest) int
@@ -159,7 +175,7 @@ type ComplexityRoot struct {
 		FavoriteVehicles             func(childComplexity int) int
 		Login                        func(childComplexity int, input cubawheeler.LoginRequest) int
 		Otp                          func(childComplexity int, email string) int
-		UpdatOrder                   func(childComplexity int, update *cubawheeler.UpdateOrder) int
+		StartOrder                   func(childComplexity int, order string) int
 		UpdateApplicationCredentials func(childComplexity int, application string) int
 		UpdatePlace                  func(childComplexity int, input *cubawheeler.UpdatePlace) int
 		UpdateProfile                func(childComplexity int, profile cubawheeler.UpdateProfile) int
@@ -261,6 +277,12 @@ type ComplexityRoot struct {
 		StartTime         func(childComplexity int) int
 	}
 
+	Response struct {
+		Code    func(childComplexity int) int
+		Message func(childComplexity int) int
+		Success func(childComplexity int) int
+	}
+
 	Review struct {
 		Comment func(childComplexity int) int
 		From    func(childComplexity int) int
@@ -325,6 +347,9 @@ type ChargeResolver interface {
 
 	Order(ctx context.Context, obj *cubawheeler.Charge) (*cubawheeler.Order, error)
 }
+type GeoLocationResolver interface {
+	Type(ctx context.Context, obj *cubawheeler.GeoLocation) (cubawheeler.ShapeType, error)
+}
 type MessageResolver interface {
 	Order(ctx context.Context, obj *cubawheeler.Message) (string, error)
 }
@@ -334,9 +359,9 @@ type MutationResolver interface {
 	UpdateProfile(ctx context.Context, profile cubawheeler.UpdateProfile) (*cubawheeler.Profile, error)
 	ChangePin(ctx context.Context, old *string, pin string) (*cubawheeler.Profile, error)
 	CreateOrder(ctx context.Context, input []*cubawheeler.Item) (*cubawheeler.Order, error)
-	UpdatOrder(ctx context.Context, update *cubawheeler.UpdateOrder) (*cubawheeler.Order, error)
 	CancelOrder(ctx context.Context, order string) (*cubawheeler.Order, error)
 	AcceptOrder(ctx context.Context, order string) (*cubawheeler.Order, error)
+	StartOrder(ctx context.Context, order string) (*cubawheeler.Order, error)
 	AddFavoritePlace(ctx context.Context, place cubawheeler.AddPlace) (*cubawheeler.Location, error)
 	FavoritePlaces(ctx context.Context) ([]*cubawheeler.Location, error)
 	UpdatePlace(ctx context.Context, input *cubawheeler.UpdatePlace) (*cubawheeler.Location, error)
@@ -347,6 +372,7 @@ type MutationResolver interface {
 	UpdateRate(ctx context.Context, input cubawheeler.RateRequest) (*cubawheeler.Rate, error)
 	CreateApplication(ctx context.Context, input cubawheeler.ApplicationRequest) (*cubawheeler.Application, error)
 	UpdateApplicationCredentials(ctx context.Context, application string) (*cubawheeler.Application, error)
+	AuthPusher(ctx context.Context, socketID string, channelName string) (*string, error)
 }
 type OrderResolver interface {
 	Price(ctx context.Context, obj *cubawheeler.Order) (int, error)
@@ -438,6 +464,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Address.city":
+		if e.complexity.Address.City == nil {
+			break
+		}
+
+		return e.complexity.Address.City(childComplexity), true
+
+	case "Address.state":
+		if e.complexity.Address.State == nil {
+			break
+		}
+
+		return e.complexity.Address.State(childComplexity), true
+
+	case "Address.street1":
+		if e.complexity.Address.Street1 == nil {
+			break
+		}
+
+		return e.complexity.Address.Street1(childComplexity), true
+
+	case "Address.street2":
+		if e.complexity.Address.Street2 == nil {
+			break
+		}
+
+		return e.complexity.Address.Street2(childComplexity), true
+
+	case "Address.zip_code":
+		if e.complexity.Address.ZipCode == nil {
+			break
+		}
+
+		return e.complexity.Address.ZipCode(childComplexity), true
 
 	case "Ads.description":
 		if e.complexity.Ads.Description == nil {
@@ -768,19 +829,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Coupon.ValidUntil(childComplexity), true
 
-	case "Location.lat":
-		if e.complexity.Location.Lat == nil {
+	case "GeoLocation.coordinates":
+		if e.complexity.GeoLocation.Coordinates == nil {
 			break
 		}
 
-		return e.complexity.Location.Lat(childComplexity), true
+		return e.complexity.GeoLocation.Coordinates(childComplexity), true
 
-	case "Location.long":
-		if e.complexity.Location.Long == nil {
+	case "GeoLocation.type":
+		if e.complexity.GeoLocation.Type == nil {
 			break
 		}
 
-		return e.complexity.Location.Long(childComplexity), true
+		return e.complexity.GeoLocation.Type(childComplexity), true
+
+	case "Location.address":
+		if e.complexity.Location.Address == nil {
+			break
+		}
+
+		return e.complexity.Location.Address(childComplexity), true
+
+	case "Location.geo_location":
+		if e.complexity.Location.Geolocation == nil {
+			break
+		}
+
+		return e.complexity.Location.Geolocation(childComplexity), true
 
 	case "Location.name":
 		if e.complexity.Location.Name == nil {
@@ -788,6 +863,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Location.Name(childComplexity), true
+
+	case "Location.user":
+		if e.complexity.Location.User == nil {
+			break
+		}
+
+		return e.complexity.Location.User(childComplexity), true
 
 	case "Message.from":
 		if e.complexity.Message.From == nil {
@@ -879,6 +961,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AddRate(childComplexity, args["input"].(cubawheeler.RateRequest)), true
 
+	case "Mutation.authPusher":
+		if e.complexity.Mutation.AuthPusher == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_authPusher_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AuthPusher(childComplexity, args["socket_id"].(string), args["channel_name"].(string)), true
+
 	case "Mutation.cancelOrder":
 		if e.complexity.Mutation.CancelOrder == nil {
 			break
@@ -965,17 +1059,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.Otp(childComplexity, args["email"].(string)), true
 
-	case "Mutation.updatOrder":
-		if e.complexity.Mutation.UpdatOrder == nil {
+	case "Mutation.startOrder":
+		if e.complexity.Mutation.StartOrder == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_updatOrder_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_startOrder_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdatOrder(childComplexity, args["update"].(*cubawheeler.UpdateOrder)), true
+		return e.complexity.Mutation.StartOrder(childComplexity, args["order"].(string)), true
 
 	case "Mutation.updateApplicationCredentials":
 		if e.complexity.Mutation.UpdateApplicationCredentials == nil {
@@ -1546,6 +1640,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Rate.StartTime(childComplexity), true
 
+	case "Response.code":
+		if e.complexity.Response.Code == nil {
+			break
+		}
+
+		return e.complexity.Response.Code(childComplexity), true
+
+	case "Response.message":
+		if e.complexity.Response.Message == nil {
+			break
+		}
+
+		return e.complexity.Response.Message(childComplexity), true
+
+	case "Response.success":
+		if e.complexity.Response.Success == nil {
+			break
+		}
+
+		return e.complexity.Response.Success(childComplexity), true
+
 	case "Review.comment":
 		if e.complexity.Review.Comment == nil {
 			break
@@ -2024,6 +2139,30 @@ func (ec *executionContext) field_Mutation_addRate_args(ctx context.Context, raw
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_authPusher_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["socket_id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("socket_id"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["socket_id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["channel_name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channel_name"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["channel_name"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_cancelOrder_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -2123,18 +2262,18 @@ func (ec *executionContext) field_Mutation_otp_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_updatOrder_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_startOrder_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *cubawheeler.UpdateOrder
-	if tmp, ok := rawArgs["update"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("update"))
-		arg0, err = ec.unmarshalOUpdateOrder2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐUpdateOrder(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["order"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["update"] = arg0
+	args["order"] = arg0
 	return args, nil
 }
 
@@ -2385,6 +2524,211 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Address_street1(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Address) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Address_street1(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Street1, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Address_street1(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Address",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Address_street2(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Address) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Address_street2(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Street2, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Address_street2(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Address",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Address_city(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Address) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Address_city(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.City, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Address_city(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Address",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Address_state(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Address) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Address_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Address_state(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Address",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Address_zip_code(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Address) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Address_zip_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ZipCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Address_zip_code(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Address",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Ads_id(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Ads) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Ads_id(ctx, field)
@@ -4576,6 +4920,94 @@ func (ec *executionContext) fieldContext_Coupon_valid_until(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _GeoLocation_type(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.GeoLocation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GeoLocation_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.GeoLocation().Type(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(cubawheeler.ShapeType)
+	fc.Result = res
+	return ec.marshalNShapeType2cubawheelerᚗioᚋpkgᚋcubawheelerᚐShapeType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GeoLocation_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoLocation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ShapeType does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GeoLocation_coordinates(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.GeoLocation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GeoLocation_coordinates(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Coordinates, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]float64)
+	fc.Result = res
+	return ec.marshalNFloat2ᚕfloat64ᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GeoLocation_coordinates(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoLocation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Location_name(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Location) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Location_name(ctx, field)
 	if err != nil {
@@ -4620,8 +5052,8 @@ func (ec *executionContext) fieldContext_Location_name(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Location_lat(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Location) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Location_lat(ctx, field)
+func (ec *executionContext) _Location_user(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_user(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4634,38 +5066,35 @@ func (ec *executionContext) _Location_lat(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Lat, nil
+		return obj.User, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(float64)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Location_lat(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Location_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Location",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Float does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Location_long(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Location) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Location_long(ctx, field)
+func (ec *executionContext) _Location_address(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_address(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4678,7 +5107,60 @@ func (ec *executionContext) _Location_long(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Long, nil
+		return obj.Address, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(cubawheeler.Address)
+	fc.Result = res
+	return ec.marshalOAddress2cubawheelerᚗioᚋpkgᚋcubawheelerᚐAddress(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Location_address(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Location",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "street1":
+				return ec.fieldContext_Address_street1(ctx, field)
+			case "street2":
+				return ec.fieldContext_Address_street2(ctx, field)
+			case "city":
+				return ec.fieldContext_Address_city(ctx, field)
+			case "state":
+				return ec.fieldContext_Address_state(ctx, field)
+			case "zip_code":
+				return ec.fieldContext_Address_zip_code(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Address", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Location_geo_location(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Location) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Location_geo_location(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Geolocation, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4690,19 +5172,25 @@ func (ec *executionContext) _Location_long(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(float64)
+	res := resTmp.(cubawheeler.GeoLocation)
 	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+	return ec.marshalNGeoLocation2cubawheelerᚗioᚋpkgᚋcubawheelerᚐGeoLocation(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Location_long(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Location_geo_location(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Location",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Float does not have child fields")
+			switch field.Name {
+			case "type":
+				return ec.fieldContext_GeoLocation_type(ctx, field)
+			case "coordinates":
+				return ec.fieldContext_GeoLocation_coordinates(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GeoLocation", field.Name)
 		},
 	}
 	return fc, nil
@@ -5337,89 +5825,6 @@ func (ec *executionContext) fieldContext_Mutation_createOrder(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_updatOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updatOrder(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdatOrder(rctx, fc.Args["update"].(*cubawheeler.UpdateOrder))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*cubawheeler.Order)
-	fc.Result = res
-	return ec.marshalNOrder2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐOrder(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updatOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Order_id(ctx, field)
-			case "rate":
-				return ec.fieldContext_Order_rate(ctx, field)
-			case "price":
-				return ec.fieldContext_Order_price(ctx, field)
-			case "rider":
-				return ec.fieldContext_Order_rider(ctx, field)
-			case "driver":
-				return ec.fieldContext_Order_driver(ctx, field)
-			case "status":
-				return ec.fieldContext_Order_status(ctx, field)
-			case "status_history":
-				return ec.fieldContext_Order_status_history(ctx, field)
-			case "history":
-				return ec.fieldContext_Order_history(ctx, field)
-			case "coupon":
-				return ec.fieldContext_Order_coupon(ctx, field)
-			case "start_at":
-				return ec.fieldContext_Order_start_at(ctx, field)
-			case "end_at":
-				return ec.fieldContext_Order_end_at(ctx, field)
-			case "review":
-				return ec.fieldContext_Order_review(ctx, field)
-			case "items":
-				return ec.fieldContext_Order_items(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updatOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_cancelOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_cancelOrder(ctx, field)
 	if err != nil {
@@ -5586,6 +5991,89 @@ func (ec *executionContext) fieldContext_Mutation_acceptOrder(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_startOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_startOrder(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().StartOrder(rctx, fc.Args["order"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*cubawheeler.Order)
+	fc.Result = res
+	return ec.marshalNOrder2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐOrder(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_startOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Order_id(ctx, field)
+			case "rate":
+				return ec.fieldContext_Order_rate(ctx, field)
+			case "price":
+				return ec.fieldContext_Order_price(ctx, field)
+			case "rider":
+				return ec.fieldContext_Order_rider(ctx, field)
+			case "driver":
+				return ec.fieldContext_Order_driver(ctx, field)
+			case "status":
+				return ec.fieldContext_Order_status(ctx, field)
+			case "status_history":
+				return ec.fieldContext_Order_status_history(ctx, field)
+			case "history":
+				return ec.fieldContext_Order_history(ctx, field)
+			case "coupon":
+				return ec.fieldContext_Order_coupon(ctx, field)
+			case "start_at":
+				return ec.fieldContext_Order_start_at(ctx, field)
+			case "end_at":
+				return ec.fieldContext_Order_end_at(ctx, field)
+			case "review":
+				return ec.fieldContext_Order_review(ctx, field)
+			case "items":
+				return ec.fieldContext_Order_items(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_startOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_addFavoritePlace(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_addFavoritePlace(ctx, field)
 	if err != nil {
@@ -5624,10 +6112,12 @@ func (ec *executionContext) fieldContext_Mutation_addFavoritePlace(ctx context.C
 			switch field.Name {
 			case "name":
 				return ec.fieldContext_Location_name(ctx, field)
-			case "lat":
-				return ec.fieldContext_Location_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Location_long(ctx, field)
+			case "user":
+				return ec.fieldContext_Location_user(ctx, field)
+			case "address":
+				return ec.fieldContext_Location_address(ctx, field)
+			case "geo_location":
+				return ec.fieldContext_Location_geo_location(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
 		},
@@ -5687,10 +6177,12 @@ func (ec *executionContext) fieldContext_Mutation_favoritePlaces(ctx context.Con
 			switch field.Name {
 			case "name":
 				return ec.fieldContext_Location_name(ctx, field)
-			case "lat":
-				return ec.fieldContext_Location_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Location_long(ctx, field)
+			case "user":
+				return ec.fieldContext_Location_user(ctx, field)
+			case "address":
+				return ec.fieldContext_Location_address(ctx, field)
+			case "geo_location":
+				return ec.fieldContext_Location_geo_location(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
 		},
@@ -5739,10 +6231,12 @@ func (ec *executionContext) fieldContext_Mutation_updatePlace(ctx context.Contex
 			switch field.Name {
 			case "name":
 				return ec.fieldContext_Location_name(ctx, field)
-			case "lat":
-				return ec.fieldContext_Location_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Location_long(ctx, field)
+			case "user":
+				return ec.fieldContext_Location_user(ctx, field)
+			case "address":
+				return ec.fieldContext_Location_address(ctx, field)
+			case "geo_location":
+				return ec.fieldContext_Location_geo_location(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
 		},
@@ -6287,6 +6781,58 @@ func (ec *executionContext) fieldContext_Mutation_updateApplicationCredentials(c
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_authPusher(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_authPusher(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AuthPusher(rctx, fc.Args["socket_id"].(string), fc.Args["channel_name"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_authPusher(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_authPusher_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Order_id(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Order) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Order_id(ctx, field)
 	if err != nil {
@@ -6805,9 +7351,9 @@ func (ec *executionContext) _Order_start_at(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Order_start_at(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6849,9 +7395,9 @@ func (ec *executionContext) _Order_end_at(ctx context.Context, field graphql.Col
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Order_end_at(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -8895,10 +9441,12 @@ func (ec *executionContext) fieldContext_Query_lastNAddress(ctx context.Context,
 			switch field.Name {
 			case "name":
 				return ec.fieldContext_Location_name(ctx, field)
-			case "lat":
-				return ec.fieldContext_Location_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Location_long(ctx, field)
+			case "user":
+				return ec.fieldContext_Location_user(ctx, field)
+			case "address":
+				return ec.fieldContext_Location_address(ctx, field)
+			case "geo_location":
+				return ec.fieldContext_Location_geo_location(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
 		},
@@ -9734,6 +10282,138 @@ func (ec *executionContext) fieldContext_Rate_max_km(ctx context.Context, field 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Response_message(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Response) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Response_message(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Message, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Response_message(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Response",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Response_code(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Response) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Response_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Code, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Response_code(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Response",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Response_success(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Response) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Response_success(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Success, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Response_success(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Response",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -10750,10 +11430,12 @@ func (ec *executionContext) fieldContext_User_locations(ctx context.Context, fie
 			switch field.Name {
 			case "name":
 				return ec.fieldContext_Location_name(ctx, field)
-			case "lat":
-				return ec.fieldContext_Location_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Location_long(ctx, field)
+			case "user":
+				return ec.fieldContext_Location_user(ctx, field)
+			case "address":
+				return ec.fieldContext_Location_address(ctx, field)
+			case "geo_location":
+				return ec.fieldContext_Location_geo_location(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Location", field.Name)
 		},
@@ -13860,11 +14542,11 @@ func (ec *executionContext) unmarshalInputLoginRequest(ctx context.Context, obj 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("otp"))
-			data, err := ec.unmarshalNString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Otp = *data
+			it.Otp = data
 		}
 	}
 
@@ -13889,7 +14571,7 @@ func (ec *executionContext) unmarshalInputOrderFilter(ctx context.Context, obj i
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			data, err := ec.unmarshalOInt2int(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -14499,6 +15181,50 @@ func (ec *executionContext) unmarshalInputUserFilter(ctx context.Context, obj in
 
 // region    **************************** object.gotpl ****************************
 
+var addressImplementors = []string{"Address"}
+
+func (ec *executionContext) _Address(ctx context.Context, sel ast.SelectionSet, obj *cubawheeler.Address) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, addressImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Address")
+		case "street1":
+			out.Values[i] = ec._Address_street1(ctx, field, obj)
+		case "street2":
+			out.Values[i] = ec._Address_street2(ctx, field, obj)
+		case "city":
+			out.Values[i] = ec._Address_city(ctx, field, obj)
+		case "state":
+			out.Values[i] = ec._Address_state(ctx, field, obj)
+		case "zip_code":
+			out.Values[i] = ec._Address_zip_code(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var adsImplementors = []string{"Ads"}
 
 func (ec *executionContext) _Ads(ctx context.Context, sel ast.SelectionSet, obj *cubawheeler.Ads) graphql.Marshaler {
@@ -15011,6 +15737,81 @@ func (ec *executionContext) _Coupon(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
+var geoLocationImplementors = []string{"GeoLocation"}
+
+func (ec *executionContext) _GeoLocation(ctx context.Context, sel ast.SelectionSet, obj *cubawheeler.GeoLocation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, geoLocationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GeoLocation")
+		case "type":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._GeoLocation_type(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "coordinates":
+			out.Values[i] = ec._GeoLocation_coordinates(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var locationImplementors = []string{"Location"}
 
 func (ec *executionContext) _Location(ctx context.Context, sel ast.SelectionSet, obj *cubawheeler.Location) graphql.Marshaler {
@@ -15027,13 +15828,12 @@ func (ec *executionContext) _Location(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "lat":
-			out.Values[i] = ec._Location_lat(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "long":
-			out.Values[i] = ec._Location_long(ctx, field, obj)
+		case "user":
+			out.Values[i] = ec._Location_user(ctx, field, obj)
+		case "address":
+			out.Values[i] = ec._Location_address(ctx, field, obj)
+		case "geo_location":
+			out.Values[i] = ec._Location_geo_location(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -15209,13 +16009,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "updatOrder":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updatOrder(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "cancelOrder":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_cancelOrder(ctx, field)
@@ -15226,6 +16019,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "acceptOrder":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_acceptOrder(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "startOrder":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_startOrder(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -15291,6 +16091,10 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "authPusher":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_authPusher(ctx, field)
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -16336,6 +17140,55 @@ func (ec *executionContext) _Rate(ctx context.Context, sel ast.SelectionSet, obj
 			out.Values[i] = ec._Rate_min_km(ctx, field, obj)
 		case "max_km":
 			out.Values[i] = ec._Rate_max_km(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var responseImplementors = []string{"Response"}
+
+func (ec *executionContext) _Response(ctx context.Context, sel ast.SelectionSet, obj *cubawheeler.Response) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, responseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Response")
+		case "message":
+			out.Values[i] = ec._Response_message(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "code":
+			out.Values[i] = ec._Response_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "success":
+			out.Values[i] = ec._Response_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -17432,6 +18285,42 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 	return graphql.WrapContextMarshaler(ctx, res)
 }
 
+func (ec *executionContext) unmarshalNFloat2ᚕfloat64ᚄ(ctx context.Context, v interface{}) ([]float64, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]float64, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNFloat2float64(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNFloat2ᚕfloat64ᚄ(ctx context.Context, sel ast.SelectionSet, v []float64) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNFloat2float64(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGeoLocation2cubawheelerᚗioᚋpkgᚋcubawheelerᚐGeoLocation(ctx context.Context, sel ast.SelectionSet, v cubawheeler.GeoLocation) graphql.Marshaler {
+	return ec._GeoLocation(ctx, sel, &v)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -17454,6 +18343,21 @@ func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}
 
 func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
 	res := graphql.MarshalInt(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNInt2int64(ctx context.Context, v interface{}) (int64, error) {
+	res, err := graphql.UnmarshalInt64(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.SelectionSet, v int64) graphql.Marshaler {
+	res := graphql.MarshalInt64(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -17793,6 +18697,16 @@ func (ec *executionContext) marshalNRole2cubawheelerᚗioᚋpkgᚋcubawheelerᚐ
 	return v
 }
 
+func (ec *executionContext) unmarshalNShapeType2cubawheelerᚗioᚋpkgᚋcubawheelerᚐShapeType(ctx context.Context, v interface{}) (cubawheeler.ShapeType, error) {
+	var res cubawheeler.ShapeType
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNShapeType2cubawheelerᚗioᚋpkgᚋcubawheelerᚐShapeType(ctx context.Context, sel ast.SelectionSet, v cubawheeler.ShapeType) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -17800,27 +18714,6 @@ func (ec *executionContext) unmarshalNString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
-	res, err := graphql.UnmarshalString(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNString2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	res := graphql.MarshalString(*v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -18215,6 +19108,10 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalOAddress2cubawheelerᚗioᚋpkgᚋcubawheelerᚐAddress(ctx context.Context, sel ast.SelectionSet, v cubawheeler.Address) graphql.Marshaler {
+	return ec._Address(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalOAds2ᚕᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐAds(ctx context.Context, sel ast.SelectionSet, v []*cubawheeler.Ads) graphql.Marshaler {
@@ -19109,14 +20006,6 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	}
 	res := graphql.MarshalString(*v)
 	return res
-}
-
-func (ec *executionContext) unmarshalOUpdateOrder2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐUpdateOrder(ctx context.Context, v interface{}) (*cubawheeler.UpdateOrder, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputUpdateOrder(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOUpdatePlace2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐUpdatePlace(ctx context.Context, v interface{}) (*cubawheeler.UpdatePlace, error) {

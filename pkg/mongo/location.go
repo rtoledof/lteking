@@ -15,7 +15,6 @@ var _ cubawheeler.LocationService = &LocationService{}
 var _ cubawheeler.LastLocations = &LocationService{}
 
 const LocationsCollections Collections = "locations"
-const LastLocationsCollections Collections = "last_locations"
 
 type LocationService struct {
 	db         *DB
@@ -40,9 +39,11 @@ func (s *LocationService) Create(ctx context.Context, request *cubawheeler.Locat
 	location := &cubawheeler.Location{
 		ID:   cubawheeler.NewID().String(),
 		Name: request.Name,
-		Lat:  request.Lat,
-		Long: request.Long,
 		User: *request.User,
+		Geolocation: cubawheeler.GeoLocation{
+			Type:        "Point",
+			Coordinates: []float64{request.Long, request.Lat},
+		},
 	}
 	_, err := s.collection.InsertOne(ctx, location)
 	if err != nil {

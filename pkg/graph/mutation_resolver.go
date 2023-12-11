@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"cubawheeler.io/pkg/pusher"
 	"fmt"
 
 	"cubawheeler.io/pkg/cubawheeler"
@@ -11,24 +12,39 @@ var _ MutationResolver = &mutationResolver{}
 
 type mutationResolver struct{ *Resolver }
 
-func (r *mutationResolver) CreateOrder(ctx context.Context, input []*cubawheeler.Item) (*cubawheeler.Order, error) {
+func (r *mutationResolver) StartOrder(ctx context.Context, order string) (*cubawheeler.Order, error) {
+	return r.order.StartOrder(ctx, order)
+}
+
+func (r *mutationResolver) AuthPusher(ctx context.Context, socketID string, channelName string) (*string, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (r *mutationResolver) CreateOrder(ctx context.Context, input []*cubawheeler.Item) (*cubawheeler.Order, error) {
+	order, err := r.order.Create(ctx, cubawheeler.AssambleOrderItem(input))
+	if err != nil {
+		return nil, err
+	}
+	pusher.NewOrdersChannel <- order
+	return order, nil
 }
 
 func (r *mutationResolver) UpdatOrder(ctx context.Context, update *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
-	//TODO implement me
-	panic("implement me")
+	return r.order.Update(ctx, update)
 }
 
-func (r *mutationResolver) CancelOrder(ctx context.Context, order string) (*cubawheeler.Order, error) {
-	//TODO implement me
-	panic("implement me")
+func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
+	order, err := r.order.CancelOrder(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	pusher.CanceledOrderChannel <- order
+	return order, nil
 }
 
 func (r *mutationResolver) AcceptOrder(ctx context.Context, order string) (*cubawheeler.Order, error) {
-	//TODO implement me
-	panic("implement me")
+	return r.order.AcceptOrder(ctx, order)
 }
 
 // Login is the resolver for the login field.

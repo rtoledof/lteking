@@ -16,6 +16,15 @@ type Config struct {
 	SMTPPort     int64
 	SMTPUSer     string
 	SMTPPassword string
+
+	PusherAppId   string
+	PusherKey     string
+	PusherSecret  string
+	PusherCluster string
+	PusherSecure  bool
+
+	BeansInterest string
+	BeansSecret   string
 }
 
 func LoadConfig() Config {
@@ -68,6 +77,37 @@ func LoadConfig() Config {
 
 	if pass, exist := os.LookupEnv("SMTP_PASS"); exist {
 		cfg.SMTPPassword = pass
+	}
+
+	if appId, exist := os.LookupEnv("PUSHER_APP_ID"); exist {
+		cfg.PusherAppId = appId
+	}
+
+	if key, exist := os.LookupEnv("PUSHER_Key"); exist {
+		cfg.PusherKey = key
+	}
+
+	if secret, exist := os.LookupEnv("PUSHER_SECRET"); exist {
+		cfg.PusherSecret = secret
+	}
+
+	if cluster, exist := os.LookupEnv("PUSHER_CLUSTER"); exist {
+		cfg.PusherCluster = cluster
+	}
+
+	if s, exist := os.LookupEnv("PUSHER_SECURE"); exist {
+		secure, err := strconv.ParseBool(s)
+		if err == nil {
+			cfg.PusherSecure = secure
+		}
+	}
+
+	if instance, exist := os.LookupEnv("BEANS_INSTANCE"); exist {
+		cfg.BeansInterest = instance
+	}
+
+	if secret, exist := os.LookupEnv("BEANS_SECRET"); exist {
+		cfg.BeansSecret = secret
 	}
 
 	return cfg

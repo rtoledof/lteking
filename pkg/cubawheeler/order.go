@@ -27,8 +27,8 @@ type Order struct {
 	Rate          int                   `json:"rate" bson:"rate"`
 	Price         uint64                `json:"price" bson:"price"`
 	Coupon        string                `json:"coupon,omitempty" bson:"coupon,omitempty"`
-	StartAt       int                   `json:"start_at" bson:"start_at"`
-	EndAt         int                   `json:"end_at" bson:"end_at"`
+	StartAt       int64                 `json:"start_at" bson:"start_at"`
+	EndAt         int64                 `json:"end_at" bson:"end_at"`
 	Review        string                `json:"review,omitempty" bson:"review"`
 	CreatedAt     int64                 `json:"created_at" bson:"created_at"`
 	UpdatedAt     int64                 `json:"updated_at" bson:"updated_at"`
@@ -40,6 +40,26 @@ type Item struct {
 	Seconds int           `json:"seconds"`
 	M       float64       `json:"m"`
 	Route   []*PointInput `json:"route"`
+}
+
+func AssambleOrderItem(items []*Item) []OrderItem {
+	var resp []OrderItem
+	for _, v := range items {
+		var i = OrderItem{
+			PickUp: Point{
+				Lat: v.PickUp.Lat,
+				Lon: v.PickUp.Lon,
+			},
+			DropOff: Point{
+				Lat: v.DropOff.Lat,
+				Lon: v.DropOff.Lon,
+			},
+			Seconds: uint64(v.Seconds),
+			Meters:  uint64(v.M),
+		}
+		resp = append(resp, i)
+	}
+	return resp
 }
 
 type PointInput struct {
@@ -59,7 +79,7 @@ type OrderList struct {
 }
 
 type OrderFilter struct {
-	Limit  *int      `json:"limit,omitempty"`
+	Limit  int       `json:"limit,omitempty"`
 	Token  *string   `json:"token,omitempty"`
 	Ids    []*string `json:"ids,omitempty"`
 	Rider  *string   `json:"rider,omitempty"`
@@ -72,6 +92,11 @@ type OrderService interface {
 	Update(context.Context, *UpdateOrder) (*Order, error)
 	FindByID(context.Context, string) (*Order, error)
 	FindAll(context.Context, *OrderFilter) (*OrderList, error)
+
+	AcceptOrder(context.Context, string) (*Order, error)
+	CancelOrder(context.Context, string) (*Order, error)
+	CompleteOrder(context.Context, string) (*Order, error)
+	StartOrder(context.Context, string) (*Order, error)
 }
 
 type AddPlace struct {
@@ -88,9 +113,10 @@ type OrderStatus string
 
 const (
 	OrderStatusNew      OrderStatus = "NEW"
-	OrderStatusPickUp   OrderStatus = "PICK_UP"
+	OrderStatusPickUp   OrderStatus = "PICKED_UP"
 	OrderStatusOnTheWay OrderStatus = "ON_THE_WAY"
-	OrderStatusDropOff  OrderStatus = "DROP_OFF"
+	OrderStatusDropOff  OrderStatus = "DROPED_OFF"
+	OrderStatusCancel   OrderStatus = "CANCELED"
 )
 
 var AllOrderStatus = []OrderStatus{
@@ -98,11 +124,12 @@ var AllOrderStatus = []OrderStatus{
 	OrderStatusPickUp,
 	OrderStatusOnTheWay,
 	OrderStatusDropOff,
+	OrderStatusCancel,
 }
 
 func (e OrderStatus) IsValid() bool {
 	switch e {
-	case OrderStatusNew, OrderStatusPickUp, OrderStatusOnTheWay, OrderStatusDropOff:
+	case OrderStatusNew, OrderStatusPickUp, OrderStatusOnTheWay, OrderStatusDropOff, OrderStatusCancel:
 		return true
 	}
 	return false

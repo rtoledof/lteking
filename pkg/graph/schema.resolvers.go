@@ -10,6 +10,9 @@ func (r *Resolver) Ads() AdsResolver { return &adsResolver{r} }
 // Charge returns ChargeResolver implementation.
 func (r *Resolver) Charge() ChargeResolver { return &chargeResolver{r} }
 
+// GeoLocation returns GeoLocationResolver implementation.
+func (r *Resolver) GeoLocation() GeoLocationResolver { return &geoLocationResolver{r} }
+
 // Message returns MessageResolver implementation.
 func (r *Resolver) Message() MessageResolver { return &messageResolver{r} }
 

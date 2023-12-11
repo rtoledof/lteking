@@ -16,10 +16,39 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum ChannelEvent {
+  UPDATE_LOCATION
+  UPDATE_STATUS
+  DRIVER_ARRIVING
+  TRIP_ENDING
+  NEW_ORDER
+}
+
+enum ShapeType {
+  POINT
+  LINE
+  POLIGON
+  MULTILINE
+}
+
+type GeoLocation {
+  type: ShapeType!
+  coordinates: [Float!]!
+}
+
+type Address {
+  street1: String
+  street2: String
+  city: String
+  state: String
+  zip_code: String
+}
+
 type Location {
   name: String!
-  lat: Float!
-  long: Float!
+  user: String
+  address: Address
+  geo_location: GeoLocation!
 }
 
 enum Interval {
@@ -154,9 +183,10 @@ enum Role {
 
 enum OrderStatus {
   NEW
-  PICK_UP
+  PICKED_UP
   ON_THE_WAY
-  DROP_OFF
+  DROPED_OFF
+  CANCELED
 }
 
 type OrderStatusHistory {
@@ -377,6 +407,12 @@ type ApplicationList {
   data: [Application]
 }
 
+type Response {
+  message: String!
+  code: Int!
+  success: Boolean!
+}
+
 type Query {
   users(filter: UserFilter): UserList!
 
@@ -485,9 +521,9 @@ type Mutation {
   changePin(old: String, pin: String!): Profile!
 
   createOrder(input: [Item!]): Order!
-  updatOrder(update: UpdateOrder): Order!
   cancelOrder(order: String!): Order!
   acceptOrder(order: String!): Order!
+  startOrder(order: String!): Order!
 
   addFavoritePlace(place: AddPlace!): Location
   favoritePlaces: [Location!]!
@@ -502,4 +538,6 @@ type Mutation {
 
   createApplication(input: ApplicationRequest!): Application!
   updateApplicationCredentials(application: String!): Application!
+
+  authPusher(socket_id: String!, channel_name: String!): String
 }

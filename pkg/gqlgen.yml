@@ -138,3 +138,13 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.Item
   PointInput: 
     model: cubawheeler.io/pkg/cubawheeler.PointInput
+  ChannelEvent: 
+    model: cubawheeler.io/pkg/cubawheeler.ChannelEvent
+  Response: 
+    model: cubawheeler.io/pkg/cubawheeler.Response
+  ShapeType: 
+    model: cubawheeler.io/pkg/cubawheeler.ShapeType
+  Address: 
+    model: cubawheeler.io/pkg/cubawheeler.Address
+  GeoLocation: 
+    model: cubawheeler.io/pkg/cubawheeler.GeoLocation

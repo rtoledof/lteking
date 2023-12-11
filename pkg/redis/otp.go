@@ -9,8 +9,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/redis/go-redis/v9"
-
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
@@ -24,10 +22,10 @@ type token struct {
 }
 
 type OtpService struct {
-	redis *redis.Client
+	redis *Redis
 }
 
-func NewOtpService(client *redis.Client) *OtpService {
+func NewOtpService(client *Redis) *OtpService {
 	return &OtpService{redis: client}
 }
 
@@ -43,7 +41,7 @@ func (s *OtpService) Create(ctx context.Context, email string) error {
 	if err != nil {
 		return fmt.Errorf("unable to marshal otp: %v: %w", err, errors.ErrInternal)
 	}
-	if err = s.redis.Set(ctx, otp.Otp, data, otp.ExpireIn).Err(); err != nil {
+	if err = s.redis.client.Set(ctx, otp.Otp, data, otp.ExpireIn).Err(); err != nil {
 		return fmt.Errorf("unable to store otp token: %v: %w", err, errors.ErrInternal)
 	}
 	go func() {
@@ -57,11 +55,11 @@ func (s *OtpService) Create(ctx context.Context, email string) error {
 
 func (s *OtpService) Otp(ctx context.Context, otp, email string) error {
 	defer func() {
-		if err := s.redis.Del(ctx, otp).Err(); err != nil {
+		if err := s.redis.client.Del(ctx, otp).Err(); err != nil {
 			log.Println("unable to delete an user otp token")
 		}
 	}()
-	data := s.redis.Get(ctx, otp)
+	data := s.redis.client.Get(ctx, otp)
 	if data == nil {
 		return errors.ErrNotFound
 	}

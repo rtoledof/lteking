@@ -7,7 +7,9 @@ import (
 	"database/sql/driver"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -120,4 +122,57 @@ func NewReferalCode() string {
 func NewOtp() string {
 	var otp = rand.Int63n(9999)
 	return fmt.Sprintf("%04d", otp)
+}
+
+type ChannelEvent string
+
+const (
+	ChannelEventUpdateLocation ChannelEvent = "UPDATE_LOCATION"
+	ChannelEventUpdateStatus   ChannelEvent = "UPDATE_STATUS"
+	ChannelEventDriverArriving ChannelEvent = "DRIVER_ARRIVING"
+	ChannelEventTripEnding     ChannelEvent = "TRIP_ENDING"
+	ChannelEventNewOrder       ChannelEvent = "NEW_ORDER"
+)
+
+var AllChannelEvent = []ChannelEvent{
+	ChannelEventUpdateLocation,
+	ChannelEventUpdateStatus,
+	ChannelEventDriverArriving,
+	ChannelEventTripEnding,
+	ChannelEventNewOrder,
+}
+
+func (e ChannelEvent) IsValid() bool {
+	switch e {
+	case ChannelEventUpdateLocation, ChannelEventUpdateStatus, ChannelEventDriverArriving, ChannelEventTripEnding, ChannelEventNewOrder:
+		return true
+	}
+	return false
+}
+
+func (e ChannelEvent) String() string {
+	return string(e)
+}
+
+func (e *ChannelEvent) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ChannelEvent(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ChannelEvent", str)
+	}
+	return nil
+}
+
+func (e ChannelEvent) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type Response struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+	Success bool   `json:"success"`
 }

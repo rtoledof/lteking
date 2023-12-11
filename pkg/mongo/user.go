@@ -2,8 +2,12 @@ package mongo
 
 import (
 	"context"
+	"cubawheeler.io/pkg/pusher"
+	"cubawheeler.io/pkg/redis"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,13 +24,38 @@ const UsersCollection Collections = "users"
 type UserService struct {
 	db         *DB
 	collection *mongo.Collection
+	beansToken *redis.BeansToken
+	beans      *pusher.PushNotification
 }
 
-func NewUserService(db *DB) *UserService {
-	return &UserService{
+func NewUserService(
+	db *DB,
+	beansToken *redis.BeansToken,
+	beans *pusher.PushNotification,
+	done chan struct{},
+) *UserService {
+	s := &UserService{
 		db:         db,
 		collection: db.client.Database(database).Collection(UsersCollection.String()),
+		beansToken: beansToken,
+		beans:      beans,
 	}
+	ticker := time.NewTicker(time.Hour * 1)
+	go func() {
+
+		for {
+			select {
+			case <-ticker.C:
+				if err := s.generateTokens(context.Background()); err != nil {
+					slog.Info(err.Error())
+				}
+			case <-done:
+				return
+			}
+		}
+
+	}()
+	return s
 }
 
 func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.User, error) {
@@ -102,7 +131,7 @@ func (s *UserService) FindAll(ctx context.Context, filter *cubawheeler.UserFilte
 	if user.Role != cubawheeler.RoleAdmin {
 		return nil, errors.New("access denied")
 	}
-	users, token, err := findAllUsers(ctx, s.collection, filter)
+	users, token, err := findAllUsers(ctx, s.db, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +152,10 @@ func (s *UserService) AddFavoritePlace(ctx context.Context, input cubawheeler.Ad
 		Name: input.Name,
 	}
 	if input.Location != nil {
-		location.Lat = input.Location.Lat
-		location.Long = input.Location.Long
+		location.Geolocation = cubawheeler.GeoLocation{
+			Type:        "Point",
+			Coordinates: []float64{input.Location.Long, input.Location.Lat},
+		}
 	}
 	usr.Locations = append(usr.Locations, &location)
 	if err := updateAddFavoritesPlaces(ctx, s.db, usr); err != nil {
@@ -166,9 +197,10 @@ func (s *UserService) UpdatePlace(ctx context.Context, input *cubawheeler.Update
 	for i := range user.Locations {
 		place := user.Locations[i]
 		if place.Name == input.Name {
-			place.Lat = input.Location.Lat
-			place.Long = input.Location.Long
-			location.Lat = place.Lat
+			place.Geolocation = cubawheeler.GeoLocation{
+				Type:        "Point",
+				Coordinates: []float64{input.Location.Long, input.Location.Lat},
+			}
 			user.Locations[i] = place
 			break
 		}
@@ -222,9 +254,30 @@ func (s *UserService) LastNAddress(ctx context.Context, number int) ([]*cubawhee
 	panic("implement me")
 }
 
+func (s *UserService) generateTokens(ctx context.Context) error {
+	users, _, err := findAllUsers(ctx, s.db, &cubawheeler.UserFilter{
+		Status: []cubawheeler.UserStatus{cubawheeler.UserStatusActive},
+	})
+	if err != nil {
+		return err
+	}
+	for _, v := range users {
+		if _, err := s.beansToken.GetBeansToken(ctx, v.ID); err != nil && errors.Is(e.ErrNotFound, err) {
+			token, err := s.beans.GenerateToken(v.ID)
+			if err != nil {
+				slog.Info("unabe to generate a new beans token: %v", err)
+				continue
+			}
+			if err := s.beansToken.StoreBeansToken(ctx, v.ID, token); err != nil {
+				slog.Info("unabe to store a beans token: %v", err)
+			}
+		}
+	}
+	return nil
+}
+
 func findUserByEmail(ctx context.Context, db *DB, email string) (*cubawheeler.User, error) {
-	collection := db.client.Database(database).Collection(UsersCollection.String())
-	users, _, err := findAllUsers(ctx, collection, &cubawheeler.UserFilter{Email: email, Limit: 1})
+	users, _, err := findAllUsers(ctx, db, &cubawheeler.UserFilter{Email: email, Limit: 1})
 	if err != nil {
 		return nil, err
 	}
@@ -235,8 +288,7 @@ func findUserByEmail(ctx context.Context, db *DB, email string) (*cubawheeler.Us
 }
 
 func findUserByID(ctx context.Context, db *DB, id string) (*cubawheeler.User, error) {
-	collection := db.client.Database(database).Collection(UsersCollection.String())
-	users, _, err := findAllUsers(ctx, collection, &cubawheeler.UserFilter{
+	users, _, err := findAllUsers(ctx, db, &cubawheeler.UserFilter{
 		Ids:   []string{id},
 		Limit: 1,
 	})
@@ -249,7 +301,8 @@ func findUserByID(ctx context.Context, db *DB, id string) (*cubawheeler.User, er
 	return users[0], nil
 }
 
-func findAllUsers(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.UserFilter) ([]*cubawheeler.User, string, error) {
+func findAllUsers(ctx context.Context, db *DB, filter *cubawheeler.UserFilter) ([]*cubawheeler.User, string, error) {
+	collection := db.client.Database(database).Collection(UsersCollection.String())
 	var users []*cubawheeler.User
 	var token string
 	f := bson.D{}
@@ -264,6 +317,9 @@ func findAllUsers(ctx context.Context, collection *mongo.Collection, filter *cub
 	}
 	if len(filter.Pin) > 0 {
 		f = append(f, primitive.E{Key: "pin", Value: filter.Email})
+	}
+	if len(filter.Status) > 0 {
+		f = append(f, primitive.E{Key: "status", Value: primitive.A{"$in", filter.Status}})
 	}
 	cur, err := collection.Find(ctx, f)
 	if err != nil {

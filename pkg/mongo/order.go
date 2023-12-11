@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	e "cubawheeler.io/pkg/errors"
 )
 
 var _ cubawheeler.OrderService = &OrderService{}
@@ -21,6 +23,7 @@ type OrderService struct {
 	db         *DB
 	collection *mongo.Collection
 	orderChan  chan *cubawheeler.Order
+	mutex      sync.Map
 }
 
 func NewOrderService(db *DB) *OrderService {
@@ -68,15 +71,7 @@ func (s *OrderService) Update(ctx context.Context, trip *cubawheeler.UpdateOrder
 }
 
 func (s *OrderService) FindByID(ctx context.Context, id string) (*cubawheeler.Order, error) {
-	limit := 1
-	trips, _, err := findOrders(ctx, s.collection, &cubawheeler.OrderFilter{
-		Ids:   []*string{&id},
-		Limit: &limit,
-	})
-	if err != nil && len(trips) == 0 {
-		return nil, errors.New("trip not found")
-	}
-	return trips[0], nil
+	return findOrderById(ctx, s.db, id)
 }
 
 func (s *OrderService) FindAll(ctx context.Context, filter *cubawheeler.OrderFilter) (*cubawheeler.OrderList, error) {
@@ -85,6 +80,107 @@ func (s *OrderService) FindAll(ctx context.Context, filter *cubawheeler.OrderFil
 		return nil, err
 	}
 	return &cubawheeler.OrderList{Data: trips, Token: token}, nil
+}
+
+func (s *OrderService) AcceptOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
+	s.orderLock(id)
+	defer s.orderUnlock(id)
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, fmt.Errorf("nil user in context: %w", e.ErrAccessDenied)
+	}
+	if usr.Role != cubawheeler.RoleDriver {
+		return nil, fmt.Errorf("invalid user to acept the order: %w", e.ErrAccessDenied)
+	}
+	order, err := findOrderById(ctx, s.db, id)
+	if err != nil {
+		return nil, err
+	}
+	if order.Driver != "" {
+		return nil, e.ErrOrderAccepted
+	}
+	f := bson.D{}
+	order.Driver = usr.ID
+	f = append(f, bson.E{Key: "driver", Value: usr.ID})
+	order.Status = cubawheeler.OrderStatusOnTheWay
+	f = append(f, bson.E{Key: "status", Value: order.Status})
+	if err := updateOrder(ctx, s.db, order.ID, f); err != nil {
+		return nil, err
+	}
+	return order, nil
+}
+
+func (s *OrderService) CancelOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
+	s.orderLock(id)
+	defer s.orderUnlock(id)
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, e.ErrAccessDenied
+	}
+	if user.Role != cubawheeler.RoleDriver && user.Role != cubawheeler.RoleAdmin {
+		return nil, e.ErrAccessDenied
+	}
+	order, err := findOrderById(ctx, s.db, id)
+	if err != nil {
+		return nil, err
+	}
+	order.Status = cubawheeler.OrderStatusDropOff
+	f := bson.D{{Key: "status", Value: order.Status}}
+	if err = updateOrder(ctx, s.db, order.ID, f); err != nil {
+		return nil, err
+	}
+	return order, nil
+}
+
+func (s *OrderService) CompleteOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
+	s.orderLock(id)
+	defer s.orderUnlock(id)
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, e.ErrAccessDenied
+	}
+	if user.Role != cubawheeler.RoleDriver && user.Role != cubawheeler.RoleAdmin {
+		return nil, e.ErrAccessDenied
+	}
+	order, err := findOrderById(ctx, s.db, id)
+	if err != nil {
+		return nil, err
+	}
+	order.Status = cubawheeler.OrderStatusDropOff
+	f := bson.D{{Key: "status", Value: order.Status}}
+	order.EndAt = time.Now().UTC().Unix()
+	f = append(f, bson.E{Key: "end_at", Value: order.EndAt})
+	if err = updateOrder(ctx, s.db, order.ID, f); err != nil {
+		return nil, err
+	}
+	return order, nil
+}
+
+func (s *OrderService) StartOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
+	s.orderLock(id)
+	defer s.orderUnlock(id)
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, e.ErrAccessDenied
+	}
+	if user.Role != cubawheeler.RoleDriver && user.Role != cubawheeler.RoleAdmin {
+		return nil, e.ErrAccessDenied
+	}
+	order, err := findOrderById(ctx, s.db, id)
+	if err != nil {
+		return nil, err
+	}
+	if order.Driver != user.ID {
+		return nil, e.ErrAccessDenied
+	}
+	order.Status = cubawheeler.OrderStatusPickUp
+	f := bson.D{{Key: "status", Value: order.Status}}
+	order.StartAt = time.Now().UTC().Unix()
+	f = append(f, bson.E{Key: "start_at", Value: order.EndAt})
+	if err = updateOrder(ctx, s.db, order.ID, f); err != nil {
+		return nil, err
+	}
+	return order, nil
 }
 
 func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.OrderFilter) ([]*cubawheeler.Order, string, error) {
@@ -122,9 +218,9 @@ func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubaw
 			return nil, "", err
 		}
 		trips = append(trips, &trip)
-		if len(trips) == *filter.Limit+1 {
-			token = trips[*filter.Limit].ID
-			trips = trips[:*filter.Limit]
+		if len(trips) == filter.Limit+1 {
+			token = trips[filter.Limit].ID
+			trips = trips[:filter.Limit]
 			break
 		}
 	}
@@ -134,4 +230,45 @@ func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubaw
 	}
 	cur.Close(ctx)
 	return trips, token, nil
+}
+
+func findOrderById(ctx context.Context, db *DB, id string) (*cubawheeler.Order, error) {
+	collection := db.client.Database(database).Collection(OrderCollection.String())
+	trips, _, err := findOrders(ctx, collection, &cubawheeler.OrderFilter{
+		Ids:   []*string{&id},
+		Limit: 1,
+	})
+	if err != nil && len(trips) == 0 {
+		return nil, e.ErrNotFound
+	}
+	return trips[0], nil
+}
+
+func updateOrder(ctx context.Context, db *DB, id string, f bson.D) error {
+	collection := db.client.Database(database).Collection(OrderCollection.String())
+	if _, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, bson.D{{Key: "$set", Value: f}}); err != nil {
+		return fmt.Errorf("unabe to update the order: %v: %w", err, e.ErrInternal)
+	}
+	return nil
+}
+
+func (s *OrderService) orderLock(key string) {
+	mu := sync.Mutex{}
+	l_, _ := s.mutex.LoadOrStore(key, &mu)
+	l := l_.(*sync.Mutex)
+	l.Lock()
+	if l != &mu {
+		l.Unlock()
+		s.orderLock(key)
+	}
+}
+
+func (s *OrderService) orderUnlock(key string) {
+	l_, ok := s.mutex.Load(key)
+	if !ok {
+		return
+	}
+	l := l_.(*sync.Mutex)
+	s.mutex.Delete(key)
+	l.Unlock()
 }

@@ -13,26 +13,28 @@ import (
 )
 
 type User struct {
-	ID               string      `json:"id" faker:"-" bson:"_id"`
-	Name             string      `json:"name" faker:"name" bson:"name"`
-	Password         []byte      `json:"-" bson:"password"`
-	Email            string      `json:"email" faker:"email" bson:"email"`
-	Pin              []byte      `json:"pin" faker:"number" bson:"pin"`
-	Otp              string      `json:"-" bson:"otp,omitempty"`
-	Rate             float64     `json:"rate" bson:"rate"`
-	Available        bool        `json:"-" bson:"available"`
-	Status           UserStatus  `json:"status" bson:"status"`
-	ActiveVehicle    string      `json:"active_vehicle,omitempty" bson:"active_vehicle"`
-	Code             string      `json:"referal_code" bson:"referal_code"`
-	Referer          string      `json:"-" bson:"referer"`
-	Role             Role        `json:"-" bson:"role"`
-	Plan             string      `json:"plan,omitempty" bson:"plan"`
-	Locations        []*Location `json:"locations,omitempty" bson:"locations"`
-	LastLocations    []*Location `json:"last_locations,omitempty" bson:"last_locations,omitempty"`
-	Vehicles         []*Vehicle  `json:"vehicles,omitempty" bson:"vehicles"`
-	FavoriteVehicles []*Vehicle  `json:"favorite_vehicles,omitempty" bson:"favorite_vehicles,omitempty"`
-	Orders           []*Order    `json:"orders,omitempty" bson:"orders,omitempty"`
-	Profile          Profile     `json:"profile" faker:"-" bson:"profile"`
+	ID                  string         `json:"id" faker:"-" bson:"_id"`
+	Name                string         `json:"name" faker:"name" bson:"name"`
+	Password            []byte         `json:"-" bson:"password"`
+	Email               string         `json:"email" faker:"email" bson:"email"`
+	Pin                 []byte         `json:"pin" faker:"number" bson:"pin"`
+	Otp                 string         `json:"-" bson:"otp,omitempty"`
+	Rate                float64        `json:"rate" bson:"rate"`
+	Available           bool           `json:"-" bson:"available"`
+	Status              UserStatus     `json:"status" bson:"status"`
+	ActiveVehicle       string         `json:"active_vehicle,omitempty" bson:"active_vehicle"`
+	Code                string         `json:"referal_code" bson:"referal_code"`
+	Referer             string         `json:"-" bson:"referer"`
+	Role                Role           `json:"-" bson:"role"`
+	Plan                string         `json:"plan,omitempty" bson:"plan"`
+	Locations           []*Location    `json:"locations,omitempty" bson:"locations"`
+	LastLocations       []*Location    `json:"last_locations,omitempty" bson:"last_locations,omitempty"`
+	Vehicles            []*Vehicle     `json:"vehicles,omitempty" bson:"vehicles"`
+	FavoriteVehicles    []*Vehicle     `json:"favorite_vehicles,omitempty" bson:"favorite_vehicles,omitempty"`
+	Orders              []*Order       `json:"orders,omitempty" bson:"orders,omitempty"`
+	Profile             Profile        `json:"profile" faker:"-" bson:"profile"`
+	BeansToken          map[string]any `json:"beans_token,omitempty" bson:"beans_token,omitempty"`
+	BeansTokenCreatedAt int64          `json:"beans_token_created_at,omitempty" bson:"beans_token_created_at,omitempty"`
 }
 
 type UserList struct {
@@ -116,14 +118,15 @@ type OTPServer interface {
 }
 
 type UserFilter struct {
-	Limit int
-	Token string
-	Ids   []string
-	Name  string
-	Email string
-	Otp   string
-	Pin   string
-	User  string
+	Limit  int
+	Token  string
+	Ids    []string
+	Name   string
+	Email  string
+	Otp    string
+	Pin    string
+	User   string
+	Status []UserStatus
 }
 
 type Gender string
