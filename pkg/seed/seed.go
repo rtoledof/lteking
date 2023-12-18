@@ -8,18 +8,23 @@ type Seed interface {
 }
 
 type seed struct {
-	app Seed
+	seeders []Seed
 }
 
 func NewSeed(db *mongo.DB) Seed {
 	return &seed{
-		app: NewApplication(db),
+		seeders: []Seed{
+			NewApplication(db),
+			NewPlan(db),
+		},
 	}
 }
 
 func (s *seed) Up() error {
-	if err := s.app.Up(); err != nil {
-		return err
+	for _, v := range s.seeders {
+		if err := v.Up(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
