@@ -18,12 +18,13 @@ type Plan struct {
 }
 
 type PlanRequest struct {
-	Name       string
-	Recurring  bool
-	TotalTrips int
-	Price      int
-	Interval   Interval
-	Code       string
+	ID         string
+	Name       *string
+	Recurring  *bool
+	TotalTrips *int
+	Price      *int
+	Interval   *Interval
+	Code       *string
 }
 
 type PlanFilter struct {

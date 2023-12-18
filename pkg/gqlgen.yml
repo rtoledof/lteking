@@ -148,3 +148,7 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.Address
   GeoLocation: 
     model: cubawheeler.io/pkg/cubawheeler.GeoLocation
+  NearByResponse: 
+    model: cubawheeler.io/pkg/cubawheeler.NearByResponse
+  Device: 
+    model: cubawheeler.io/pkg/cubawheeler.Device

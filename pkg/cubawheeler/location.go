@@ -23,13 +23,37 @@ type Address struct {
 type GeoLocation struct {
 	Type        ShapeType `json:"type"` // One of Point, Line
 	Coordinates []float64 `json:"coordinates"`
+	Bearing     float64   `json:"bearing"`
+	Lat         float64   `json:"lat"`
+	Long        float64   `json:"long"`
 }
+
+//{
+//	"_id" : ObjectId("59a47286cfa9a3a73e51e75c"),
+//	"theaterId" : 104,
+//	"location" : {
+//		"address" : {
+//			"street1" : "5000 W 147th St",
+//			"city" : "Hawthorne",
+//			"state" : "CA",
+//			"zipcode" : "90250"
+//		},
+//		"geo" : {
+//			"type" : "Point",
+//			"coordinates" : [
+//				-118.36559,
+//				33.897167
+//			]
+//		}
+//	}
+//}
 
 type Location struct {
 	ID          string      `json:"id" bson:"_id"`
 	Name        string      `json:"name,omitempty" bson:"name,omitempty"`
 	User        string      `json:"-" bson:"user_id"`
-	CreatedAt   uint        `json:"created_at" bson:"created_at"`
+	CreatedAt   int64       `json:"created_at" bson:"created_at"`
+	UpdatedAt   int64       `json:"updated_at,omitempty" bson:"updated_at,omitempty"`
 	Address     Address     `json:"address,omitempty" bson:"address,omitempty"`
 	Geolocation GeoLocation `json:"geo" bson:"geo"`
 }

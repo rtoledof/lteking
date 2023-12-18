@@ -2,9 +2,10 @@ package mongo
 
 import (
 	"context"
-	"cubawheeler.io/pkg/cubawheeler"
 	"errors"
 	"fmt"
+
+	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -28,7 +29,7 @@ func (s *ChargeService) Create(ctx context.Context, request *cubawheeler.ChargeR
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
 	}
-	if usr.Role != cubawheeler.RoleRider || usr.Role != cubawheeler.RoleAdmin {
+	if usr.Role != cubawheeler.RoleRider && usr.Role != cubawheeler.RoleDriver {
 		return nil, errors.New("access denied")
 	}
 	if usr.Role == cubawheeler.RoleRider {
@@ -94,16 +95,16 @@ func findAllCharges(ctx context.Context, collection *mongo.Collection, filter cu
 	var token string
 	f := bson.D{}
 	if len(filter.Ids) > 0 {
-		f = append(f, bson.E{"_id", bson.A{"$in", filter.Ids}})
+		f = append(f, bson.E{Key: "_id", Value: bson.A{"$in", filter.Ids}})
 	}
 	if filter.Rider != nil {
-		f = append(f, bson.E{"rider", filter.Rider})
+		f = append(f, bson.E{Key: "rider", Value: filter.Rider})
 	}
 	if filter.Driver != nil {
-		f = append(f, bson.E{"driver", filter.Driver})
+		f = append(f, bson.E{Key: "driver", Value: filter.Driver})
 	}
 	if len(filter.Token) > 0 {
-		f = append(f, bson.E{"_id", bson.A{"$gt", filter.Token}})
+		f = append(f, bson.E{Key: "_id", Value: bson.A{"$gt", filter.Token}})
 	}
 
 	cur, err := collection.Find(ctx, f)

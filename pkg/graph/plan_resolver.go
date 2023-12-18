@@ -2,8 +2,9 @@ package graph
 
 import (
 	"context"
-	"cubawheeler.io/pkg/cubawheeler"
 	"fmt"
+
+	"cubawheeler.io/pkg/cubawheeler"
 )
 
 type planResolver struct{ *Resolver }

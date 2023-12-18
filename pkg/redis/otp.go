@@ -29,7 +29,7 @@ func NewOtpService(client *Redis) *OtpService {
 	return &OtpService{redis: client}
 }
 
-func (s *OtpService) Create(ctx context.Context, email string) error {
+func (s *OtpService) Create(ctx context.Context, email string) (string, error) {
 	//TODO implement me
 	otp := token{
 		Email:     email,
@@ -39,10 +39,10 @@ func (s *OtpService) Create(ctx context.Context, email string) error {
 	}
 	data, err := json.Marshal(otp)
 	if err != nil {
-		return fmt.Errorf("unable to marshal otp: %v: %w", err, errors.ErrInternal)
+		return "", fmt.Errorf("unable to marshal otp: %v: %w", err, errors.ErrInternal)
 	}
 	if err = s.redis.client.Set(ctx, otp.Otp, data, otp.ExpireIn).Err(); err != nil {
-		return fmt.Errorf("unable to store otp token: %v: %w", err, errors.ErrInternal)
+		return "", fmt.Errorf("unable to store otp token: %v: %w", err, errors.ErrInternal)
 	}
 	go func() {
 		textTemplate := fmt.Sprintf("Your otp is: %s", otp.Otp)
@@ -50,7 +50,7 @@ func (s *OtpService) Create(ctx context.Context, email string) error {
 
 		mailer.GenMessage("no-reply@cubawheeler.com", email, textTemplate, htmlTemplate)
 	}()
-	return nil
+	return otp.Otp, nil
 }
 
 func (s *OtpService) Otp(ctx context.Context, otp, email string) error {

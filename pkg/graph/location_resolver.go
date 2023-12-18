@@ -10,22 +10,26 @@ import (
 type updatePlaceResolver struct{ *Resolver }
 
 func (r *updatePlaceResolver) Location(ctx context.Context, obj *cubawheeler.UpdatePlace, data *cubawheeler.PointInput) error {
-	panic("implemet me")
+	obj.Location.Lat = data.Lat
+	obj.Location.Long = data.Lon
+	return nil
 }
 
 // Palte implements UpdateVehicleResolver.
-func (*updatePlaceResolver) Palte(ctx context.Context, obj *cubawheeler.UpdateVehicle, data *string) error {
-	panic("unimplemented")
+func (r *updatePlaceResolver) Palte(ctx context.Context, obj *cubawheeler.UpdateVehicle, data *string) error {
+	obj.Plate = *data
+	return nil
 }
 
 // Pictures implements UpdateVehicleResolver.
-func (*updatePlaceResolver) Pictures(ctx context.Context, obj *cubawheeler.UpdateVehicle, data []*graphql.Upload) error {
+func (r *updatePlaceResolver) Pictures(ctx context.Context, obj *cubawheeler.UpdateVehicle, data []*graphql.Upload) error {
 	panic("unimplemented")
 }
 
 // VehicleType implements UpdateVehicleResolver.
-func (*updatePlaceResolver) VehicleType(ctx context.Context, obj *cubawheeler.UpdateVehicle, data *cubawheeler.VehicleType) error {
-	panic("unimplemented")
+func (r *updatePlaceResolver) VehicleType(ctx context.Context, obj *cubawheeler.UpdateVehicle, data *cubawheeler.VehicleType) error {
+	obj.Type = *data
+	return nil
 }
 
 type locationResolver struct{ *Resolver }

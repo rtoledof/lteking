@@ -2,12 +2,9 @@ package mongo
 
 import (
 	"context"
-	"cubawheeler.io/pkg/pusher"
-	"cubawheeler.io/pkg/redis"
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,6 +12,8 @@ import (
 
 	"cubawheeler.io/pkg/cubawheeler"
 	e "cubawheeler.io/pkg/errors"
+	"cubawheeler.io/pkg/pusher"
+	"cubawheeler.io/pkg/redis"
 )
 
 var _ cubawheeler.UserService = &UserService{}
@@ -34,60 +33,74 @@ func NewUserService(
 	beans *pusher.PushNotification,
 	done chan struct{},
 ) *UserService {
+
+	_, err := db.client.Database(database).Collection(UsersCollection.String()).Indexes().CreateOne(
+		context.Background(),
+		mongo.IndexModel{
+			Keys: bson.D{{Key: "email", Value: "text"}},
+		})
+	if err != nil {
+		panic("unable to create user email index")
+	}
+
 	s := &UserService{
 		db:         db,
 		collection: db.client.Database(database).Collection(UsersCollection.String()),
 		beansToken: beansToken,
 		beans:      beans,
 	}
-	ticker := time.NewTicker(time.Hour * 1)
-	go func() {
 
-		for {
-			select {
-			case <-ticker.C:
-				if err := s.generateTokens(context.Background()); err != nil {
-					slog.Info(err.Error())
-				}
-			case <-done:
-				return
-			}
-		}
-
-	}()
+	//	ticker := time.NewTicker(time.Hour * 1)
+	//	go func() {
+	//
+	//		for {
+	//			select {
+	//			case <-ticker.C:
+	//				if err := s.generateTokens(context.Background()); err != nil {
+	//					slog.Info(err.Error())
+	//				}
+	//			case <-done:
+	//				return
+	//			}
+	//		}
+	//
+	//	}()
 	return s
 }
 
 func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.User, error) {
 	app := cubawheeler.ClientFromContext(ctx)
 	user, err := s.FindByEmail(ctx, input.Email)
-	if err != nil && errors.Is(err, e.ErrNotFound) {
-		if app == nil {
-			return nil, fmt.Errorf("no application provided: %w", e.ErrAccessDenied)
-		}
-		user = &cubawheeler.User{
-			ID:     cubawheeler.NewID().String(),
-			Email:  input.Email,
-			Status: cubawheeler.UserStatusOnReview,
-		}
+	if err != nil {
+		if errors.Is(err, e.ErrNotFound) {
+			if app == nil {
+				return nil, fmt.Errorf("no application provided: %w", e.ErrAccessDenied)
+			}
+			user = &cubawheeler.User{
+				ID:     cubawheeler.NewID().String(),
+				Email:  input.Email,
+				Status: cubawheeler.UserStatusOnReview,
+			}
 
-		switch app.Type {
-		case cubawheeler.ApplicationTypeDriver:
-			user.Role = cubawheeler.RoleDriver
-		default:
-			user.Role = cubawheeler.RoleRider
-		}
-		// TODO: generate a new OTP for the user
+			switch app.Type {
+			case cubawheeler.ApplicationTypeDriver:
+				user.Role = cubawheeler.RoleDriver
+			default:
+				user.Role = cubawheeler.RoleRider
+			}
+			// TODO: generate a new OTP for the user
 
-		err = s.CreateUser(ctx, user)
-		if err != nil {
-			return nil, err
+			err = s.CreateUser(ctx, user)
+			if err != nil {
+				return nil, err
+			}
+			user, err = findUserByEmail(ctx, s.db, user.Email)
+			if err != nil {
+				return nil, err
+			}
+			return user, nil
 		}
-		user, err = findUserByEmail(ctx, s.db, user.Email)
-		if err != nil {
-			return nil, err
-		}
-		return user, nil
+		return nil, err
 	}
 
 	if !user.IsActive() {
@@ -182,7 +195,7 @@ func (s *UserService) AddFavoriteVehicle(ctx context.Context, plate *string) (*c
 		return nil, err
 	}
 	usr.FavoriteVehicles = append(usr.FavoriteVehicles, vehicle)
-	if err := updateUser(ctx, s.db, usr, bson.D{{Key: "favorite_vehicles", Value: usr.FavoriteVehicles}}); err != nil {
+	if err := updateUser(ctx, s.db, usr); err != nil {
 		return nil, err
 	}
 	return vehicle, nil
@@ -222,14 +235,7 @@ func (s *UserService) Me(ctx context.Context) (*cubawheeler.Profile, error) {
 		return nil, errors.New("invalid token provided")
 	}
 
-	profiles, _, err := findAllProfiles(ctx, s.db.client.Database(database).Collection(ProfileCollection.String()), &cubawheeler.ProfileFilter{
-		User:  usr.ID,
-		Limit: 1,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return profiles[0], nil
+	return &usr.Profile, nil
 }
 
 func (s *UserService) Orders(ctx context.Context, filter *cubawheeler.OrderFilter) (*cubawheeler.OrderList, error) {
@@ -252,6 +258,81 @@ func (s *UserService) LastNAddress(ctx context.Context, number int) ([]*cubawhee
 		return nil, errors.New("invalid token profived")
 	}
 	panic("implement me")
+}
+
+func (s *UserService) UpdateProfile(ctx context.Context, request *cubawheeler.UpdateProfile) error {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return errors.New("invalid token provided")
+	}
+	params := bson.D{}
+	if request.Name != nil {
+		params = append(params, primitive.E{Key: "name", Value: *request.Name})
+		usr.Profile.Name = *request.Name
+	}
+	if request.LastName != nil {
+		params = append(params, primitive.E{Key: "profile.last_name", Value: *request.LastName})
+		usr.Profile.LastName = *request.LastName
+	}
+	if request.Dob != nil {
+		params = append(params, primitive.E{Key: "profile.dob", Value: *request.Dob})
+		usr.Profile.DOB = *request.Dob
+	}
+	if request.Phone != nil {
+		params = append(params, primitive.E{Key: "profile.phone", Value: *request.Phone})
+		usr.Profile.Phone = *request.Phone
+	}
+	if request.Photo != nil {
+		params = append(params, primitive.E{Key: "profile.photo", Value: *request.Photo})
+		usr.Profile.Photo = *request.Photo
+	}
+	if request.Gender != nil {
+		params = append(params, primitive.E{Key: "profile.gender", Value: *request.Gender})
+		usr.Profile.Gender = *request.Gender
+	}
+	if request.Licence != nil {
+		params = append(params, primitive.E{Key: "profile.licence", Value: *request.Licence})
+		usr.Profile.Licence = *request.Licence
+	}
+	if request.Dni != nil {
+		params = append(params, primitive.E{Key: "profile.dni", Value: *request.Dni})
+		usr.Profile.Dni = *request.Dni
+	}
+
+	if usr.Profile.IsCompleted(usr.Role) {
+		usr.Profile.Status = cubawheeler.ProfileStatusCompleted
+		usr.Status = cubawheeler.UserStatusActive
+		params = append(params, primitive.E{Key: "profile.status", Value: usr.Profile.Status})
+		params = append(params, primitive.E{Key: "status", Value: usr.Status})
+	}
+
+	if err := updateUser(ctx, s.db, usr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *UserService) AddDevice(ctx context.Context, device string) error {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return e.ErrNilUserInContext
+	}
+	usr.Devices = append(usr.Devices, cubawheeler.Device{Token: device, Active: true})
+	return updateUser(ctx, s.db, usr)
+}
+
+func (s *UserService) GetUserDevices(ctx context.Context, users []string) ([]*cubawheeler.User, error) {
+	panic("implement me")
+}
+
+func (s *UserService) SetAvailability(ctx context.Context, user string, available bool) error {
+	usr, err := findUserByID(ctx, s.db, user)
+	if err != nil {
+		return err
+	}
+	usr.Available = available
+	return updateUser(ctx, s.db, usr)
 }
 
 func (s *UserService) generateTokens(ctx context.Context) error {
@@ -321,6 +402,9 @@ func findAllUsers(ctx context.Context, db *DB, filter *cubawheeler.UserFilter) (
 	if len(filter.Status) > 0 {
 		f = append(f, primitive.E{Key: "status", Value: primitive.A{"$in", filter.Status}})
 	}
+	if len(filter.Role) > 0 {
+		f = append(f, primitive.E{Key: "role", Value: filter.Role})
+	}
 	cur, err := collection.Find(ctx, f)
 	if err != nil {
 		return nil, "", err
@@ -360,9 +444,9 @@ func updateAddFavoritesPlaces(ctx context.Context, db *DB, usr *cubawheeler.User
 	return nil
 }
 
-func updateUser(ctx context.Context, db *DB, user *cubawheeler.User, data bson.D) error {
+func updateUser(ctx context.Context, db *DB, user *cubawheeler.User) error {
 	collection := db.client.Database(database).Collection(UsersCollection.String())
-	_, err := collection.UpdateOne(ctx, bson.D{{"email", user.Email}}, bson.D{{"$set", data}})
+	_, err := collection.UpdateOne(ctx, bson.D{{"email", user.Email}}, bson.D{{Key: "$set", Value: user}})
 	if err != nil {
 		return fmt.Errorf("unable to update the user: %v: %w", err, e.ErrInternal)
 	}

@@ -36,5 +36,6 @@ func (r *chargeRequestResolver) Dispute(ctx context.Context, obj *cubawheeler.Ch
 }
 
 func (r *chargeRequestResolver) Order(ctx context.Context, obj *cubawheeler.ChargeRequest, data *string) error {
-	panic("implement me")
+	obj.Trip = *data
+	return nil
 }

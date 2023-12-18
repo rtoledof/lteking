@@ -62,7 +62,7 @@ func (pn *PushNotification) PublishToUser(users []string, notification Notificat
 	if err != nil {
 		return fmt.Errorf("unable to send push notification to users: %v: %w", err, errors.ErrInternal)
 	}
-	slog.Info("push notification with publish id: %s was successfull sent to users: %v", pubId, users)
+	slog.Info(fmt.Sprintf("push notification with publish id: %s was successfull sent to users: %v", pubId, users))
 	return nil
 }
 

@@ -100,7 +100,7 @@ func (s *ProfileService) Update(ctx context.Context, request *cubawheeler.Update
 	profile, _ = s.FindByUser(ctx)
 	if profile.IsCompleted(usr.Role) {
 		usr.Status = cubawheeler.UserStatusActive
-		if err := updateUser(ctx, s.db, usr, bson.D{{Key: "status", Value: usr.Status}}); err != nil {
+		if err := updateUser(ctx, s.db, usr); err != nil {
 			return nil, err
 		}
 	}
@@ -193,12 +193,17 @@ func findAllProfiles(ctx context.Context, collection *mongo.Collection, filter *
 }
 
 func createProfile(ctx context.Context, db *DB, request *cubawheeler.UpdateProfile, usr *cubawheeler.User) (*cubawheeler.Profile, error) {
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("nil user in context")
+	}
 	profile := &cubawheeler.Profile{
 		ID:     cubawheeler.NewID().String(),
 		UserId: usr.ID,
 		Status: cubawheeler.ProfileStatusIncompleted,
 	}
-	collection := db.client.Database(database).Collection(string(ProfileCollection))
+	user.Profile = cubawheeler.Profile{}
+	collection := db.client.Database(database).Collection(string(UsersCollection))
 	_, err := collection.InsertOne(ctx, profile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to crete the profile: %w", err)

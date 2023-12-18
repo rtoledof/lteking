@@ -5,21 +5,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gopkg.in/gomail.v2"
 	"io/ioutil"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/ably/ably-go/ably"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/redis/go-redis/v9"
+	"gopkg.in/gomail.v2"
 
+	abl "cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/graph"
 	"cubawheeler.io/pkg/mailer"
@@ -46,13 +47,17 @@ type App struct {
 	seed         seed.Seed
 	dialer       *gomail.Dialer
 	done         chan struct{}
+	orderChan    chan *cubawheeler.Order
+	realTime     cubawheeler.RealTimeService
+	rest         *ably.REST
 }
 
 func New(cfg Config) *App {
 	opt, _ := redis.ParseURL(cfg.Redis)
 	client := redis.NewClient(opt)
+	redisDB := rdb.NewRedis(client)
 	app := &App{
-		rdb:    rdb.NewRedis(client),
+		rdb:    redisDB,
 		config: cfg,
 		mongo:  mongo.NewDB(cfg.Mongo),
 		dialer: gomail.NewDialer(
@@ -70,6 +75,7 @@ func New(cfg Config) *App {
 		),
 		notification: pusher.NewPushNotification(cfg.BeansInterest, cfg.BeansSecret),
 		done:         make(chan struct{}),
+		orderChan:    make(chan *cubawheeler.Order, 10000),
 	}
 
 	app.loader()
@@ -84,7 +90,6 @@ func New(cfg Config) *App {
 }
 
 func (a *App) Start(ctx context.Context) error {
-	//fmt.Sprintf("%s:%d", a.config.Host, a.config.Port)
 	addr := fmt.Sprintf("%s:%d", a.config.Host, a.config.Port)
 	httpSrv := &http.Server{
 		Addr:    addr,
@@ -125,8 +130,6 @@ func (a *App) Start(ctx context.Context) error {
 		defer cancel()
 		return httpSrv.Shutdown(timeout)
 	}
-
-	return nil
 }
 
 func (a *App) loader() {
@@ -175,6 +178,17 @@ func (a *App) loader() {
 		a.done,
 	)
 	appSrv := mongo.NewApplicationService(a.mongo)
+	client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
+
+	go client.Consumer.Consume(
+		a.config.Amqp.Queue,
+		a.config.Amqp.Consumer,
+		a.config.Amqp.AutoAsk,
+		a.config.Amqp.Exclusive,
+		a.config.Amqp.NoLocal,
+		a.config.Amqp.NoWait,
+		a.config.Amqp.Arg,
+	)
 
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
@@ -182,12 +196,6 @@ func (a *App) loader() {
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(AuthMiddleware(userSrv))
 	router.Use(ClientMiddleware(appSrv))
-
-	router.Post("/location/update", func(w http.ResponseWriter, r *http.Request) {
-		params, _ := ioutil.ReadAll(r.Body)
-		// {"time_ms":1702317426603,"events":[{"channel":"presence-rider-AYxQyEWf-yZdNzvqzBS50A","data":"{\"message\":\"Rolando loca !\",\"id\":\"AYxQyEWf-yZdNzvqzBS50A\"}","event":"client-send-message","name":"client_event","socket_id":"604871.271085","user_id":"AYxQyEWf-yZdNzvqzBS50A"}]}
-		log.Printf("%s", params)
-	})
 
 	router.Post("/pusher/auth", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -209,7 +217,7 @@ func (a *App) loader() {
 		w.Write(auth)
 	})
 
-	router.Post("/pusher/beans-auth", func(w http.ResponseWriter, r *http.Request) {
+	router.Get("/pusher/beans-auth", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		usr := cubawheeler.UserFromContext(r.Context())
 		if usr == nil {
@@ -241,10 +249,14 @@ func (a *App) loader() {
 	})
 
 	router.Group(func(r chi.Router) {
-		//srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
-		//		r.Use(AuthMiddleware(userSrv))
-		//		r.Use(ClientMiddleware(appSrv))
-		grapgqlSrv := graph.NewHandler(a.rdb, a.mongo, userSrv)
+		grapgqlSrv := graph.NewHandler(
+			a.rdb,
+			a.mongo,
+			userSrv,
+			a.done,
+			a.config.Amqp.Connection,
+			a.config.Ably.ApiKey,
+		)
 		r.Handle("/", playground.Handler("GraphQL playground", "/query"))
 		r.Handle("/query", grapgqlSrv)
 	})

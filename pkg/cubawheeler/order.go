@@ -18,8 +18,8 @@ type OrderItem struct {
 
 type Order struct {
 	ID            string                `json:"id" bson:"_id"`
-	Items         []OrderItem           `json:"items" bson:"items"`
-	History       []Point               `json:"history,omitempty" bson:"history,omitempty"`
+	Items         []*OrderItem          `json:"items" bson:"items"`
+	History       []*Point              `json:"history,omitempty" bson:"history,omitempty"`
 	Driver        string                `json:"driver,omitempty" bson:"driver,omitempty"`
 	Rider         string                `json:"rider" bson:"rider"`
 	Status        OrderStatus           `json:"status" bson:"status"`
@@ -42,8 +42,8 @@ type Item struct {
 	Route   []*PointInput `json:"route"`
 }
 
-func AssambleOrderItem(items []*Item) []OrderItem {
-	var resp []OrderItem
+func AssambleOrderItem(items []*Item) []*OrderItem {
+	var resp []*OrderItem
 	for _, v := range items {
 		var i = OrderItem{
 			PickUp: Point{
@@ -57,7 +57,7 @@ func AssambleOrderItem(items []*Item) []OrderItem {
 			Seconds: uint64(v.Seconds),
 			Meters:  uint64(v.M),
 		}
-		resp = append(resp, i)
+		resp = append(resp, &i)
 	}
 	return resp
 }
@@ -88,7 +88,7 @@ type OrderFilter struct {
 }
 
 type OrderService interface {
-	Create(context.Context, []OrderItem) (*Order, error)
+	Create(context.Context, []*OrderItem) (*Order, error)
 	Update(context.Context, *UpdateOrder) (*Order, error)
 	FindByID(context.Context, string) (*Order, error)
 	FindAll(context.Context, *OrderFilter) (*OrderList, error)
@@ -154,4 +154,21 @@ func (e *OrderStatus) UnmarshalGQL(v interface{}) error {
 
 func (e OrderStatus) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type CostPerBrand struct {
+	ID    string `json:"id"`
+	Brand Brand  `json:"brand"`
+	Price int    `json:"price"`
+}
+
+type CreateOrderRequest struct {
+	Route  []*PointInput `json:"route"`
+	Coupon *string       `json:"coupon,omitempty"`
+}
+
+type CreateOrderResponse struct {
+	Order *Order          `json:"order"`
+	Cost  []*CostPerBrand `json:"cost"`
+	Price int             `json:"price"`
 }

@@ -2,8 +2,8 @@ package graph
 
 import (
 	"context"
-	"cubawheeler.io/pkg/pusher"
 	"fmt"
+	"net/http"
 
 	"cubawheeler.io/pkg/cubawheeler"
 )
@@ -12,40 +12,100 @@ var _ MutationResolver = &mutationResolver{}
 
 type mutationResolver struct{ *Resolver }
 
-func (r *mutationResolver) StartOrder(ctx context.Context, order string) (*cubawheeler.Order, error) {
-	return r.order.StartOrder(ctx, order)
+// AuthPusher implements MutationResolver.
+func (*mutationResolver) AuthPusher(ctx context.Context, socketID string, channelName string) (*string, error) {
+	panic("unimplemented")
 }
 
-func (r *mutationResolver) AuthPusher(ctx context.Context, socketID string, channelName string) (*string, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (r *mutationResolver) CreateOrder(ctx context.Context, input []*cubawheeler.Item) (*cubawheeler.Order, error) {
-	order, err := r.order.Create(ctx, cubawheeler.AssambleOrderItem(input))
-	if err != nil {
-		return nil, err
+// CancelOrder implements MutationResolver.
+func (r *mutationResolver) CancelOrder(ctx context.Context, order string) (*cubawheeler.Response, error) {
+	response := cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
 	}
-	pusher.NewOrdersChannel <- order
-	return order, nil
-}
-
-func (r *mutationResolver) UpdatOrder(ctx context.Context, update *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
-	return r.order.Update(ctx, update)
-}
-
-func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
-	order, err := r.order.CancelOrder(ctx, id)
+	_, err := r.order.CancelOrder(ctx, order)
 	if err != nil {
-		return nil, err
+		response.Success = false
+		response.Code = http.StatusBadRequest
+		response.Message = err.Error()
 	}
-	pusher.CanceledOrderChannel <- order
-	return order, nil
+	return &response, nil
 }
 
-func (r *mutationResolver) AcceptOrder(ctx context.Context, order string) (*cubawheeler.Order, error) {
-	return r.order.AcceptOrder(ctx, order)
+// CreateOrder implements MutationResolver.
+func (*mutationResolver) CreateOrder(ctx context.Context, input *cubawheeler.CreateOrderRequest) (*cubawheeler.CreateOrderResponse, error) {
+	panic(fmt.Errorf("not implemented: CreateOrder - createOrder"))
+	// // order, err := r.order.Create(ctx, cubawheeler.AssambleOrderItem(input))
+	// // if err != nil {
+	// // 	return nil, err
+	// // }
+	// // return order, nil
 }
+
+// StartOrder implements MutationResolver.
+func (r *mutationResolver) StartOrder(ctx context.Context, order string) (*cubawheeler.Response, error) {
+	response := cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
+	}
+	if _, err := r.order.StartOrder(ctx, order); err != nil {
+		response.Success = false
+		response.Code = http.StatusBadRequest
+		response.Message = err.Error()
+	}
+	return &response, nil
+}
+
+// UpdateOrder implements MutationResolver.
+func (*mutationResolver) UpdateOrder(ctx context.Context, input *cubawheeler.CreateOrderRequest) (*cubawheeler.CreateOrderResponse, error) {
+	panic("unimplemented")
+}
+
+func (r *mutationResolver) AcceptOrder(ctx context.Context, order string) (*cubawheeler.Response, error) {
+	response := cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
+	}
+	_, err := r.order.AcceptOrder(ctx, order)
+	if err != nil {
+		response.Success = false
+		response.Code = http.StatusBadRequest
+	}
+	return &response, nil
+}
+
+func (r *mutationResolver) ConfirmOrder(ctx context.Context, order string, cost string) (*cubawheeler.Response, error) {
+	// response := cubawheeler.Response{
+	// 	Success: true,
+	// 	Code:    http.StatusOK,
+	// }
+	// _, err := r.order.ConfirmOrder(ctx, order, cost)
+	// if err != nil {
+	// 	response.Success = false
+	// 	response.Code = http.StatusBadRequest
+	// }
+	// return &response, nil
+	panic(fmt.Errorf("not implemented: ConfirmOrder - confirmOrder"))
+}
+
+// func (r *mutationResolver) UpdatOrder(ctx context.Context, update *cubawheeler.CreateOrderRequest) (*cubawheeler.CreateOrderResponse, error) {
+// 	// return r.order.Update(ctx, update)
+// 	panic(fmt.Errorf("not implemented: UpdatOrder - updatOrder"))
+// }
+
+// func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*cubawheeler.Response, error) {
+// 	response := cubawheeler.Response{
+// 		Success: true,
+// 		Code:    http.StatusOK,
+// 	}
+// 	_, err := r.order.CancelOrder(ctx, id)
+// 	if err != nil {
+// 		response.Success = false
+// 		response.Code = http.StatusBadRequest
+// 		response.Message = err.Error()
+// 	}
+// 	return &response, nil
+// }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.Token, error) {
@@ -65,29 +125,50 @@ func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginReq
 }
 
 // Otp is the resolver for the otp field.
-func (r *mutationResolver) Otp(ctx context.Context, email string) (string, error) {
+func (r *mutationResolver) Otp(ctx context.Context, email string) (*cubawheeler.Response, error) {
 	// TODO: generate a new otp and send the email
-	return "", r.otp.Create(ctx, email)
+	var rsp = cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
+	}
+	otp, err := r.otp.Create(ctx, email)
+	if err != nil {
+		rsp.Success = false
+		rsp.Code = http.StatusBadRequest
+		rsp.Message = err.Error()
+	} else {
+		rsp.Message = otp
+	}
+	return &rsp, nil
 }
 
 // UpdateProfile is the resolver for the updateProfile field.
-func (r *mutationResolver) UpdateProfile(ctx context.Context, profile cubawheeler.UpdateProfile) (*cubawheeler.Profile, error) {
-	return r.profile.Update(ctx, &cubawheeler.UpdateProfile{
+func (r *mutationResolver) UpdateProfile(ctx context.Context, profile cubawheeler.UpdateProfile) (*cubawheeler.Response, error) {
+	var rsp = cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
+	}
+	if err := r.user.UpdateProfile(ctx, &cubawheeler.UpdateProfile{
 		Name:     profile.Name,
 		LastName: profile.LastName,
 		Dob:      profile.Dob,
 		Phone:    profile.Phone,
 		Photo:    profile.Photo,
 		Gender:   profile.Gender,
-		// Licence:  profile.Licence,
-		Dni: profile.Dni,
-	})
+		Dni:      profile.Dni,
+	}); err != nil {
+		rsp.Success = false
+		rsp.Message = err.Error()
+		rsp.Code = http.StatusBadRequest
+		return nil, err
+	}
+	return &rsp, nil
 }
 
-// UpdateTrip is the resolver for the updateTrip field.
-func (r *mutationResolver) UpdateOrder(ctx context.Context, update *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
-	return r.order.Update(ctx, update)
-}
+// UpdateOrder is the resolver for the updateTrip field.
+// func (r *mutationResolver) UpdateOrder(ctx context.Context, update *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
+// 	return r.order.Update(ctx, update)
+// }
 
 // AddFavoritePlace is the resolver for the addFavoritePlace field.
 func (r *mutationResolver) AddFavoritePlace(ctx context.Context, input cubawheeler.AddPlace) (*cubawheeler.Location, error) {
@@ -126,7 +207,7 @@ func (r *mutationResolver) UpdateVehicle(ctx context.Context, input *cubawheeler
 
 // CancelTrip is the resolver for the cancelTrip field.
 func (r *mutationResolver) CancelTrip(ctx context.Context, trip string) (*cubawheeler.Order, error) {
-	panic(fmt.Errorf("not implemented: CancelTrip - cancelTrip"))
+	return r.order.CancelOrder(ctx, trip)
 }
 
 // AddRate is the resolver for the addRate field.
@@ -136,16 +217,21 @@ func (r *mutationResolver) AddRate(ctx context.Context, input cubawheeler.RateRe
 
 // UpdateRate is the resolver for the updateRate field.
 func (r *mutationResolver) UpdateRate(ctx context.Context, input cubawheeler.RateRequest) (*cubawheeler.Rate, error) {
-	panic(fmt.Errorf("not implemented: UpdateRate - updateRate"))
+	return r.rate.Update(ctx, &input)
 }
 
-func (r *mutationResolver) ChangePin(ctx context.Context, old *string, pin string) (*cubawheeler.Profile, error) {
-	return r.profile.ChangePin(ctx, old, pin)
-}
-
-// AcceptTrip is the resolver for the acceptTrip field.
-func (r *mutationResolver) AcceptTrip(ctx context.Context, trip string) (*cubawheeler.Order, error) {
-	panic(fmt.Errorf("not implemented: AcceptTrip - acceptTrip"))
+func (r *mutationResolver) ChangePin(ctx context.Context, old *string, pin string) (*cubawheeler.Response, error) {
+	var rsp = cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
+	}
+	_, err := r.profile.ChangePin(ctx, old, pin)
+	if err != nil {
+		rsp.Success = false
+		rsp.Message = err.Error()
+		rsp.Code = http.StatusBadRequest
+	}
+	return &rsp, nil
 }
 
 // CreateApplication is the resolver for the createApplication field.
@@ -156,4 +242,18 @@ func (r *mutationResolver) CreateApplication(ctx context.Context, input cubawhee
 // UpdateApplicationCredentials is the resolver for the updateApplicationCredentials field.
 func (r *mutationResolver) UpdateApplicationCredentials(ctx context.Context, application string) (*cubawheeler.Application, error) {
 	return r.app.UpdateApplicationCredentials(ctx, application)
+}
+
+// AddDevice is the resolver for the addDevice field.
+func (r *mutationResolver) AddDevice(ctx context.Context, device string) (*cubawheeler.Response, error) {
+	var rsp = cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
+	}
+	if err := r.user.AddDevice(ctx, device); err != nil {
+		rsp.Message = err.Error()
+		rsp.Code = http.StatusBadRequest
+		rsp.Success = false
+	}
+	return &rsp, nil
 }

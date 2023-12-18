@@ -158,6 +158,11 @@ enum Role {
   ADMIN
   CLIENT
 }
+
+type Device {
+  token: String!
+  active: Boolean!
+}
  
  type User {
   id: ID!
@@ -179,6 +184,7 @@ enum Role {
   favorite_vehicles: [Vehicle]
   orders: [Order]
   reviews: [Review]
+  devices: [Device!]
 }
 
 enum OrderStatus {
@@ -413,6 +419,11 @@ type Response {
   success: Boolean!
 }
 
+type NearByResponse {
+  driver: User!
+  location: Location!
+}
+
 type Query {
   users(filter: UserFilter): UserList!
 
@@ -428,6 +439,8 @@ type Query {
   findVehicle(vehicle: String!): Vehicle!
 
   findApplications(input: ApplicationFilter): ApplicationList!
+
+  nearByDrivers(input: PointInput): [NearByResponse!]!
 }
 
 input UpdateProfile {
@@ -462,9 +475,6 @@ input PointInput {
 input Item {
   pick_up: PointInput!
   drop_off: PointInput!
-  seconds: Int!
-  m: Float!
-  route: [PointInput!]!
 }
 
 input AddPlace {
@@ -513,17 +523,37 @@ input ApplicationRequest {
   secret: String!
 }
 
+input CreateOrderRequest {
+  route: [PointInput!]!
+  coupon: String
+}
+
+type CostPerBrand {
+  id: ID!
+  brand: Brand!
+  price: Int!
+}
+
+type CreateOrderResponse {
+  order: Order!
+  cost: [CostPerBrand!]!
+  price: Int!
+}
+
 type Mutation {
   login(input: LoginRequest!): Token!
-  otp(email: String!): String!
+  otp(email: String!): Response!
 
-  updateProfile(profile: UpdateProfile!): Profile!
-  changePin(old: String, pin: String!): Profile!
+  updateProfile(profile: UpdateProfile!): Response!
+  changePin(old: String, pin: String!): Response!
+  addDevice(decive: String!): Response!
 
-  createOrder(input: [Item!]): Order!
-  cancelOrder(order: String!): Order!
-  acceptOrder(order: String!): Order!
-  startOrder(order: String!): Order!
+  createOrder(input: CreateOrderRequest): CreateOrderResponse!
+  updateOrder(input: CreateOrderRequest): CreateOrderResponse!
+  confirmOrder(order: String!, cost: ID!): Response!
+  cancelOrder(order: String!): Response!
+  acceptOrder(order: String!): Response!
+  startOrder(order: String!): Response!
 
   addFavoritePlace(place: AddPlace!): Location
   favoritePlaces: [Location!]!

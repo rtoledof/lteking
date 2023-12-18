@@ -12,6 +12,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type Device struct {
+	Token  string `json:"token" bson:"id"`
+	Active bool   `json:"active" bson:"active"`
+}
+
 type User struct {
 	ID                  string         `json:"id" faker:"-" bson:"_id"`
 	Name                string         `json:"name" faker:"name" bson:"name"`
@@ -32,9 +37,11 @@ type User struct {
 	Vehicles            []*Vehicle     `json:"vehicles,omitempty" bson:"vehicles"`
 	FavoriteVehicles    []*Vehicle     `json:"favorite_vehicles,omitempty" bson:"favorite_vehicles,omitempty"`
 	Orders              []*Order       `json:"orders,omitempty" bson:"orders,omitempty"`
-	Profile             Profile        `json:"profile" faker:"-" bson:"profile"`
+	Profile             Profile        `json:"profile,omitempty" faker:"-" bson:"profile"`
 	BeansToken          map[string]any `json:"beans_token,omitempty" bson:"beans_token,omitempty"`
 	BeansTokenCreatedAt int64          `json:"beans_token_created_at,omitempty" bson:"beans_token_created_at,omitempty"`
+	Devices             []Device       `json:"devices,omitempty" bson:"devices,omitempty"`
+	jwt.StandardClaims
 }
 
 type UserList struct {
@@ -74,12 +81,10 @@ func (u *User) ComparePin(pin string) error {
 
 func (u *User) GenToken() (*Token, error) {
 	expiresAt := time.Now().Add(time.Hour * 24 * 7)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		ExpiresAt: expiresAt.Unix(),
-		Id:        u.Email,
-		IssuedAt:  time.Now().Unix(),
-		Issuer:    "cubawheeler",
-	})
+	u.ExpiresAt = expiresAt.Unix()
+	u.IssuedAt = time.Now().Unix()
+	u.Issuer = "cubawheeler"
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, u)
 
 	accessToken, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
@@ -103,13 +108,17 @@ type UserService interface {
 	Orders(context.Context, *OrderFilter) (*OrderList, error)
 	LastNAddress(context.Context, int) ([]*Location, error)
 	Login(context.Context, LoginRequest) (*User, error)
-	AddFavoriteVehicle(ctx context.Context, plate *string) (*Vehicle, error)
-	FavoriteVehicles(ctx context.Context) ([]*Vehicle, error)
-	UpdatePlace(ctx context.Context, input *UpdatePlace) (*Location, error)
+	AddFavoriteVehicle(context.Context, *string) (*Vehicle, error)
+	FavoriteVehicles(context.Context) ([]*Vehicle, error)
+	UpdatePlace(context.Context, *UpdatePlace) (*Location, error)
+	UpdateProfile(context.Context, *UpdateProfile) error
+	AddDevice(context.Context, string) error
+	GetUserDevices(context.Context, []string) ([]*User, error)
+	SetAvailability(ctx context.Context, user string, available bool) error
 }
 
 type OtpService interface {
-	Create(context.Context, string) error
+	Create(context.Context, string) (string, error)
 	Otp(context.Context, string, string) error
 }
 
@@ -126,6 +135,7 @@ type UserFilter struct {
 	Otp    string
 	Pin    string
 	User   string
+	Role   Role
 	Status []UserStatus
 }
 

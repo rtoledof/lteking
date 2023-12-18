@@ -172,7 +172,7 @@ func (e ChannelEvent) MarshalGQL(w io.Writer) {
 }
 
 type Response struct {
-	Message string `json:"message"`
+	Message string `json:"message,omitempty"`
 	Code    int    `json:"code"`
 	Success bool   `json:"success"`
 }

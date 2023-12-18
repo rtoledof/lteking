@@ -58,3 +58,41 @@ func (r *queryResolver) FindVehicle(ctx context.Context, vehicle string) (*cubaw
 func (r *queryResolver) FindApplications(ctx context.Context, input *cubawheeler.ApplicationFilter) (*cubawheeler.ApplicationList, error) {
 	panic(fmt.Errorf("not implemented: FindApplications - findApplications"))
 }
+
+// NearByDrivers is the resolver for the nearByDrivers field.
+func (r *queryResolver) NearByDrivers(ctx context.Context, input *cubawheeler.PointInput) ([]*cubawheeler.NearByResponse, error) {
+	locations, err := r.realTimeLocation.FindNearByDrivers(ctx, cubawheeler.GeoLocation{
+		Type: "Point",
+		Long: input.Lon,
+		Lat:  input.Lat,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var users []string
+	var userLocations = make(map[string]*cubawheeler.Location)
+	for _, l := range locations {
+		users = append(users, l.User)
+		userLocations[l.User] = l
+	}
+
+	rsp, err := r.user.FindAll(ctx, &cubawheeler.UserFilter{
+		Ids:    users,
+		Status: []cubawheeler.UserStatus{cubawheeler.UserStatusActive},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var nearByResponses []*cubawheeler.NearByResponse
+	for _, v := range rsp.Data {
+		rsp := cubawheeler.NearByResponse{
+			Driver: v,
+		}
+		if l, ok := userLocations[v.ID]; ok {
+			rsp.Location = l
+			nearByResponses = append(nearByResponses, &rsp)
+		}
+	}
+
+	return nearByResponses, nil
+}

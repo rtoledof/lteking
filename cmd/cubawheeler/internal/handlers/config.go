@@ -3,7 +3,25 @@ package handlers
 import (
 	"os"
 	"strconv"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
+
+type Amqp struct {
+	Connection string
+	Queue      string
+	Consumer   string
+	AutoAsk    bool
+	Exclusive  bool
+	NoLocal    bool
+	NoWait     bool
+	Arg        amqp.Table
+}
+
+type Ably struct {
+	ApiKey           string
+	ApiSubscriperKey string
+}
 
 type Config struct {
 	Host  string
@@ -11,6 +29,7 @@ type Config struct {
 	Path  string
 	Redis string
 	Mongo string
+	Amqp  Amqp
 
 	SMTPServer   string
 	SMTPPort     int64
@@ -25,6 +44,8 @@ type Config struct {
 
 	BeansInterest string
 	BeansSecret   string
+
+	Ably Ably
 }
 
 func LoadConfig() Config {
@@ -34,10 +55,8 @@ func LoadConfig() Config {
 		Redis: "redis://localhost:6379",
 		Mongo: "mongodb://localhost:27017/",
 
-		SMTPServer:   "smtp.gmail.com",
-		SMTPPort:     587,
-		SMTPUSer:     "",
-		SMTPPassword: "",
+		SMTPServer: "smtp.gmail.com",
+		SMTPPort:   587,
 	}
 
 	if redisAddr, exist := os.LookupEnv("REDIS_ADDR"); exist {
@@ -110,5 +129,24 @@ func LoadConfig() Config {
 		cfg.BeansSecret = secret
 	}
 
+	if amqp, exist := os.LookupEnv("AMQP_CONNECTION"); exist {
+		cfg.Amqp.Connection = amqp
+	}
+
+	if queue, exist := os.LookupEnv("AMQP_QUEUE"); exist {
+		cfg.Amqp.Queue = queue
+	}
+
+	if consumer, exist := os.LookupEnv("AMQP_CONSUMER"); exist {
+		cfg.Amqp.Consumer = consumer
+	}
+
+	if apiKey, exist := os.LookupEnv("ABLY_API_KEY"); exist {
+		cfg.Ably.ApiKey = apiKey
+	}
+
+	if subscriberApiKey, exist := os.LookupEnv("ABLY_SUBSCRIBER_API_KEY"); exist {
+		cfg.Ably.ApiSubscriperKey = subscriberApiKey
+	}
 	return cfg
 }

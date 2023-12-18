@@ -34,11 +34,16 @@ func NewOrderService(db *DB) *OrderService {
 	}
 }
 
-func (s *OrderService) Create(ctx context.Context, input []cubawheeler.OrderItem) (*cubawheeler.Order, error) {
+func (s *OrderService) Create(ctx context.Context, input []*cubawheeler.OrderItem) (*cubawheeler.Order, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
 	}
+
+	// Must connect to to mapbox and get the route.
+	// Get brands y rate to be aplied
+	// Calculate the price of the trip and store it in the order
+	// Send the order, brand and price to the client
 	priceXsec := 1
 	priceXm := 100
 	order := cubawheeler.Order{
@@ -60,10 +65,14 @@ func (s *OrderService) Create(ctx context.Context, input []cubawheeler.OrderItem
 		return nil, fmt.Errorf("unable to store the trip: %w", err)
 	}
 
-	s.orderChan <- &order
+	// realtime.OrderChan <- &order
 
 	return &order, nil
 }
+
+// Request with brand and price
+// Accept the order for the client
+// Send the order to the near by drivers with are riding a vehicle of the same brand
 
 func (s *OrderService) Update(ctx context.Context, trip *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
 	//TODO implement me
@@ -204,7 +213,7 @@ func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubaw
 		f = append(f, bson.E{Key: "driver", Value: filter.Driver})
 	}
 	if filter.Token != nil {
-		f = append(f, bson.E{Key: "_id", Value: primitive.E{"$gt", filter.Token}})
+		f = append(f, bson.E{Key: "_id", Value: primitive.E{Key: "$gt", Value: filter.Token}})
 	}
 
 	cur, err := collection.Find(ctx, f)

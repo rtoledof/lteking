@@ -3,8 +3,9 @@ package graph
 import (
 	"context"
 
-	"cubawheeler.io/pkg/cubawheeler"
 	"github.com/99designs/gqlgen/graphql"
+
+	"cubawheeler.io/pkg/cubawheeler"
 )
 
 type profileResolver struct{ *Resolver }

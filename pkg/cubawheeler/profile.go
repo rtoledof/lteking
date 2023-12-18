@@ -10,19 +10,19 @@ import (
 )
 
 type Profile struct {
-	ID                string        `json:"id" faker:"-" bson:"_id"`
+	ID                string        `json:"-" faker:"-" bson:"_id"`
 	Name              string        `json:"name,omitempty" faker:"name" bson:"name"`
 	LastName          string        `json:"last_name,omitempty" faker:"last_name" bson:"last_name"`
 	DOB               string        `json:"dob,omitempty" bson:"dob"`
 	Phone             string        `json:"phone,omitempty" faker:"phone_number" bson:"phone"`
 	Photo             string        `json:"photo,omitempty" faker:"url" bson:"photo"`
-	Gender            Gender        `json:"gender" bson:"gender"`
+	Gender            Gender        `json:"gender,omitempty" bson:"gender"`
 	Licence           string        `json:"licence,omitempty" bson:"licence"`
 	Dni               string        `json:"dni,omitempty" bson:"dni"`
-	UserId            string        `faker:"-" json:"user_id" bson:"user_id"`
-	Status            ProfileStatus `json:"status" bson:"status"`
-	Circulation       string        `json:"ciculation" bson:"circulation"`
-	TechnicInspection string        `json:"technic_inspection" bson:"technic_inspection"`
+	UserId            string        `faker:"-" json:"-" bson:"user_id"`
+	Status            ProfileStatus `json:"status,omitempty" bson:"status"`
+	Circulation       string        `json:"ciculation,omitempty" bson:"circulation"`
+	TechnicInspection string        `json:"technic_inspection,omitempty" bson:"technic_inspection"`
 }
 
 func (p *Profile) IsCompleted(role Role) bool {

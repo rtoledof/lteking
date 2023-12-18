@@ -78,16 +78,16 @@ func findAllAds(ctx context.Context, collection *mongo.Collection, filter *cubaw
 	var token string
 	f := bson.D{}
 	if len(filter.Ids) > 0 {
-		f = append(f, primitive.E{"_id", primitive.A{"$in", filter.Ids}})
+		f = append(f, primitive.E{Key: "_id", Value: primitive.A{"$in", filter.Ids}})
 	}
 	if len(filter.Token) > 0 {
-		f = append(f, bson.E{"_id", primitive.E{"$gt", filter.Token}})
+		f = append(f, bson.E{Key: "_id", Value: primitive.E{Key: "$gt", Value: filter.Token}})
 	}
 	if len(filter.Name) > 0 {
-		f = append(f, bson.E{"name", filter.Name})
+		f = append(f, bson.E{Key: "name", Value: filter.Name})
 	}
 	if len(filter.Owner) > 0 {
-		f = append(f, bson.E{"owner", filter.Owner})
+		f = append(f, bson.E{Key: "owner", Value: filter.Owner})
 	}
 	cur, err := collection.Find(ctx, f)
 	if err != nil {
