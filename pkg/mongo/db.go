@@ -43,3 +43,7 @@ func NewDB(serverURL string) *DB {
 
 	return &DB{client: client}
 }
+
+func (db *DB) Collection(name Collections) *mongo.Collection {
+	return db.client.Database(database).Collection(name.String())
+}

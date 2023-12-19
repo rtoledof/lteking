@@ -49,6 +49,14 @@ func (r *Resolver) AddPlace() AddPlaceResolver { return &addPlaceResolver{r} }
 // ChargeRequest returns ChargeRequestResolver implementation.
 func (r *Resolver) ChargeRequest() ChargeRequestResolver { return &chargeRequestResolver{r} }
 
+// CreateOrderRequest returns CreateOrderRequestResolver implementation.
+func (r *Resolver) CreateOrderRequest() CreateOrderRequestResolver {
+	return &createOrderRequestResolver{r}
+}
+
+// RateRequest returns RateRequestResolver implementation.
+func (r *Resolver) RateRequest() RateRequestResolver { return &rateRequestResolver{r} }
+
 // UpdatePlace returns UpdatePlaceResolver implementation.
 func (r *Resolver) UpdatePlace() UpdatePlaceResolver { return &updatePlaceResolver{r} }
 

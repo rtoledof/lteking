@@ -152,3 +152,9 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.NearByResponse
   Device: 
     model: cubawheeler.io/pkg/cubawheeler.Device
+  CostPerBrand: 
+    model: cubawheeler.io/pkg/cubawheeler.CostPerBrand
+  CreateOrderRequest: 
+    model: cubawheeler.io/pkg/cubawheeler.CreateOrderRequest
+  CreateOrderResponse: 
+    model: cubawheeler.io/pkg/cubawheeler.CreateOrderResponse

@@ -15,12 +15,13 @@ type Rate struct {
 	PricePerKm        int    `json:"price_per_km" bson:"price_per_km"`
 	PricePerPassenger int    `json:"price_per_passenger,omitempty" bson:"price_per_passenger,omitempty"`
 	PricePerBaggage   int    `json:"price_per_baggage" bson:"price_per_baggage"`
-	StartTime         int    `json:"start_time,omitempty" bson:"start_time,omitempty"`
-	EndTime           int    `json:"end_time,omitempty" bson:"end_time,omitempty"`
+	StartTime         string `json:"start_time,omitempty" bson:"start_time,omitempty"`
+	EndTime           string `json:"end_time,omitempty" bson:"end_time,omitempty"`
 	StartDate         int    `json:"start_date,omitempty" bson:"start_date,omitempty"`
 	EndDate           int    `json:"end_date,omitempty" bson:"end_date,omitempty"`
 	MinKm             int    `json:"min_km,omitempty" bson:"min_km,omitempty"`
 	MaxKm             int    `json:"max_km,omitempty" bson:"max_km,omitempty"`
+	HighDemand        bool   `json:"high_demand,omitempty" bson:"high_demand,omitempty"`
 }
 
 func (r *Rate) Validate() error {
@@ -29,9 +30,6 @@ func (r *Rate) Validate() error {
 	}
 	if r.BasePrice <= 0 {
 		return fmt.Errorf("base price is required: %w", errors.ErrInvalidInput)
-	}
-	if r.PricePerMin <= 0 {
-		return fmt.Errorf("price per min is required: %w", errors.ErrInvalidInput)
 	}
 	if r.PricePerKm <= 0 {
 		return fmt.Errorf("price per km is required: %w", errors.ErrInvalidInput)
@@ -48,12 +46,13 @@ type RateRequest struct {
 	PricePerKm        *int   `json:"price_per_km,omitempty"`
 	PricePerPassenger *int   `json:"price_per_passenger,omitempty"`
 	PricePerBaggage   *int   `json:"price_per_baggage,omitempty"`
-	StartTime         *int   `json:"start_time,omitempty"`
-	EndTime           *int   `json:"end_time,omitempty"`
+	StartTime         string `json:"start_time,omitempty"`
+	EndTime           string `json:"end_time,omitempty"`
 	StartDate         *int   `json:"start_date,omitempty"`
 	EndDate           *int   `json:"end_date,omitempty"`
 	MinKm             *int   `json:"min_km,omitempty"`
 	MaxKm             *int   `json:"max_km,omitempty"`
+	HiDemand          *bool  `json:"high_demand,omitempty"`
 }
 
 type RateFilter struct {

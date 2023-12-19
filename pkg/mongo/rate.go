@@ -156,6 +156,7 @@ func assembleRate(rate *cubawheeler.Rate, req cubawheeler.RateRequest) {
 	if id == "" {
 		id = cubawheeler.NewID().String()
 	}
+	rate.ID = id
 	if len(req.Code) > 0 {
 		rate.Code = req.Code
 	}
@@ -174,11 +175,11 @@ func assembleRate(rate *cubawheeler.Rate, req cubawheeler.RateRequest) {
 	if req.PricePerBaggage != nil {
 		rate.PricePerBaggage = *req.PricePerBaggage
 	}
-	if req.StartTime != nil {
-		rate.StartTime = *req.StartTime
+	if len(req.StartTime) > 0 {
+		rate.StartTime = req.StartTime
 	}
-	if req.EndTime != nil {
-		rate.EndTime = *req.EndTime
+	if len(req.EndTime) > 0 {
+		rate.EndTime = req.EndTime
 	}
 	if req.StartDate != nil {
 		rate.StartDate = *req.StartDate

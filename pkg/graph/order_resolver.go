@@ -58,3 +58,17 @@ func (r *orderItemResolver) Seconds(ctx context.Context, obj *cubawheeler.OrderI
 func (r *orderItemResolver) M(ctx context.Context, obj *cubawheeler.OrderItem) (float64, error) {
 	return float64(obj.Meters), nil
 }
+
+type createOrderRequestResolver struct{ *Resolver }
+
+// Riders is the resolver for the riders field.
+func (r *createOrderRequestResolver) Riders(ctx context.Context, obj *cubawheeler.CreateOrderRequest, data *int) error {
+	obj.Riders = data
+	return nil
+}
+
+// Baggages is the resolver for the baggages field.
+func (r *createOrderRequestResolver) Baggages(ctx context.Context, obj *cubawheeler.CreateOrderRequest, data *int) error {
+	obj.Baggages = data
+	return nil
+}

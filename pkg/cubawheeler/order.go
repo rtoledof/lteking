@@ -163,8 +163,10 @@ type CostPerBrand struct {
 }
 
 type CreateOrderRequest struct {
-	Route  []*PointInput `json:"route"`
-	Coupon *string       `json:"coupon,omitempty"`
+	Route    []*PointInput `json:"route"`
+	Coupon   *string       `json:"coupon,omitempty"`
+	Riders   *int          `json:"riders,omitempty"`
+	Baggages *int          `json:"baggages,omitempty"`
 }
 
 type CreateOrderResponse struct {

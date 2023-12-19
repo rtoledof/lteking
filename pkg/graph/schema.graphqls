@@ -335,8 +335,8 @@ type Rate {
   price_per_km: Int!
   price_per_passenger: Int
   price_per_baggage: Int!
-  start_time: Int
-  end_time: Int
+  start_time: String
+  end_time: String
   start_date: Int
   end_date: Int
   min_km: Int
@@ -506,12 +506,13 @@ input RateRequest {
   price_per_km: Int
   price_per_passenger: Int
   price_per_baggage: Int
-  start_time: Int
-  end_time: Int
+  start_time: String
+  end_time: String
   start_date: Int
   end_date: Int
   min_km: Int
   max_km: Int
+  high_demand: Boolean
 }
 
 scalar Upload
@@ -526,6 +527,8 @@ input ApplicationRequest {
 input CreateOrderRequest {
   route: [PointInput!]!
   coupon: String
+  riders: Int
+  baggages: Int
 }
 
 type CostPerBrand {

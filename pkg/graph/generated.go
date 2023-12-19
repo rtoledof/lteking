@@ -54,6 +54,8 @@ type ResolverRoot interface {
 	Vehicle() VehicleResolver
 	AddPlace() AddPlaceResolver
 	ChargeRequest() ChargeRequestResolver
+	CreateOrderRequest() CreateOrderRequestResolver
+	RateRequest() RateRequestResolver
 	UpdatePlace() UpdatePlaceResolver
 	UpdateProfile() UpdateProfileResolver
 	UpdateVehicle() UpdateVehicleResolver
@@ -458,6 +460,13 @@ type AddPlaceResolver interface {
 type ChargeRequestResolver interface {
 	Order(ctx context.Context, obj *cubawheeler.ChargeRequest, data *string) error
 	Dispute(ctx context.Context, obj *cubawheeler.ChargeRequest, data *bool) error
+}
+type CreateOrderRequestResolver interface {
+	Riders(ctx context.Context, obj *cubawheeler.CreateOrderRequest, data *int) error
+	Baggages(ctx context.Context, obj *cubawheeler.CreateOrderRequest, data *int) error
+}
+type RateRequestResolver interface {
+	HighDemand(ctx context.Context, obj *cubawheeler.RateRequest, data *bool) error
 }
 type UpdatePlaceResolver interface {
 	Location(ctx context.Context, obj *cubawheeler.UpdatePlace, data *cubawheeler.PointInput) error
@@ -2415,7 +2424,7 @@ func (ec *executionContext) field_Mutation_createOrder_args(ctx context.Context,
 	var arg0 *cubawheeler.CreateOrderRequest
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOCreateOrderRequest2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCreateOrderRequest(ctx, tmp)
+		arg0, err = ec.unmarshalOCreateOrderRequest2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCreateOrderRequest(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2490,7 +2499,7 @@ func (ec *executionContext) field_Mutation_updateOrder_args(ctx context.Context,
 	var arg0 *cubawheeler.CreateOrderRequest
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOCreateOrderRequest2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCreateOrderRequest(ctx, tmp)
+		arg0, err = ec.unmarshalOCreateOrderRequest2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCreateOrderRequest(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -5376,7 +5385,7 @@ func (ec *executionContext) _CreateOrderResponse_cost(ctx context.Context, field
 	}
 	res := resTmp.([]*cubawheeler.CostPerBrand)
 	fc.Result = res
-	return ec.marshalNCostPerBrand2ᚕᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCostPerBrandᚄ(ctx, field.Selections, res)
+	return ec.marshalNCostPerBrand2ᚕᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCostPerBrandᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_CreateOrderResponse_cost(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6413,7 +6422,7 @@ func (ec *executionContext) _Mutation_createOrder(ctx context.Context, field gra
 	}
 	res := resTmp.(*cubawheeler.CreateOrderResponse)
 	fc.Result = res
-	return ec.marshalNCreateOrderResponse2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCreateOrderResponse(ctx, field.Selections, res)
+	return ec.marshalNCreateOrderResponse2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCreateOrderResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_createOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6476,7 +6485,7 @@ func (ec *executionContext) _Mutation_updateOrder(ctx context.Context, field gra
 	}
 	res := resTmp.(*cubawheeler.CreateOrderResponse)
 	fc.Result = res
-	return ec.marshalNCreateOrderResponse2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCreateOrderResponse(ctx, field.Selections, res)
+	return ec.marshalNCreateOrderResponse2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCreateOrderResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_updateOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -10875,9 +10884,9 @@ func (ec *executionContext) _Rate_price_per_passenger(ctx context.Context, field
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Rate_price_per_passenger(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -10960,9 +10969,9 @@ func (ec *executionContext) _Rate_start_time(ctx context.Context, field graphql.
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Rate_start_time(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -10972,7 +10981,7 @@ func (ec *executionContext) fieldContext_Rate_start_time(ctx context.Context, fi
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -11001,9 +11010,9 @@ func (ec *executionContext) _Rate_end_time(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Rate_end_time(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -11013,7 +11022,7 @@ func (ec *executionContext) fieldContext_Rate_end_time(ctx context.Context, fiel
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -11042,9 +11051,9 @@ func (ec *executionContext) _Rate_start_date(ctx context.Context, field graphql.
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Rate_start_date(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -11083,9 +11092,9 @@ func (ec *executionContext) _Rate_end_date(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Rate_end_date(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -11124,9 +11133,9 @@ func (ec *executionContext) _Rate_min_km(ctx context.Context, field graphql.Coll
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Rate_min_km(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -11165,9 +11174,9 @@ func (ec *executionContext) _Rate_max_km(ctx context.Context, field graphql.Coll
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Rate_max_km(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -15402,7 +15411,7 @@ func (ec *executionContext) unmarshalInputCreateOrderRequest(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"route", "coupon"}
+	fieldsInOrder := [...]string{"route", "coupon", "riders", "baggages"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -15427,6 +15436,28 @@ func (ec *executionContext) unmarshalInputCreateOrderRequest(ctx context.Context
 				return it, err
 			}
 			it.Coupon = data
+		case "riders":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("riders"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.CreateOrderRequest().Riders(ctx, &it, data); err != nil {
+				return it, err
+			}
+		case "baggages":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baggages"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.CreateOrderRequest().Baggages(ctx, &it, data); err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -15628,7 +15659,7 @@ func (ec *executionContext) unmarshalInputRateRequest(ctx context.Context, obj i
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "code", "base_price", "price_per_min", "price_per_km", "price_per_passenger", "price_per_baggage", "start_time", "end_time", "start_date", "end_date", "min_km", "max_km"}
+	fieldsInOrder := [...]string{"id", "code", "base_price", "price_per_min", "price_per_km", "price_per_passenger", "price_per_baggage", "start_time", "end_time", "start_date", "end_date", "min_km", "max_km", "high_demand"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -15702,7 +15733,7 @@ func (ec *executionContext) unmarshalInputRateRequest(ctx context.Context, obj i
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("start_time"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			data, err := ec.unmarshalOString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -15711,7 +15742,7 @@ func (ec *executionContext) unmarshalInputRateRequest(ctx context.Context, obj i
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("end_time"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			data, err := ec.unmarshalOString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -15752,6 +15783,17 @@ func (ec *executionContext) unmarshalInputRateRequest(ctx context.Context, obj i
 				return it, err
 			}
 			it.MaxKm = data
+		case "high_demand":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("high_demand"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.RateRequest().HighDemand(ctx, &it, data); err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -19416,7 +19458,7 @@ func (ec *executionContext) marshalNClient2ᚖcubawheelerᚗioᚋpkgᚋcubawheel
 	return ec._Client(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCostPerBrand2ᚕᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCostPerBrandᚄ(ctx context.Context, sel ast.SelectionSet, v []*cubawheeler.CostPerBrand) graphql.Marshaler {
+func (ec *executionContext) marshalNCostPerBrand2ᚕᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCostPerBrandᚄ(ctx context.Context, sel ast.SelectionSet, v []*cubawheeler.CostPerBrand) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -19440,7 +19482,7 @@ func (ec *executionContext) marshalNCostPerBrand2ᚕᚖcubawheelerᚗioᚋpkgᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNCostPerBrand2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCostPerBrand(ctx, sel, v[i])
+			ret[i] = ec.marshalNCostPerBrand2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCostPerBrand(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -19460,7 +19502,7 @@ func (ec *executionContext) marshalNCostPerBrand2ᚕᚖcubawheelerᚗioᚋpkgᚋ
 	return ret
 }
 
-func (ec *executionContext) marshalNCostPerBrand2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCostPerBrand(ctx context.Context, sel ast.SelectionSet, v *cubawheeler.CostPerBrand) graphql.Marshaler {
+func (ec *executionContext) marshalNCostPerBrand2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCostPerBrand(ctx context.Context, sel ast.SelectionSet, v *cubawheeler.CostPerBrand) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -19480,11 +19522,11 @@ func (ec *executionContext) marshalNCouponStatus2cubawheelerᚗioᚋpkgᚋcubawh
 	return v
 }
 
-func (ec *executionContext) marshalNCreateOrderResponse2cubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCreateOrderResponse(ctx context.Context, sel ast.SelectionSet, v cubawheeler.CreateOrderResponse) graphql.Marshaler {
+func (ec *executionContext) marshalNCreateOrderResponse2cubawheelerᚗioᚋpkgᚋcubawheelerᚐCreateOrderResponse(ctx context.Context, sel ast.SelectionSet, v cubawheeler.CreateOrderResponse) graphql.Marshaler {
 	return ec._CreateOrderResponse(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNCreateOrderResponse2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCreateOrderResponse(ctx context.Context, sel ast.SelectionSet, v *cubawheeler.CreateOrderResponse) graphql.Marshaler {
+func (ec *executionContext) marshalNCreateOrderResponse2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCreateOrderResponse(ctx context.Context, sel ast.SelectionSet, v *cubawheeler.CreateOrderResponse) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -20561,7 +20603,7 @@ func (ec *executionContext) marshalOCoupon2ᚖcubawheelerᚗioᚋpkgᚋcubawheel
 	return ec._Coupon(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOCreateOrderRequest2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐCreateOrderRequest(ctx context.Context, v interface{}) (*cubawheeler.CreateOrderRequest, error) {
+func (ec *executionContext) unmarshalOCreateOrderRequest2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐCreateOrderRequest(ctx context.Context, v interface{}) (*cubawheeler.CreateOrderRequest, error) {
 	if v == nil {
 		return nil, nil
 	}

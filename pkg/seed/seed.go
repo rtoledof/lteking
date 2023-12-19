@@ -16,6 +16,7 @@ func NewSeed(db *mongo.DB) Seed {
 		seeders: []Seed{
 			NewApplication(db),
 			NewPlan(db),
+			NewRate(db),
 		},
 	}
 }
