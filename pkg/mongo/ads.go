@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/derrors"
 )
 
 var _ cubawheeler.AdsService = &AdsService{}
@@ -27,7 +28,8 @@ func NewAdsService(db *DB) *AdsService {
 	}
 }
 
-func (s *AdsService) Create(ctx context.Context, request *cubawheeler.AdsRequest) (*cubawheeler.Ads, error) {
+func (s *AdsService) Create(ctx context.Context, request *cubawheeler.AdsRequest) (_ *cubawheeler.Ads, err error) {
+	defer derrors.Wrap(&err, "mongo.AdsService.Create")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
@@ -46,19 +48,21 @@ func (s *AdsService) Create(ctx context.Context, request *cubawheeler.AdsRequest
 		ValidFrom:   request.ValidFrom,
 		ValidUntil:  request.ValidUntil,
 	}
-	_, err := s.collection.InsertOne(ctx, &ads)
+	_, err = s.collection.InsertOne(ctx, &ads)
 	if err != nil {
 		return nil, errors.New("unable to store the ads")
 	}
 	return &ads, nil
 }
 
-func (s *AdsService) Update(ctx context.Context, request *cubawheeler.AdsRequest) (*cubawheeler.Ads, error) {
+func (s *AdsService) Update(ctx context.Context, request *cubawheeler.AdsRequest) (_ *cubawheeler.Ads, err error) {
+	defer derrors.Wrap(&err, "mongo.AdsService.Update")
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *AdsService) FindById(ctx context.Context, id string) (*cubawheeler.Ads, error) {
+func (s *AdsService) FindById(ctx context.Context, id string) (_ *cubawheeler.Ads, err error) {
+	defer derrors.Wrap(&err, "mongo.AdsService.FindById")
 	ads, _, err := findAllAds(ctx, s.collection, &cubawheeler.AdsRequest{Ids: []string{id}})
 	if err != nil {
 		return nil, err
@@ -69,7 +73,8 @@ func (s *AdsService) FindById(ctx context.Context, id string) (*cubawheeler.Ads,
 	return ads[0], nil
 }
 
-func (s *AdsService) FindAll(ctx context.Context, request *cubawheeler.AdsRequest) ([]*cubawheeler.Ads, string, error) {
+func (s *AdsService) FindAll(ctx context.Context, request *cubawheeler.AdsRequest) (_ []*cubawheeler.Ads, _ string, err error) {
+	defer derrors.Wrap(&err, "mongo.AdsService.FindAll")
 	return findAllAds(ctx, s.collection, request)
 }
 

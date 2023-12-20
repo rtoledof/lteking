@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	e "cubawheeler.io/pkg/errors"
 )
 
 var (
@@ -139,7 +138,7 @@ func (s *ProfileService) FindByUser(ctx context.Context) (*cubawheeler.Profile, 
 		return nil, err
 	}
 	if len(profiles) == 0 {
-		return nil, e.ErrNotFound
+		return nil, cubawheeler.ErrNotFound
 	}
 	return profiles[0], nil
 }

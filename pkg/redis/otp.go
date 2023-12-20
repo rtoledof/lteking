@@ -2,14 +2,14 @@ package redis
 
 import (
 	"context"
-	"cubawheeler.io/pkg/errors"
-	"cubawheeler.io/pkg/mailer"
 	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"cubawheeler.io/pkg/cubawheeler"
+
+	"cubawheeler.io/pkg/mailer"
 )
 
 var _ cubawheeler.OtpService = &OtpService{}
@@ -39,10 +39,10 @@ func (s *OtpService) Create(ctx context.Context, email string) (string, error) {
 	}
 	data, err := json.Marshal(otp)
 	if err != nil {
-		return "", fmt.Errorf("unable to marshal otp: %v: %w", err, errors.ErrInternal)
+		return "", fmt.Errorf("unable to marshal otp: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	if err = s.redis.client.Set(ctx, otp.Otp, data, otp.ExpireIn).Err(); err != nil {
-		return "", fmt.Errorf("unable to store otp token: %v: %w", err, errors.ErrInternal)
+		return "", fmt.Errorf("unable to store otp token: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	go func() {
 		textTemplate := fmt.Sprintf("Your otp is: %s", otp.Otp)
@@ -61,18 +61,18 @@ func (s *OtpService) Otp(ctx context.Context, otp, email string) error {
 	}()
 	data := s.redis.client.Get(ctx, otp)
 	if data == nil {
-		return errors.ErrNotFound
+		return cubawheeler.ErrNotFound
 	}
 	var t token
 	b, err := data.Bytes()
 	if err != nil {
-		return fmt.Errorf("unable to get token info: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to get token info: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	if err := json.Unmarshal(b, &t); err != nil {
-		return fmt.Errorf("unable to decode token info: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to decode token info: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	if t.Email != email {
-		return errors.ErrNotFound
+		return cubawheeler.ErrNotFound
 	}
 	return nil
 }

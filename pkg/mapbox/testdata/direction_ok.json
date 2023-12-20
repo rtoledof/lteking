@@ -1,0 +1,180 @@
+{
+  "routes": [
+    {
+      "geometry": "mnn_Ick}pAfBiF`CzA",
+      "waypoints": [
+        { 
+          "name": "Köpenicker Straße",
+          "location": [ 13.426579, 52.508068 ]
+        },
+        { 
+          "name": "Engeldamm",
+          "location": [ 13.427292, 52.506902 ]
+        }
+      ],
+      "legs": [
+        {
+          "summary": "Köpenicker Straße, Engeldamm",
+          "weight": 44.4,
+          "duration": 26.2,
+          "steps": [
+            {
+              "intersections": [
+                {
+                  "out": 0,
+                  "entry": [ true ],
+                  "bearings": [ 125 ],
+                  "location": [ 13.426579, 52.508068 ]
+                },
+                {
+                  "out": 1,
+                  "in": 2,
+                  "entry": [ true, true, false ],
+                  "bearings": [ 30, 120, 300 ],
+                  "location": [ 13.426688, 52.508022 ]
+                }
+              ],
+              "driving_side": "right",
+              "geometry": "mnn_Ick}pAHUlAqDNa@",
+              "mode": "driving",
+              "maneuver": {
+                "bearing_after": 125,
+                "bearing_before": 0,
+                "location": [ 13.426579, 52.508068 ],
+                "modifier": "right",
+                "type": "depart",
+                "instruction": "Head southeast on Köpenicker Straße (L 1066)"
+              },
+              "ref": "L 1066",
+              "weight": 35.9,
+              "duration": 17.7,
+              "name": "Köpenicker Straße (L 1066)",
+              "distance": 98.1,
+              "voiceInstructions": [
+                {
+                  "distanceAlongGeometry": 98.1,
+                  "announcement": "Head southeast on Köpenicker Straße (L 1066), then turn right onto Engeldamm",
+                  "ssmlAnnouncement": "<speak><amazon:effect name=\"drc\"><prosody rate=\"1.08\">Head southeast on Köpenicker Straße (L <say-as interpret-as=\"address\">1066</say-as>), then turn right onto Engeldamm</prosody></amazon:effect></speak>"
+                },
+                {
+                  "distanceAlongGeometry": 83.1,
+                  "announcement": "Turn right onto Engeldamm, then you will arrive at your destination",
+                  "ssmlAnnouncement": "<speak><amazon:effect name=\"drc\"><prosody rate=\"1.08\">Turn right onto Engeldamm, then you will arrive at your destination</prosody></amazon:effect></speak>"
+                }
+              ],
+              "bannerInstructions": [
+                {
+                  "distanceAlongGeometry": 98.1,
+                  "primary": {
+                    "text": "Engeldamm",
+                    "components": [ { "text": "Engeldamm" } ],
+                    "type": "turn",
+                    "modifier": "right"
+                  },
+                  "secondary": null,
+                  "sub": null
+                }
+              ]
+            },
+            {
+              "intersections": [
+                {
+                  "out": 2,
+                  "in": 3,
+                  "entry": [ false, true, true, false ],
+                  "bearings": [ 30, 120, 210, 300 ],
+                  "location": [ 13.427752, 52.50755 ]
+                }
+              ],
+              "driving_side": "right",
+              "geometry": "ekn_Imr}pARL\\T^RHDd@\\",
+              "mode": "driving",
+              "maneuver": {
+                "bearing_after": 202,
+                "bearing_before": 125,
+                "location": [ 13.427752, 52.50755 ],
+                "modifier": "right",
+                "type": "turn",
+                "instruction": "Turn right onto Engeldamm"
+              },
+              "weight": 8.5,
+              "duration": 8.5,
+              "name": "Engeldamm",
+              "distance": 78.6,
+              "voiceInstructions": [
+                {
+                  "distanceAlongGeometry": 27.7,
+                  "announcement": "You have arrived at your destination",
+                  "ssmlAnnouncement": "<speak><amazon:effect name=\"drc\"><prosody rate=\"1.08\">You have arrived at your destination</prosody></amazon:effect></speak>"
+                }
+              ],
+              "bannerInstructions": [
+                {
+                  "distanceAlongGeometry": 78.6,
+                  "primary": {
+                    "text": "You will arrive at your destination",
+                    "components": [ { "text": "You will arrive at your destination" } ],
+                    "type": "arrive",
+                    "modifier": "straight"
+                  },
+                  "secondary": {
+                    "text": "Engeldamm",
+                    "components": [ { "text": "Engeldamm" } ],
+                    "type": "arrive",
+                    "modifier": "straight"
+                  }
+                },
+                {
+                  "distanceAlongGeometry": 15,
+                  "primary": {
+                    "text": "You have arrived at your destination",
+                    "components": [ { "text": "You have arrived at your destination" } ],
+                    "type": "arrive",
+                    "modifier": "straight"
+                  },
+                  "secondary": {
+                    "text": "Engeldamm",
+                    "components": [ { "text": "Engeldamm" } ]
+                  }
+                }
+              ]
+            },
+            {
+              "intersections": [
+                {
+                  "in": 0,
+                  "entry": [ true ],
+                  "bearings": [ 25 ],
+                  "location": [ 13.427292, 52.506902 ]
+                }
+              ],
+              "driving_side": "right",
+              "geometry": "cgn_Iqo}pA",
+              "mode": "driving",
+              "maneuver": {
+                "bearing_after": 0,
+                "bearing_before": 205,
+                "location": [ 13.427292, 52.506902 ],
+                "type": "arrive",
+                "instruction": "You have arrived at your destination"
+              },
+              "weight": 0,
+              "duration": 0,
+              "name": "Engeldamm",
+              "distance": 0,
+              "voiceInstructions": [ ],
+              "bannerInstructions": [ ]
+            }
+          ],
+          "distance": 176.7
+        }
+      ],
+      "weight_name": "auto",
+      "weight": 44.4,
+      "duration": 26.2,
+      "distance": 176.7
+    }
+  ],
+  "code": "Ok",
+  "uuid": "cjd51uqn5005447p8nte2zc4w"
+}

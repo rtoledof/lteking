@@ -8,7 +8,6 @@ import (
 	"github.com/pusher/pusher-http-go/v5"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/errors"
 )
 
 var (
@@ -53,13 +52,13 @@ func (p *Pusher) Authenticate(params []byte, usr *cubawheeler.User, presence boo
 		}
 		data, err = p.client.AuthorizePresenceChannel(params, memberData)
 		if err != nil {
-			return nil, fmt.Errorf("unable to authorize presence channel: %v: %w", err, errors.ErrInvalidInput)
+			return nil, fmt.Errorf("unable to authorize presence channel: %v: %w", err, cubawheeler.ErrInvalidInput)
 		}
 	} else {
 		data, err = p.client.AuthorizePrivateChannel(params)
 
 		if err != nil {
-			return nil, fmt.Errorf("unable to authorize private channel: %v: %w", err, errors.ErrInvalidInput)
+			return nil, fmt.Errorf("unable to authorize private channel: %v: %w", err, cubawheeler.ErrInvalidInput)
 		}
 	}
 

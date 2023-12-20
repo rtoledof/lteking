@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/errors"
 )
 
 //db.restaurants.find({ location:
@@ -74,13 +73,13 @@ func (s *RealTimeService) FindNearByDrivers(ctx context.Context, location cubawh
 	}
 	cur, err := collection.Find(ctx, filter)
 	if err != nil {
-		return nil, fmt.Errorf("unable to find the data: %v: %w", err, errors.ErrNotFound)
+		return nil, fmt.Errorf("unable to find the data: %v: %w", err, cubawheeler.ErrNotFound)
 	}
 	defer cur.Close(ctx)
 	for cur.Next(ctx) {
 		var location cubawheeler.Location
 		if err := cur.Decode(&location); err != nil {
-			return nil, fmt.Errorf("unable to decode the location: %v: %w", err, errors.ErrInternal)
+			return nil, fmt.Errorf("unable to decode the location: %v: %w", err, cubawheeler.ErrInternal)
 		}
 		locations = append(locations, &location)
 	}
@@ -97,7 +96,7 @@ func (s *RealTimeService) UpdateLocation(context.Context, string, cubawheeler.Ge
 		if result == nil {
 			v.CreatedAt = time.Now().Unix()
 			if _, err := collection.InsertOne(ctx, v); err != nil {
-				slog.Info("unable to insert location data: %v: %w", err, errors.ErrInternal)
+				slog.Info("unable to insert location data: %v: %w", err, cubawheeler.ErrInternal)
 			}
 		}
 	}

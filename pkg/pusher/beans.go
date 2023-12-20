@@ -1,10 +1,12 @@
 package pusher
 
 import (
-	"cubawheeler.io/pkg/errors"
 	"fmt"
-	pn "github.com/pusher/push-notifications-go"
 	"log/slog"
+
+	pn "github.com/pusher/push-notifications-go"
+
+	"cubawheeler.io/pkg/cubawheeler"
 )
 
 type Notification struct {
@@ -51,7 +53,7 @@ func NewPushNotification(instanceId, secretKey string) *PushNotification {
 func (pn *PushNotification) PublishToInterest(interest []string, notification Notification) error {
 	pubId, err := pn.client.PublishToInterests(interest, notification.Request())
 	if err != nil {
-		return fmt.Errorf("unable to send push notification: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to send push notification: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	slog.Info("push notification with publish id: %s was succesfull sent to interest: %s", pubId, interest)
 	return nil
@@ -60,7 +62,7 @@ func (pn *PushNotification) PublishToInterest(interest []string, notification No
 func (pn *PushNotification) PublishToUser(users []string, notification Notification) error {
 	pubId, err := pn.client.PublishToUsers(users, notification.Request())
 	if err != nil {
-		return fmt.Errorf("unable to send push notification to users: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to send push notification to users: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	slog.Info(fmt.Sprintf("push notification with publish id: %s was successfull sent to users: %v", pubId, users))
 	return nil
@@ -69,14 +71,14 @@ func (pn *PushNotification) PublishToUser(users []string, notification Notificat
 func (pn *PushNotification) GenerateToken(userID string) (map[string]any, error) {
 	beansToken, err := pn.client.GenerateToken(userID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate beansToken: %v: %w", err, errors.ErrInternal)
+		return nil, fmt.Errorf("unable to generate beansToken: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return beansToken, nil
 }
 
 func (pn *PushNotification) DeleteUser(user string) error {
 	if err := pn.client.DeleteUser(user); err != nil {
-		return fmt.Errorf("unable to delete the user: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to delete the user: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }

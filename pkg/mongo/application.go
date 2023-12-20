@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	e "cubawheeler.io/pkg/errors"
 )
 
 var _ cubawheeler.ApplicationService = &ApplicationService{}
@@ -31,7 +30,7 @@ func (s *ApplicationService) FindByClient(ctx context.Context, client string) (*
 		return nil, err
 	}
 	if len(apps) == 0 {
-		return nil, e.ErrNotFound
+		return nil, cubawheeler.ErrNotFound
 	}
 	return apps[0], nil
 }
@@ -45,7 +44,7 @@ func (s *ApplicationService) FindByID(ctx context.Context, input string) (*cubaw
 		return nil, err
 	}
 	if len(apps) == 0 {
-		return nil, e.ErrNotFound
+		return nil, cubawheeler.ErrNotFound
 	}
 	return apps[0], nil
 }
@@ -54,10 +53,10 @@ func (s *ApplicationService) FindByID(ctx context.Context, input string) (*cubaw
 func (s *ApplicationService) CreateApplication(ctx context.Context, input cubawheeler.ApplicationRequest) (*cubawheeler.Application, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	if usr.Role != cubawheeler.RoleAdmin {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	app := &cubawheeler.Application{
 		Name:   input.Name,
@@ -73,7 +72,7 @@ func (s *ApplicationService) CreateApplication(ctx context.Context, input cubawh
 func (s *ApplicationService) FindApplications(ctx context.Context, input *cubawheeler.ApplicationFilter) (*cubawheeler.ApplicationList, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	apps, token, err := findApplications(ctx, s.db, *input)
 	if err != nil {
@@ -89,10 +88,10 @@ func (s *ApplicationService) FindApplications(ctx context.Context, input *cubawh
 func (s *ApplicationService) UpdateApplicationCredentials(ctx context.Context, application string) (*cubawheeler.Application, error) {
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	if usr.Role != cubawheeler.RoleAdmin {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	applications, _, err := findApplications(ctx, s.db, cubawheeler.ApplicationFilter{
 		Ids:   []*string{&application},
@@ -104,7 +103,7 @@ func (s *ApplicationService) UpdateApplicationCredentials(ctx context.Context, a
 	app := applications[0]
 	private, public, err := cubawheeler.NewKeyPair()
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate a new key pair: %v: %w", err, e.ErrInternal)
+		return nil, fmt.Errorf("unable to generate a new key pair: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	app.Client = private.X.String()
 	app.Secret = string(public)
@@ -129,7 +128,7 @@ func createApplication(ctx context.Context, db *DB, app *cubawheeler.Application
 
 	_, err := collection.InsertOne(ctx, app)
 	if err != nil {
-		return e.ErrInternal
+		return cubawheeler.ErrInternal
 	}
 	return nil
 }
@@ -150,14 +149,14 @@ func findApplications(ctx context.Context, db *DB, filter cubawheeler.Applicatio
 	collection := db.client.Database(database).Collection(ApplicationCollection.String())
 	cur, err := collection.Find(ctx, f)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to find the applications: %v: %w", err, e.ErrInternal)
+		return nil, "", fmt.Errorf("unable to find the applications: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	defer cur.Close(ctx)
 	for cur.Next(ctx) {
 		var app cubawheeler.Application
 		err := cur.Decode(&app)
 		if err != nil {
-			return nil, "", fmt.Errorf("unable to decode the application: %v: %w", err, e.ErrInternal)
+			return nil, "", fmt.Errorf("unable to decode the application: %v: %w", err, cubawheeler.ErrInternal)
 		}
 		applications = append(applications, &app)
 		if len(applications) > filter.Limit {
@@ -167,7 +166,7 @@ func findApplications(ctx context.Context, db *DB, filter cubawheeler.Applicatio
 		}
 	}
 	if err := cur.Err(); err != nil {
-		return nil, "", fmt.Errorf("an error processing the applications: %v: %w", err, e.ErrInternal)
+		return nil, "", fmt.Errorf("an error processing the applications: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return applications, token, nil
 }
@@ -176,7 +175,7 @@ func updateApplications(ctx context.Context, app string, db *DB, f bson.D) error
 	collection := db.client.Database(database).Collection(ApplicationCollection.String())
 	_, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: app}}, f)
 	if err != nil {
-		return fmt.Errorf("unable to update the application: %s, %v: %w", app, err, e.ErrInternal)
+		return fmt.Errorf("unable to update the application: %s, %v: %w", app, err, cubawheeler.ErrInternal)
 	}
 	return nil
 }

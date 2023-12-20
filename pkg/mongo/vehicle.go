@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	e "cubawheeler.io/pkg/errors"
+	"cubawheeler.io/pkg/derrors"
 )
 
 var _ cubawheeler.VehicleService = &VehicleService{}
@@ -30,20 +30,22 @@ func NewVehicleService(db *DB) *VehicleService {
 	}
 }
 
-func (s *VehicleService) Store(ctx context.Context, vehicle *cubawheeler.Vehicle) error {
+func (s *VehicleService) Store(ctx context.Context, vehicle *cubawheeler.Vehicle) (err error) {
+	defer derrors.Wrap(&err, "mongo.VehicleService.Store")
 	vehicle.ID = cubawheeler.NewID().String()
 	vehicle.CreatedAt = time.Now().UTC().Unix()
-	_, err := s.collection.InsertOne(ctx, vehicle)
+	_, err = s.collection.InsertOne(ctx, vehicle)
 	if err != nil {
 		return fmt.Errorf("unable to store the vehicle: %w", err)
 	}
 	return nil
 }
 
-func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVehicle) (*cubawheeler.Vehicle, error) {
+func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVehicle) (_ *cubawheeler.Vehicle, err error) {
+	defer derrors.Wrap(&err, "mongo.VehicleService.Update")
 	user := cubawheeler.UserFromContext(ctx)
 	if user == nil {
-		return nil, fmt.Errorf("unable to update the vehicle: %w", e.ErrAccessDenied)
+		return nil, fmt.Errorf("unable to update the vehicle: %w", cubawheeler.ErrAccessDenied)
 	}
 	vehicles, _, err := findAllVehicles(ctx, s.collection, &cubawheeler.VehicleFilter{
 		Ids:   []string{input.ID},
@@ -57,7 +59,7 @@ func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVeh
 	}
 	vehicle := vehicles[0]
 	if vehicle.User != user.ID && user.Role != cubawheeler.RoleAdmin {
-		return nil, fmt.Errorf("access denied: %v: %w", err, e.ErrAccessDenied)
+		return nil, fmt.Errorf("access denied: %v: %w", err, cubawheeler.ErrAccessDenied)
 	}
 	f := bson.D{}
 	params := bson.D{}
@@ -115,7 +117,7 @@ func findVehicleByPlate(ctx context.Context, db *DB, plate string) (*cubawheeler
 		return nil, err
 	}
 	if len(vehicles) == 0 {
-		return nil, e.ErrNotFound
+		return nil, cubawheeler.ErrNotFound
 	}
 	return vehicles[0], nil
 }

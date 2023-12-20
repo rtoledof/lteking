@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/derrors"
 )
 
 var _ cubawheeler.LocationService = &LocationService{}
@@ -28,7 +29,8 @@ func NewLocationService(db *DB) *LocationService {
 	}
 }
 
-func (s *LocationService) Create(ctx context.Context, request *cubawheeler.LocationRequest) (*cubawheeler.Location, error) {
+func (s *LocationService) Create(ctx context.Context, request *cubawheeler.LocationRequest) (_ *cubawheeler.Location, err error) {
+	defer derrors.Wrap(&err, "mongo.LocationService.Create")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
@@ -45,7 +47,7 @@ func (s *LocationService) Create(ctx context.Context, request *cubawheeler.Locat
 			Coordinates: []float64{request.Long, request.Lat},
 		},
 	}
-	_, err := s.collection.InsertOne(ctx, location)
+	_, err = s.collection.InsertOne(ctx, location)
 	if err != nil {
 		return nil, fmt.Errorf("unable to store the location: %w", err)
 	}
@@ -58,7 +60,8 @@ func (s *LocationService) Update(ctx context.Context, request *cubawheeler.Locat
 	panic("implement me")
 }
 
-func (s *LocationService) FindByID(ctx context.Context, id string) (*cubawheeler.Location, error) {
+func (s *LocationService) FindByID(ctx context.Context, id string) (_ *cubawheeler.Location, err error) {
+	defer derrors.Wrap(&err, "mongo.LocationService.FindByID")
 	locations, _, err := findAllLocations(ctx, s.collection, &cubawheeler.LocationRequest{
 		Ids: []string{id},
 	})
@@ -68,11 +71,13 @@ func (s *LocationService) FindByID(ctx context.Context, id string) (*cubawheeler
 	return locations[0], nil
 }
 
-func (s *LocationService) FindAll(ctx context.Context, request *cubawheeler.LocationRequest) ([]*cubawheeler.Location, string, error) {
+func (s *LocationService) FindAll(ctx context.Context, request *cubawheeler.LocationRequest) (_ []*cubawheeler.Location, _ string, err error) {
+	defer derrors.Wrap(&err, "mongo.LocationService.FindAll")
 	return findAllLocations(ctx, s.collection, request)
 }
 
-func (s *LocationService) Locations(ctx context.Context, n int) ([]*cubawheeler.Location, error) {
+func (s *LocationService) Locations(ctx context.Context, n int) (_ []*cubawheeler.Location, err error) {
+	defer derrors.Wrap(&err, "mongo.LocationService.Locations")
 	//TODO implement me
 	panic("implement me")
 }

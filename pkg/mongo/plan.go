@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/derrors"
 )
 
 var _ cubawheeler.PlanService = &PlanService{}
@@ -27,7 +29,8 @@ func NewPlanService(db *DB) *PlanService {
 	}
 }
 
-func (s *PlanService) Create(ctx context.Context, request *cubawheeler.PlanRequest) (*cubawheeler.Plan, error) {
+func (s *PlanService) Create(ctx context.Context, request *cubawheeler.PlanRequest) (_ *cubawheeler.Plan, err error) {
+	defer derrors.Wrap(&err, "mongo.PlanService.Create")
 	id := request.ID
 	if id == "" {
 		id = cubawheeler.NewID().String()
@@ -38,14 +41,15 @@ func (s *PlanService) Create(ctx context.Context, request *cubawheeler.PlanReque
 	if err := assamblePlan(plan, request); err != nil {
 		return nil, err
 	}
-	_, err := s.collection.InsertOne(ctx, plan)
+	_, err = s.collection.InsertOne(ctx, plan)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create the plan: %w", err)
 	}
 	return plan, nil
 }
 
-func (s *PlanService) Update(ctx context.Context, request *cubawheeler.PlanRequest) (*cubawheeler.Plan, error) {
+func (s *PlanService) Update(ctx context.Context, request *cubawheeler.PlanRequest) (_ *cubawheeler.Plan, err error) {
+	defer derrors.Wrap(&err, "mongo.PlanService.Update")
 	plan, err := findPlanById(ctx, s.db, request.ID)
 	if err != nil {
 		return nil, err
@@ -60,11 +64,13 @@ func (s *PlanService) Update(ctx context.Context, request *cubawheeler.PlanReque
 	return plan, nil
 }
 
-func (s *PlanService) FindByID(ctx context.Context, id string) (*cubawheeler.Plan, error) {
+func (s *PlanService) FindByID(ctx context.Context, id string) (_ *cubawheeler.Plan, err error) {
+	defer derrors.Wrap(&err, "mongo.PlanService.FindByID")
 	return findPlanById(ctx, s.db, id)
 }
 
-func (s *PlanService) FindAll(ctx context.Context, filter *cubawheeler.PlanFilter) ([]*cubawheeler.Plan, string, error) {
+func (s *PlanService) FindAll(ctx context.Context, filter *cubawheeler.PlanFilter) (_ []*cubawheeler.Plan, _ string, err error) {
+	defer derrors.Wrap(&err, "mongo.PlanService.FindAll")
 	return findAllPlans(ctx, s.db, filter)
 }
 

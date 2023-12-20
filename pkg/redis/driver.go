@@ -7,7 +7,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/errors"
 	"cubawheeler.io/pkg/realtime"
 )
 
@@ -58,7 +57,7 @@ func (s *RealTimeService) UpdateLocation(ctx context.Context, user string, locat
 		Latitude:  location.Lat,
 	})
 	if err := s.redis.client.GeoAdd(ctx, key, geoLocations...); err != nil {
-		return fmt.Errorf("unable to update driver locations: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to update driver locations: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }

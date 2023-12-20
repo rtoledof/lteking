@@ -176,3 +176,18 @@ type Response struct {
 	Code    int    `json:"code"`
 	Success bool   `json:"success"`
 }
+
+// Metadata represents an extra custom data added to object
+type Metadata map[string]string
+
+func (m *Metadata) Update(data Metadata) {
+	if *m == nil {
+		*m = make(map[string]string)
+	}
+	for k, v := range data {
+		(*m)[k] = v
+		if len(v) == 0 {
+			delete(*m, k)
+		}
+	}
+}

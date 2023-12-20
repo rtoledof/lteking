@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/derrors"
 )
 
 var _ cubawheeler.ChargeService = &ChargeService{}
@@ -24,7 +26,8 @@ func NewChargeService(db *DB) *ChargeService {
 	}
 }
 
-func (s *ChargeService) Create(ctx context.Context, request *cubawheeler.ChargeRequest) (*cubawheeler.Charge, error) {
+func (s *ChargeService) Create(ctx context.Context, request *cubawheeler.ChargeRequest) (_ *cubawheeler.Charge, err error) {
+	defer derrors.Wrap(&err, "mongo.ChargeService.Create")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
@@ -49,19 +52,21 @@ func (s *ChargeService) Create(ctx context.Context, request *cubawheeler.ChargeR
 		ExternalReference: request.Reference,
 	}
 	// TODO: calculate the fees and apply it to the charge
-	_, err := s.collection.InsertOne(ctx, charge)
+	_, err = s.collection.InsertOne(ctx, charge)
 	if err != nil {
 		return nil, fmt.Errorf("unable to store the charge: %w", err)
 	}
 	return charge, nil
 }
 
-func (s *ChargeService) Update(ctx context.Context, request *cubawheeler.ChargeRequest) (*cubawheeler.Charge, error) {
+func (s *ChargeService) Update(ctx context.Context, request *cubawheeler.ChargeRequest) (_ *cubawheeler.Charge, err error) {
+	defer derrors.Wrap(&err, "mongo.ChargeService.Update")
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *ChargeService) FindByID(ctx context.Context, id string) (*cubawheeler.Charge, error) {
+func (s *ChargeService) FindByID(ctx context.Context, id string) (_ *cubawheeler.Charge, err error) {
+	defer derrors.Wrap(&err, "mongo.ChargeService.FindByID")
 	charges, _, err := findAllCharges(ctx, s.collection, cubawheeler.ChargeRequest{
 		Ids:   []string{id},
 		Limit: 1,
@@ -72,7 +77,8 @@ func (s *ChargeService) FindByID(ctx context.Context, id string) (*cubawheeler.C
 	return charges[0], nil
 }
 
-func (s *ChargeService) FindAll(ctx context.Context, request cubawheeler.ChargeRequest) (*cubawheeler.ChargeList, error) {
+func (s *ChargeService) FindAll(ctx context.Context, request cubawheeler.ChargeRequest) (_ *cubawheeler.ChargeList, err error) {
+	defer derrors.Wrap(&err, "mongo.ChargeService.FindAll")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")

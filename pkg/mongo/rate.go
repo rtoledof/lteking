@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
+
+	"cubawheeler.io/pkg/cubawheeler"
 )
 
 var _ cubawheeler.RateService = &RateService{}
@@ -25,12 +25,10 @@ func NewRateService(db *DB) *RateService {
 
 func (s *RateService) Create(ctx context.Context, request cubawheeler.RateRequest) (*cubawheeler.Rate, error) {
 	usr := cubawheeler.UserFromContext(ctx)
-	if usr == nil {
-		return nil, errors.ErrAccessDenied
+	if usr == nil || usr.Role != cubawheeler.RoleAdmin {
+		return nil, cubawheeler.ErrAccessDenied
 	}
-	if usr.Role != cubawheeler.RoleAdmin {
-		return nil, errors.ErrOrderAccepted
-	}
+
 	var rate cubawheeler.Rate
 	assembleRate(&rate, request)
 	if err := rate.Validate(); err != nil {
@@ -45,12 +43,10 @@ func (s *RateService) Create(ctx context.Context, request cubawheeler.RateReques
 
 func (s *RateService) Update(ctx context.Context, request *cubawheeler.RateRequest) (*cubawheeler.Rate, error) {
 	usr := cubawheeler.UserFromContext(ctx)
-	if usr == nil {
-		return nil, errors.ErrAccessDenied
+	if usr == nil || usr.Role != cubawheeler.RoleAdmin {
+		return nil, cubawheeler.ErrAccessDenied
 	}
-	if usr.Role != cubawheeler.RoleAdmin {
-		return nil, errors.ErrOrderAccepted
-	}
+
 	rate, err := findRateByID(ctx, s.db, request.ID)
 	if err != nil {
 		return nil, err
@@ -76,7 +72,7 @@ func (s *RateService) FindAll(ctx context.Context, request cubawheeler.RateFilte
 func updateRate(ctx context.Context, db *DB, rate *cubawheeler.Rate) error {
 	collection := db.client.Database(database).Collection(RatesCollection.String())
 	if _, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: rate.ID}}, bson.D{{Key: "$set", Value: rate}}); err != nil {
-		return fmt.Errorf("unable to update rate: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to update rate: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }
@@ -112,13 +108,13 @@ func findRates(ctx context.Context, db *DB, filter *cubawheeler.RateFilter) ([]*
 	}
 	cursor, err := collection.Find(ctx, f)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to find rates: %v: %w", err, errors.ErrInternal)
+		return nil, "", fmt.Errorf("unable to find rates: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	defer cursor.Close(ctx)
 	for cursor.Next(ctx) {
 		var rate cubawheeler.Rate
 		if err := cursor.Decode(&rate); err != nil {
-			return nil, "", fmt.Errorf("unable to decode rate: %v: %w", err, errors.ErrInternal)
+			return nil, "", fmt.Errorf("unable to decode rate: %v: %w", err, cubawheeler.ErrInternal)
 		}
 		rates = append(rates, &rate)
 		if len(rates) == filter.Limit+1 && filter.Limit > 0 {
@@ -127,7 +123,7 @@ func findRates(ctx context.Context, db *DB, filter *cubawheeler.RateFilter) ([]*
 		}
 	}
 	if err := cursor.Err(); err != nil {
-		return nil, "", fmt.Errorf("unable to iterate over rates: %v: %w", err, errors.ErrInternal)
+		return nil, "", fmt.Errorf("unable to iterate over rates: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return rates, token, nil
 }
@@ -138,7 +134,7 @@ func findRateByID(ctx context.Context, db *DB, id string) (*cubawheeler.Rate, er
 		return nil, err
 	}
 	if len(rates) == 0 {
-		return nil, fmt.Errorf("unable to find rate: %v: %w", id, errors.ErrNotFound)
+		return nil, fmt.Errorf("unable to find rate: %v: %w", id, cubawheeler.ErrNotFound)
 	}
 	return rates[0], nil
 }
@@ -146,7 +142,7 @@ func findRateByID(ctx context.Context, db *DB, id string) (*cubawheeler.Rate, er
 func insertRate(ctx context.Context, db *DB, rate *cubawheeler.Rate) error {
 	collection := db.client.Database(database).Collection(RatesCollection.String())
 	if _, err := collection.InsertOne(ctx, rate); err != nil {
-		return fmt.Errorf("unable to store the rate: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to store the rate: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }

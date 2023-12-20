@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"cubawheeler.io/pkg/errors"
+	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/pusher"
 )
 
@@ -25,10 +25,10 @@ func NewBeansToken(client *Redis, notification *pusher.PushNotification) *BeansT
 func (db *BeansToken) StoreBeansToken(ctx context.Context, userID string, token map[string]any) error {
 	data, err := json.Marshal(token)
 	if err != nil {
-		return fmt.Errorf("unable to encode token: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to encode token: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	if err = db.redis.client.Set(ctx, fmt.Sprintf("BEANS_%s", userID), data, time.Hour*24).Err(); err != nil {
-		return fmt.Errorf("unable to store beans token on database: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to store beans token on database: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }
@@ -37,14 +37,14 @@ func (db *BeansToken) GetBeansToken(ctx context.Context, userID string) (map[str
 	var token map[string]any
 	data := db.redis.client.Get(ctx, fmt.Sprintf("BEANS_%s", userID))
 	if data == nil {
-		return nil, errors.ErrNotFound
+		return nil, cubawheeler.ErrNotFound
 	}
 	b, err := data.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get token data: %v: %w", err, errors.ErrNotFound)
+		return nil, fmt.Errorf("unable to get token data: %v: %w", err, cubawheeler.ErrNotFound)
 	}
 	if err := json.Unmarshal(b, &token); err != nil {
-		return nil, fmt.Errorf("unable to decode the token data: %v: %w", err, errors.ErrNotFound)
+		return nil, fmt.Errorf("unable to decode the token data: %v: %w", err, cubawheeler.ErrNotFound)
 	}
 	return token, nil
 }

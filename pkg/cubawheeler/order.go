@@ -7,6 +7,120 @@ import (
 	"strconv"
 )
 
+// {
+// 	"waypoints": [
+// 	  {
+// 		"location": [
+// 		  -84.518399,
+// 		  39.134126
+// 		],
+// 		"name": ""
+// 	  },
+// 	  {
+// 		"location": [
+// 		  -84.511987,
+// 		  39.102638
+// 		],
+// 		"name": "East 6th Street"
+// 	  }
+// 	],
+// 	"routes": [
+// 	  {
+// 		"legs": [
+// 		  {
+// 			"steps": [],
+// 			"weight": 1332.6,
+// 			"distance": 4205,
+// 			"summary": "",
+// 			"duration": 1126
+// 		  }
+// 		],
+// 		"weight_name": "cyclability",
+// 		"geometry": {
+// 		  "coordinates": [
+// 			[
+// 			  -84.518399,
+// 			  39.134126
+// 			],
+// 			[
+// 			  -84.51841,
+// 			  39.133781
+// 			],
+// 			[
+// 			  -84.520024,
+// 			  39.133456
+// 			],
+// 			[
+// 			  -84.520321,
+// 			  39.132597
+// 			],
+// 			[
+// 			  -84.52085,
+// 			  39.128019
+// 			],
+// 			[
+// 			  -84.52036,
+// 			  39.127901
+// 			],
+// 			[
+// 			  -84.52094,
+// 			  39.122783
+// 			],
+// 			[
+// 			  -84.52022,
+// 			  39.122713
+// 			],
+// 			[
+// 			  -84.520768,
+// 			  39.120841
+// 			],
+// 			[
+// 			  -84.519639,
+// 			  39.120268
+// 			],
+// 			[
+// 			  -84.51233,
+// 			  39.114141
+// 			],
+// 			[
+// 			  -84.512652,
+// 			  39.11311
+// 			],
+// 			[
+// 			  -84.512399,
+// 			  39.112216
+// 			],
+// 			[
+// 			  -84.513232,
+// 			  39.112084
+// 			],
+// 			[
+// 			  -84.512127,
+// 			  39.107599
+// 			],
+// 			[
+// 			  -84.512904,
+// 			  39.107489
+// 			],
+// 			[
+// 			  -84.511692,
+// 			  39.102682
+// 			],
+// 			[
+// 			  -84.511987,
+// 			  39.102638
+// 			]
+// 		  ],
+// 		  "type": "LineString"
+// 		},
+// 		"weight": 1332.6,
+// 		"distance": 4205,
+// 		"duration": 1126
+// 	  }
+// 	],
+// 	"code": "Ok"
+//   }
+
 type OrderItem struct {
 	ID      string  `json:"id" bson:"_id"`
 	PickUp  Point   `json:"pick_up" bson:"pick_up"`
@@ -32,6 +146,7 @@ type Order struct {
 	Review        string                `json:"review,omitempty" bson:"review"`
 	CreatedAt     int64                 `json:"created_at" bson:"created_at"`
 	UpdatedAt     int64                 `json:"updated_at" bson:"updated_at"`
+	Route         []Point               `json:"route,omitempty" bson:"route,omitempty"`
 }
 
 type Item struct {
@@ -48,11 +163,11 @@ func AssambleOrderItem(items []*Item) []*OrderItem {
 		var i = OrderItem{
 			PickUp: Point{
 				Lat: v.PickUp.Lat,
-				Lon: v.PickUp.Lon,
+				Lng: v.PickUp.Lon,
 			},
 			DropOff: Point{
 				Lat: v.DropOff.Lat,
-				Lon: v.DropOff.Lon,
+				Lng: v.DropOff.Lon,
 			},
 			Seconds: uint64(v.Seconds),
 			Meters:  uint64(v.M),

@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/errors"
+	"cubawheeler.io/pkg/derrors"
 )
 
 var _ cubawheeler.OrderStatisticsService = (*OrderStatistics)(nil)
@@ -26,7 +26,8 @@ func NewOrderStatistics(db *DB) *OrderStatistics {
 }
 
 // AddOrder implements cubawheeler.OrderStatisticsService.
-func (s *OrderStatistics) AddOrder(ctx context.Context, statistics cubawheeler.OrderStatistics) error {
+func (s *OrderStatistics) AddOrder(ctx context.Context, statistics cubawheeler.OrderStatistics) (err error) {
+	defer derrors.Wrap(&err, "unable to add order")
 	if statistics.ID == "" {
 		statistics.ID = cubawheeler.NewID().String()
 	}
@@ -34,10 +35,11 @@ func (s *OrderStatistics) AddOrder(ctx context.Context, statistics cubawheeler.O
 }
 
 // FindAllStatistics implements cubawheeler.OrderStatisticsService.
-func (s *OrderStatistics) FindAllStatistics(ctx context.Context, filter cubawheeler.OrderStatisticsFilter) ([]*cubawheeler.OrderStatistics, string, error) {
+func (s *OrderStatistics) FindAllStatistics(ctx context.Context, filter cubawheeler.OrderStatisticsFilter) (_ []*cubawheeler.OrderStatistics, _ string, err error) {
+	defer derrors.Wrap(&err, "unable to find statistics")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
-		return nil, "", errors.ErrAccessDenied
+		return nil, "", cubawheeler.ErrAccessDenied
 	}
 	if usr.Role != cubawheeler.RoleAdmin {
 		filter.User = usr.ID
@@ -46,10 +48,11 @@ func (s *OrderStatistics) FindAllStatistics(ctx context.Context, filter cubawhee
 }
 
 // FindStatistictsByUser implements cubawheeler.OrderStatisticsService.
-func (s *OrderStatistics) FindStatistictsByUser(ctx context.Context, user string) (*cubawheeler.OrderStatistics, error) {
+func (s *OrderStatistics) FindStatistictsByUser(ctx context.Context, user string) (_ *cubawheeler.OrderStatistics, err error) {
+	defer derrors.Wrap(&err, "unable to find statistics")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
-		return nil, errors.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	if usr.Role != cubawheeler.RoleAdmin {
 		user = usr.ID
@@ -61,10 +64,9 @@ func (s *OrderStatistics) FindStatistictsByUser(ctx context.Context, user string
 		return nil, err
 	}
 	if len(stats) == 0 {
-		return nil, errors.ErrNotFound
+		return nil, cubawheeler.ErrNotFound
 	}
 	return stats[0], nil
-
 }
 
 func findStatistics(ctx context.Context, db *DB, filter cubawheeler.OrderStatisticsFilter) ([]*cubawheeler.OrderStatistics, string, error) {
@@ -104,7 +106,7 @@ func findStatistics(ctx context.Context, db *DB, filter cubawheeler.OrderStatist
 func insertStatistics(ctx context.Context, db *DB, statistics cubawheeler.OrderStatistics) error {
 	collection := db.Collection(StatisticsCollection)
 	if _, err := collection.InsertOne(ctx, statistics); err != nil {
-		return fmt.Errorf("unable to insert statistics: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to insert statistics: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }

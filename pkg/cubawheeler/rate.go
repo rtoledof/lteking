@@ -3,8 +3,6 @@ package cubawheeler
 import (
 	"context"
 	"fmt"
-
-	"cubawheeler.io/pkg/errors"
 )
 
 type Rate struct {
@@ -26,13 +24,13 @@ type Rate struct {
 
 func (r *Rate) Validate() error {
 	if r.Code == "" {
-		return fmt.Errorf("code is required: %w", errors.ErrInvalidInput)
+		return fmt.Errorf("code is required: %w", ErrInvalidInput)
 	}
 	if r.BasePrice <= 0 {
-		return fmt.Errorf("base price is required: %w", errors.ErrInvalidInput)
+		return fmt.Errorf("base price is required: %w", ErrInvalidInput)
 	}
 	if r.PricePerKm <= 0 {
-		return fmt.Errorf("price per km is required: %w", errors.ErrInvalidInput)
+		return fmt.Errorf("price per km is required: %w", ErrInvalidInput)
 	}
 
 	return nil

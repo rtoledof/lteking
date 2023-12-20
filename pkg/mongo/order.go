@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	e "cubawheeler.io/pkg/errors"
 )
 
 var _ cubawheeler.OrderService = &OrderService{}
@@ -96,17 +95,17 @@ func (s *OrderService) AcceptOrder(ctx context.Context, id string) (*cubawheeler
 	defer s.orderUnlock(id)
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
-		return nil, fmt.Errorf("nil user in context: %w", e.ErrAccessDenied)
+		return nil, fmt.Errorf("nil user in context: %w", cubawheeler.ErrAccessDenied)
 	}
 	if usr.Role != cubawheeler.RoleDriver {
-		return nil, fmt.Errorf("invalid user to acept the order: %w", e.ErrAccessDenied)
+		return nil, fmt.Errorf("invalid user to acept the order: %w", cubawheeler.ErrAccessDenied)
 	}
 	order, err := findOrderById(ctx, s.db, id)
 	if err != nil {
 		return nil, err
 	}
 	if order.Driver != "" {
-		return nil, e.ErrOrderAccepted
+		return nil, cubawheeler.ErrOrderAccepted
 	}
 	f := bson.D{}
 	order.Driver = usr.ID
@@ -124,10 +123,10 @@ func (s *OrderService) CancelOrder(ctx context.Context, id string) (*cubawheeler
 	defer s.orderUnlock(id)
 	user := cubawheeler.UserFromContext(ctx)
 	if user == nil {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	if user.Role != cubawheeler.RoleDriver && user.Role != cubawheeler.RoleAdmin {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	order, err := findOrderById(ctx, s.db, id)
 	if err != nil {
@@ -146,10 +145,10 @@ func (s *OrderService) CompleteOrder(ctx context.Context, id string) (*cubawheel
 	defer s.orderUnlock(id)
 	user := cubawheeler.UserFromContext(ctx)
 	if user == nil {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	if user.Role != cubawheeler.RoleDriver && user.Role != cubawheeler.RoleAdmin {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	order, err := findOrderById(ctx, s.db, id)
 	if err != nil {
@@ -170,17 +169,17 @@ func (s *OrderService) StartOrder(ctx context.Context, id string) (*cubawheeler.
 	defer s.orderUnlock(id)
 	user := cubawheeler.UserFromContext(ctx)
 	if user == nil {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	if user.Role != cubawheeler.RoleDriver && user.Role != cubawheeler.RoleAdmin {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	order, err := findOrderById(ctx, s.db, id)
 	if err != nil {
 		return nil, err
 	}
 	if order.Driver != user.ID {
-		return nil, e.ErrAccessDenied
+		return nil, cubawheeler.ErrAccessDenied
 	}
 	order.Status = cubawheeler.OrderStatusPickUp
 	f := bson.D{{Key: "status", Value: order.Status}}
@@ -248,7 +247,7 @@ func findOrderById(ctx context.Context, db *DB, id string) (*cubawheeler.Order, 
 		Limit: 1,
 	})
 	if err != nil && len(trips) == 0 {
-		return nil, e.ErrNotFound
+		return nil, cubawheeler.ErrNotFound
 	}
 	return trips[0], nil
 }
@@ -256,7 +255,7 @@ func findOrderById(ctx context.Context, db *DB, id string) (*cubawheeler.Order, 
 func updateOrder(ctx context.Context, db *DB, id string, f bson.D) error {
 	collection := db.client.Database(database).Collection(OrderCollection.String())
 	if _, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, bson.D{{Key: "$set", Value: f}}); err != nil {
-		return fmt.Errorf("unabe to update the order: %v: %w", err, e.ErrInternal)
+		return fmt.Errorf("unabe to update the order: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }

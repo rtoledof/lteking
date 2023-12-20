@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	e "cubawheeler.io/pkg/errors"
 	"cubawheeler.io/pkg/mongo"
 )
 
@@ -44,7 +43,7 @@ func (s *Application) Up() error {
 	ctx := cubawheeler.NewContextWithUser(context.TODO(), &usr)
 	for _, v := range s.features {
 		_, err := s.service.FindByClient(ctx, v.Client)
-		if err != nil && errors.Is(err, e.ErrNotFound) {
+		if err != nil && errors.Is(err, cubawheeler.ErrNotFound) {
 			app, err := s.service.CreateApplication(ctx, v)
 			if err != nil {
 				return nil
