@@ -1,6 +1,7 @@
 package mapbox
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -219,7 +220,7 @@ func TestDirectionService_GetRoute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c.BaseURL, _ = url.Parse(tt.server.URL)
 			c.client = tt.server.Client()
-			got, err := c.Directions.GetRoute(tt.request)
+			got, err := c.Directions.GetRoute(context.Background(), tt.request)
 			if err != nil && !tt.wantErr {
 				t.Errorf("DirectionService.GetRoute() error = %v", err)
 				return

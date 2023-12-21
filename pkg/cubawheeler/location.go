@@ -229,6 +229,10 @@ type DirectionRequest struct {
 	Points []*Point `json:"points" bson:"points"`
 }
 
+func (r *DirectionRequest) AddPoint(point *Point) {
+	r.Points = append(r.Points, point)
+}
+
 func (r *DirectionRequest) Valid() bool {
 	return len(r.Points) <= 1
 }

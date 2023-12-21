@@ -3,10 +3,9 @@ package ably
 import (
 	"fmt"
 
+	"cubawheeler.io/pkg/cubawheeler"
 	"github.com/ably/ably-go/ably"
 	amqp "github.com/rabbitmq/amqp091-go"
-
-	"cubawheeler.io/pkg/errors"
 )
 
 const (
@@ -30,7 +29,7 @@ type service struct {
 func (c *Client) Dial() (*amqp.Connection, error) {
 	conn, err := amqp.Dial(c.connectionString)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connecto to the queue: %v: %w", err, errors.ErrInternal)
+		return nil, fmt.Errorf("unable to connecto to the queue: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return conn, nil
 }
@@ -38,7 +37,7 @@ func (c *Client) Dial() (*amqp.Connection, error) {
 func (c *Client) Channel(conn *amqp.Connection) (*amqp.Channel, error) {
 	ch, err := conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("unable to connecto to the channel: %v: %w", err, errors.ErrInternal)
+		return nil, fmt.Errorf("unable to connecto to the channel: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return ch, nil
 }

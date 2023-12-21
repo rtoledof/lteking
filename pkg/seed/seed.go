@@ -17,6 +17,7 @@ func NewSeed(db *mongo.DB) Seed {
 			NewApplication(db),
 			NewPlan(db),
 			NewRate(db),
+			NewVehicleCategoryRate(db),
 		},
 	}
 }

@@ -71,12 +71,10 @@ func (p *Pusher) createOrderChannel() {
 		params := map[string]string{
 			"rider":       order.Rider,
 			"pickup_lat":  strconv.Itoa(int(order.Items[0].PickUp.Lat)),
-			"pickup_lon":  strconv.Itoa(int(order.Items[0].PickUp.Lon)),
+			"pickup_lon":  strconv.Itoa(int(order.Items[0].PickUp.Lng)),
 			"dropoff_lat": strconv.Itoa(int(order.Items[0].DropOff.Lat)),
-			"dropoff_lon": strconv.Itoa(int(order.Items[0].DropOff.Lon)),
+			"dropoff_lon": strconv.Itoa(int(order.Items[0].DropOff.Lng)),
 			"price":       strconv.FormatInt(int64(order.Price), 10),
-			"distance":    strconv.FormatInt(int64(order.Items[0].Meters), 10),
-			"time":        strconv.FormatInt(int64(order.Items[0].Seconds), 10),
 		}
 		channelName := fmt.Sprintf("%s-%s", presencePrefixFilter, order.ID)
 		if err := p.client.Trigger(channelName, cubawheeler.ChannelEventNewOrder.String(), params); err != nil {

@@ -42,8 +42,8 @@ func TestRateServiceCreate(t *testing.T) {
 				pricePerKm := 10
 				pricePerPassenger := 10
 				pricePerBaggage := 10
-				startDate := int(currenctTime.Unix())
-				endDate := int(currenctTime.AddDate(0, 1, 0).Unix())
+				startDate := currenctTime.Unix()
+				endDate := currenctTime.AddDate(0, 1, 0).Unix()
 				minKm := 10
 				maxKm := 100
 				return &cubawheeler.RateRequest{
@@ -67,8 +67,8 @@ func TestRateServiceCreate(t *testing.T) {
 				PricePerKm:        10,
 				PricePerBaggage:   10,
 				PricePerPassenger: 10,
-				StartDate:         int(time.Now().UTC().Unix()),
-				EndDate:           int(currenctTime.AddDate(0, 1, 0).Unix()),
+				StartDate:         time.Now().UTC().Unix(),
+				EndDate:           currenctTime.AddDate(0, 1, 0).Unix(),
 				MinKm:             10,
 				MaxKm:             100,
 			},
@@ -82,8 +82,8 @@ func TestRateServiceCreate(t *testing.T) {
 				pricePerKm := 10
 				pricePerPassenger := 10
 				pricePerBaggage := 10
-				startDate := int(currenctTime.Unix())
-				endDate := int(currenctTime.AddDate(0, 1, 0).Unix())
+				startDate := currenctTime.Unix()
+				endDate := currenctTime.AddDate(0, 1, 0).Unix()
 				minKm := 10
 				maxKm := 100
 				return &cubawheeler.RateRequest{
@@ -181,8 +181,8 @@ func TestRateServiceFindAll(t *testing.T) {
 					PricePerKm:        10,
 					PricePerBaggage:   10,
 					PricePerPassenger: 10,
-					StartDate:         int(currenctTime.Unix()),
-					EndDate:           int(currenctTime.AddDate(0, 1, 0).Unix()),
+					StartDate:         currenctTime.Unix(),
+					EndDate:           currenctTime.AddDate(0, 1, 0).Unix(),
 					MinKm:             10,
 					MaxKm:             100,
 				},
@@ -367,8 +367,8 @@ func TestRateServiceUpdate(t *testing.T) {
 				pricePerKm := 10
 				pricePerPassenger := 10
 				pricePerBaggage := 10
-				startDate := int(currenctTime.Unix())
-				endDate := int(currenctTime.AddDate(0, 1, 0).Unix())
+				startDate := currenctTime.Unix()
+				endDate := currenctTime.AddDate(0, 1, 0).Unix()
 				minKm := 10
 				maxKm := 100
 				return &cubawheeler.RateRequest{
@@ -393,8 +393,8 @@ func TestRateServiceUpdate(t *testing.T) {
 				PricePerKm:        10,
 				PricePerBaggage:   10,
 				PricePerPassenger: 10,
-				StartDate:         int(currenctTime.Unix()),
-				EndDate:           int(currenctTime.AddDate(0, 1, 0).Unix()),
+				StartDate:         currenctTime.Unix(),
+				EndDate:           currenctTime.AddDate(0, 1, 0).Unix(),
 				MinKm:             10,
 				MaxKm:             100,
 			},
@@ -408,8 +408,8 @@ func TestRateServiceUpdate(t *testing.T) {
 				pricePerKm := 10
 				pricePerPassenger := 10
 				pricePerBaggage := 10
-				startDate := int(currenctTime.Unix())
-				endDate := int(currenctTime.AddDate(0, 1, 0).Unix())
+				startDate := currenctTime.Unix()
+				endDate := currenctTime.AddDate(0, 1, 0).Unix()
 				minKm := 10
 				maxKm := 100
 				return &cubawheeler.RateRequest{
@@ -452,8 +452,8 @@ func testRate(t *testing.T) *cubawheeler.Rate {
 		PricePerKm:        10,
 		PricePerBaggage:   10,
 		PricePerPassenger: 10,
-		StartDate:         int(time.Now().UTC().Unix()),
-		EndDate:           int(time.Now().UTC().AddDate(0, 1, 0).Unix()),
+		StartDate:         time.Now().UTC().Unix(),
+		EndDate:           time.Now().UTC().AddDate(0, 1, 0).Unix(),
 		MinKm:             10,
 		MaxKm:             100,
 	}

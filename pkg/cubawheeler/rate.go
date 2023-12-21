@@ -15,8 +15,8 @@ type Rate struct {
 	PricePerBaggage   int    `json:"price_per_baggage" bson:"price_per_baggage"`
 	StartTime         string `json:"start_time,omitempty" bson:"start_time,omitempty"`
 	EndTime           string `json:"end_time,omitempty" bson:"end_time,omitempty"`
-	StartDate         int    `json:"start_date,omitempty" bson:"start_date,omitempty"`
-	EndDate           int    `json:"end_date,omitempty" bson:"end_date,omitempty"`
+	StartDate         int64  `json:"start_date,omitempty" bson:"start_date,omitempty"`
+	EndDate           int64  `json:"end_date,omitempty" bson:"end_date,omitempty"`
 	MinKm             int    `json:"min_km,omitempty" bson:"min_km,omitempty"`
 	MaxKm             int    `json:"max_km,omitempty" bson:"max_km,omitempty"`
 	HighDemand        bool   `json:"high_demand,omitempty" bson:"high_demand,omitempty"`
@@ -46,8 +46,8 @@ type RateRequest struct {
 	PricePerBaggage   *int   `json:"price_per_baggage,omitempty"`
 	StartTime         string `json:"start_time,omitempty"`
 	EndTime           string `json:"end_time,omitempty"`
-	StartDate         *int   `json:"start_date,omitempty"`
-	EndDate           *int   `json:"end_date,omitempty"`
+	StartDate         *int64 `json:"start_date,omitempty"`
+	EndDate           *int64 `json:"end_date,omitempty"`
 	MinKm             *int   `json:"min_km,omitempty"`
 	MaxKm             *int   `json:"max_km,omitempty"`
 	HiDemand          *bool  `json:"high_demand,omitempty"`
@@ -71,4 +71,42 @@ type RateService interface {
 	Update(context.Context, *RateRequest) (*Rate, error)
 	FindByID(context.Context, string) (*Rate, error)
 	FindAll(context.Context, RateFilter) ([]*Rate, string, error)
+}
+
+type VehicleCategoryRate struct {
+	ID       string          `json:"id" bson:"_id"`
+	Category VehicleCategory `json:"category" bson:"category"`
+	Factor   float64         `json:"factor" bson:"factor"`
+}
+
+type VehicleCategoryRateFilter struct {
+	Ids      []string
+	Token    string
+	Limit    int
+	Category []VehicleCategory
+}
+
+type VehicleCategoryRateRequest struct {
+	ID       string          `json:"id"`
+	Category VehicleCategory `json:"category"`
+	Factor   float64         `json:"factor"`
+}
+
+func (r *VehicleCategoryRate) Validate() error {
+	if r.Category == "" {
+		return fmt.Errorf("category is required: %w", ErrInvalidInput)
+	}
+	if r.Factor <= 0 {
+		return fmt.Errorf("factor is required: %w", ErrInvalidInput)
+	}
+
+	return nil
+}
+
+type VehicleCategoryRateService interface {
+	Create(context.Context, *VehicleCategoryRateRequest) (*VehicleCategoryRate, error)
+	Update(context.Context, *VehicleCategoryRateRequest) (*VehicleCategoryRate, error)
+	FindByID(context.Context, string) (*VehicleCategoryRate, error)
+	FindByCategory(context.Context, VehicleCategory) (*VehicleCategoryRate, error)
+	FindAll(context.Context, VehicleCategoryRateFilter) ([]*VehicleCategoryRate, string, error)
 }

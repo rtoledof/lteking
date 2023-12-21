@@ -11,7 +11,6 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/errors"
 	"cubawheeler.io/pkg/realtime"
 )
 
@@ -69,11 +68,11 @@ func (c Consumer) Consume(queue, consumer string, autoAsk, exclusive, noLocal, n
 
 	err = ch.Qos(5, 0, false)
 	if err != nil {
-		return fmt.Errorf("unable to set prefetch: %v: %w", err, errors.ErrInternal)
+		return fmt.Errorf("unable to set prefetch: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	msgs, err := ch.Consume(queue, consumer, autoAsk, exclusive, noLocal, noWait, args)
 	if err != nil {
-		return fmt.Errorf("unable to consume from the queue: %s: %v: %w", queue, err, errors.ErrInternal)
+		return fmt.Errorf("unable to consume from the queue: %s: %v: %w", queue, err, cubawheeler.ErrInternal)
 	}
 	go func() {
 		for msg := range msgs {

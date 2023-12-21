@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/derrors"
+	"cubawheeler.io/pkg/mapbox"
 )
 
 var _ cubawheeler.OrderService = &OrderService{}
@@ -33,18 +36,18 @@ func NewOrderService(db *DB) *OrderService {
 	}
 }
 
-func (s *OrderService) Create(ctx context.Context, input []*cubawheeler.OrderItem) (*cubawheeler.Order, error) {
+func (s *OrderService) Create(ctx context.Context, input []*cubawheeler.OrderItem) (_ *cubawheeler.Order, err error) {
+	defer derrors.Wrap(&err, "mongo.OrderService.Create")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
 	}
 
 	// Must connect to to mapbox and get the route.
+	mapbox := mapbox.NewClient(os.Getenv("MAPBOX_TOKEN"))
 	// Get brands y rate to be aplied
 	// Calculate the price of the trip and store it in the order
 	// Send the order, brand and price to the client
-	priceXsec := 1
-	priceXm := 100
 	order := cubawheeler.Order{
 		ID:        cubawheeler.NewID().String(),
 		Items:     input,
@@ -53,13 +56,26 @@ func (s *OrderService) Create(ctx context.Context, input []*cubawheeler.OrderIte
 		CreatedAt: time.Now().UTC().Unix(),
 	}
 
-	var price uint64
-	for _, v := range order.Items {
-		price += v.Seconds*uint64(priceXsec) + uint64(priceXm)*v.Meters
+	var req cubawheeler.DirectionRequest
+	for _, l := range input {
+		req.AddPoint(&l.PickUp)
+		req.AddPoint(&l.DropOff)
 	}
-	order.Price = price
 
-	_, err := s.collection.InsertOne(ctx, order)
+	route, err := mapbox.Directions.GetRoute(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the route: %w", err)
+	}
+	order.Distance = route.Distance
+	order.Duration = route.Duration
+	order.Route = route
+
+	order.Price, err = s.CalculatePrice(&order)
+	if err != nil {
+		return nil, fmt.Errorf("unable to calculate the price: %w", err)
+	}
+
+	_, err = s.collection.InsertOne(ctx, order)
 	if err != nil {
 		return nil, fmt.Errorf("unable to store the trip: %w", err)
 	}
@@ -67,6 +83,50 @@ func (s *OrderService) Create(ctx context.Context, input []*cubawheeler.OrderIte
 	// realtime.OrderChan <- &order
 
 	return &order, nil
+}
+
+func (s *OrderService) CalculatePrice(o *cubawheeler.Order) (uint64, error) {
+	// Get brands y rate to be aplied
+	// Calculate the price of the trip and store it in the order
+	rates, _, err := findRates(context.Background(), s.db, &cubawheeler.RateFilter{})
+	if err != nil {
+		return 0, err
+	}
+	var rate *cubawheeler.Rate
+	for _, r := range rates {
+		if checkRate(r) {
+			rate = r
+			break
+		}
+	}
+	return uint64(rate.BasePrice) + uint64(float64(rate.PricePerKm)*o.Distance) + uint64(float64(rate.PricePerMin)*o.Duration), nil
+}
+
+func checkRate(r *cubawheeler.Rate) bool {
+	currentTime := time.Now().UTC()
+	if (r.StartDate != 0 && currentTime.Unix() < r.StartDate || currentTime.Unix() > r.EndDate) ||
+		(r.EndDate != 0 && currentTime.Unix() > r.EndDate || r.StartDate < currentTime.Unix()) {
+		return false
+	}
+	if r.StartTime != "" {
+		rateStartTime, err := time.Parse("15:04", r.StartTime)
+		if err != nil {
+			return false
+		}
+		if currentTime.Before(rateStartTime) {
+			return false
+		}
+	}
+	if r.EndTime != "" {
+		rateEndTime, err := time.Parse("15:04", r.EndTime)
+		if err != nil {
+			return false
+		}
+		if currentTime.After(rateEndTime) {
+			return false
+		}
+	}
+	return true
 }
 
 // Request with brand and price

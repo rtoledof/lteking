@@ -91,9 +91,9 @@ func processNewOrder(s *RealTimeService) {
 	for order := range OrderChan {
 		locations, err := s.FindNearByDrivers(ctx, cubawheeler.GeoLocation{
 			Type:        "Point",
-			Coordinates: []float64{order.Items[0].PickUp.Lon, order.Items[0].PickUp.Lat},
+			Coordinates: []float64{order.Items[0].PickUp.Lng, order.Items[0].PickUp.Lat},
 			Lat:         order.Items[0].PickUp.Lat,
-			Long:        order.Items[0].PickUp.Lon,
+			Long:        order.Items[0].PickUp.Lng,
 		})
 		if err != nil {
 			slog.Info(fmt.Sprintf("no driver found: %v", err))

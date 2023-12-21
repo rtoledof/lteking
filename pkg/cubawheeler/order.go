@@ -122,12 +122,8 @@ import (
 //   }
 
 type OrderItem struct {
-	ID      string  `json:"id" bson:"_id"`
-	PickUp  Point   `json:"pick_up" bson:"pick_up"`
-	DropOff Point   `json:"drop_off" bson:"drop_off"`
-	Route   []Point `json:"route,omitempty" bson:"route,omitempty"`
-	Seconds uint64  `json:"seconds,omitempty" bson:"seconds,omitempty"`
-	Meters  uint64  `json:"meters,omitempty" bson:"meters,omitempty"`
+	PickUp  Point `json:"pick_up" bson:"pick_up"`
+	DropOff Point `json:"drop_off" bson:"drop_off"`
 }
 
 type Order struct {
@@ -146,7 +142,9 @@ type Order struct {
 	Review        string                `json:"review,omitempty" bson:"review"`
 	CreatedAt     int64                 `json:"created_at" bson:"created_at"`
 	UpdatedAt     int64                 `json:"updated_at" bson:"updated_at"`
-	Route         []Point               `json:"route,omitempty" bson:"route,omitempty"`
+	Route         *DirectionResponse    `json:"route,omitempty" bson:"route,omitempty"`
+	Distance      float64               `json:"distance,omitempty" bson:"distance,omitempty"`
+	Duration      float64               `json:"duration,omitempty" bson:"duration,omitempty"`
 }
 
 type Item struct {
@@ -169,8 +167,6 @@ func AssambleOrderItem(items []*Item) []*OrderItem {
 				Lat: v.DropOff.Lat,
 				Lng: v.DropOff.Lon,
 			},
-			Seconds: uint64(v.Seconds),
-			Meters:  uint64(v.M),
 		}
 		resp = append(resp, &i)
 	}

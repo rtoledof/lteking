@@ -1,6 +1,7 @@
 package mapbox
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,7 +12,7 @@ import (
 
 type DirectionService service
 
-func (s *DirectionService) GetRoute(request cubawheeler.DirectionRequest) (_ *cubawheeler.DirectionResponse, err error) {
+func (s *DirectionService) GetRoute(ctx context.Context, request cubawheeler.DirectionRequest) (_ *cubawheeler.DirectionResponse, err error) {
 	defer derrors.Wrap(&err, "mapbox.DirectionService.GetRoute")
 	if request.Valid() {
 		return nil, cubawheeler.ErrInvalidInput
