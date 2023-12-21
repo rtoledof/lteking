@@ -7,8 +7,19 @@ package graph
 // Ads returns AdsResolver implementation.
 func (r *Resolver) Ads() AdsResolver { return &adsResolver{r} }
 
+// CategoryPrice returns CategoryPriceResolver implementation.
+func (r *Resolver) CategoryPrice() CategoryPriceResolver { return &categoryPriceResolver{r} }
+
 // Charge returns ChargeResolver implementation.
 func (r *Resolver) Charge() ChargeResolver { return &chargeResolver{r} }
+
+// DirectionResponse returns DirectionResponseResolver implementation.
+func (r *Resolver) DirectionResponse() DirectionResponseResolver {
+	return &directionResponseResolver{r}
+}
+
+// Legs returns LegsResolver implementation.
+func (r *Resolver) Legs() LegsResolver { return &legsResolver{r} }
 
 // Message returns MessageResolver implementation.
 func (r *Resolver) Message() MessageResolver { return &messageResolver{r} }
@@ -18,9 +29,6 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Order returns OrderResolver implementation.
 func (r *Resolver) Order() OrderResolver { return &orderResolver{r} }
-
-// OrderItem returns OrderItemResolver implementation.
-func (r *Resolver) OrderItem() OrderItemResolver { return &orderItemResolver{r} }
 
 // Plan returns PlanResolver implementation.
 func (r *Resolver) Plan() PlanResolver { return &planResolver{r} }
@@ -34,6 +42,12 @@ func (r *Resolver) Profile() ProfileResolver { return &profileResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// Route returns RouteResolver implementation.
+func (r *Resolver) Route() RouteResolver { return &routeResolver{r} }
+
+// Step returns StepResolver implementation.
+func (r *Resolver) Step() StepResolver { return &stepResolver{r} }
+
 // Token returns TokenResolver implementation.
 func (r *Resolver) Token() TokenResolver { return &tokenResolver{r} }
 
@@ -43,16 +57,19 @@ func (r *Resolver) User() UserResolver { return &userResolver{r} }
 // Vehicle returns VehicleResolver implementation.
 func (r *Resolver) Vehicle() VehicleResolver { return &vehicleResolver{r} }
 
+// VoiceInstructions returns VoiceInstructionsResolver implementation.
+func (r *Resolver) VoiceInstructions() VoiceInstructionsResolver {
+	return &voiceInstructionsResolver{r}
+}
+
 // AddPlace returns AddPlaceResolver implementation.
 func (r *Resolver) AddPlace() AddPlaceResolver { return &addPlaceResolver{r} }
 
 // ChargeRequest returns ChargeRequestResolver implementation.
 func (r *Resolver) ChargeRequest() ChargeRequestResolver { return &chargeRequestResolver{r} }
 
-// CreateOrderRequest returns CreateOrderRequestResolver implementation.
-func (r *Resolver) CreateOrderRequest() CreateOrderRequestResolver {
-	return &createOrderRequestResolver{r}
-}
+// DirectionRequest returns DirectionRequestResolver implementation.
+func (r *Resolver) DirectionRequest() DirectionRequestResolver { return &directionRequestResolver{r} }
 
 // RateRequest returns RateRequestResolver implementation.
 func (r *Resolver) RateRequest() RateRequestResolver { return &rateRequestResolver{r} }

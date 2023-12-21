@@ -12,6 +12,16 @@ var _ MutationResolver = &mutationResolver{}
 
 type mutationResolver struct{ *Resolver }
 
+// CreateOrder implements MutationResolver.
+func (r *mutationResolver) CreateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error) {
+	return r.order.Create(ctx, input)
+}
+
+// UpdateOrder implements MutationResolver.
+func (r *mutationResolver) UpdateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error) {
+	return r.order.Update(ctx, input)
+}
+
 // AuthPusher implements MutationResolver.
 func (*mutationResolver) AuthPusher(ctx context.Context, socketID string, channelName string) (*string, error) {
 	panic("unimplemented")
@@ -32,16 +42,6 @@ func (r *mutationResolver) CancelOrder(ctx context.Context, order string) (*cuba
 	return &response, nil
 }
 
-// CreateOrder implements MutationResolver.
-func (*mutationResolver) CreateOrder(ctx context.Context, input *cubawheeler.CreateOrderRequest) (*cubawheeler.CreateOrderResponse, error) {
-	panic(fmt.Errorf("not implemented: CreateOrder - createOrder"))
-	// // order, err := r.order.Create(ctx, cubawheeler.AssambleOrderItem(input))
-	// // if err != nil {
-	// // 	return nil, err
-	// // }
-	// // return order, nil
-}
-
 // StartOrder implements MutationResolver.
 func (r *mutationResolver) StartOrder(ctx context.Context, order string) (*cubawheeler.Response, error) {
 	response := cubawheeler.Response{
@@ -54,11 +54,6 @@ func (r *mutationResolver) StartOrder(ctx context.Context, order string) (*cubaw
 		response.Message = err.Error()
 	}
 	return &response, nil
-}
-
-// UpdateOrder implements MutationResolver.
-func (*mutationResolver) UpdateOrder(ctx context.Context, input *cubawheeler.CreateOrderRequest) (*cubawheeler.CreateOrderResponse, error) {
-	panic("unimplemented")
 }
 
 func (r *mutationResolver) AcceptOrder(ctx context.Context, order string) (*cubawheeler.Response, error) {

@@ -126,25 +126,32 @@ type OrderItem struct {
 	DropOff Point `json:"drop_off" bson:"drop_off"`
 }
 
+type CategoryPrice struct {
+	Category VehicleCategory `json:"category"`
+	Price    uint64          `json:"price"`
+}
+
 type Order struct {
-	ID            string                `json:"id" bson:"_id"`
-	Items         []*OrderItem          `json:"items" bson:"items"`
-	History       []*Point              `json:"history,omitempty" bson:"history,omitempty"`
-	Driver        string                `json:"driver,omitempty" bson:"driver,omitempty"`
-	Rider         string                `json:"rider" bson:"rider"`
-	Status        OrderStatus           `json:"status" bson:"status"`
-	StatusHistory []*OrderStatusHistory `json:"status_history,omitempty" bson:"status_history,omitempty"`
-	Rate          int                   `json:"rate" bson:"rate"`
-	Price         uint64                `json:"price" bson:"price"`
-	Coupon        string                `json:"coupon,omitempty" bson:"coupon,omitempty"`
-	StartAt       int64                 `json:"start_at" bson:"start_at"`
-	EndAt         int64                 `json:"end_at" bson:"end_at"`
-	Review        string                `json:"review,omitempty" bson:"review"`
-	CreatedAt     int64                 `json:"created_at" bson:"created_at"`
-	UpdatedAt     int64                 `json:"updated_at" bson:"updated_at"`
-	Route         *DirectionResponse    `json:"route,omitempty" bson:"route,omitempty"`
-	Distance      float64               `json:"distance,omitempty" bson:"distance,omitempty"`
-	Duration      float64               `json:"duration,omitempty" bson:"duration,omitempty"`
+	ID               string                `json:"id" bson:"_id"`
+	Items            DirectionRequest      `json:"items" bson:"items"`
+	History          []*Point              `json:"history,omitempty" bson:"history,omitempty"`
+	Driver           string                `json:"driver,omitempty" bson:"driver,omitempty"`
+	Rider            string                `json:"rider" bson:"rider"`
+	Status           OrderStatus           `json:"status" bson:"status"`
+	StatusHistory    []*OrderStatusHistory `json:"status_history,omitempty" bson:"status_history,omitempty"`
+	Rate             int                   `json:"rate" bson:"rate"`
+	Price            uint64                `json:"price" bson:"price"`
+	Coupon           string                `json:"coupon,omitempty" bson:"coupon,omitempty"`
+	StartAt          int64                 `json:"start_at" bson:"start_at"`
+	EndAt            int64                 `json:"end_at" bson:"end_at"`
+	Review           string                `json:"review,omitempty" bson:"review"`
+	CreatedAt        int64                 `json:"created_at" bson:"created_at"`
+	UpdatedAt        int64                 `json:"updated_at" bson:"updated_at"`
+	Route            *DirectionResponse    `json:"route,omitempty" bson:"route,omitempty"`
+	Distance         float64               `json:"distance,omitempty" bson:"distance,omitempty"`
+	Duration         float64               `json:"duration,omitempty" bson:"duration,omitempty"`
+	SelectedCategory CategoryPrice         `json:"selected_category,omitempty" bson:"selected_category,omitempty"`
+	CategoryPrice    []*CategoryPrice      `json:"categories_prices,omitempty" bson:"categories_prices,omitempty"`
 }
 
 type Item struct {
@@ -161,11 +168,11 @@ func AssambleOrderItem(items []*Item) []*OrderItem {
 		var i = OrderItem{
 			PickUp: Point{
 				Lat: v.PickUp.Lat,
-				Lng: v.PickUp.Lon,
+				Lng: v.PickUp.Lng,
 			},
 			DropOff: Point{
 				Lat: v.DropOff.Lat,
-				Lng: v.DropOff.Lon,
+				Lng: v.DropOff.Lng,
 			},
 		}
 		resp = append(resp, &i)
@@ -175,7 +182,7 @@ func AssambleOrderItem(items []*Item) []*OrderItem {
 
 type PointInput struct {
 	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
+	Lng float64 `json:"lon"`
 }
 
 type UpdateOrder struct {
@@ -199,8 +206,8 @@ type OrderFilter struct {
 }
 
 type OrderService interface {
-	Create(context.Context, []*OrderItem) (*Order, error)
-	Update(context.Context, *UpdateOrder) (*Order, error)
+	Create(context.Context, *DirectionRequest) (*Order, error)
+	Update(context.Context, *DirectionRequest) (*Order, error)
 	FindByID(context.Context, string) (*Order, error)
 	FindAll(context.Context, *OrderFilter) (*OrderList, error)
 

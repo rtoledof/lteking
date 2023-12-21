@@ -11,7 +11,7 @@ type updatePlaceResolver struct{ *Resolver }
 
 func (r *updatePlaceResolver) Location(ctx context.Context, obj *cubawheeler.UpdatePlace, data *cubawheeler.PointInput) error {
 	obj.Location.Lat = data.Lat
-	obj.Location.Long = data.Lon
+	obj.Location.Long = data.Lng
 	return nil
 }
 

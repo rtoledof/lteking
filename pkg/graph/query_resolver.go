@@ -63,7 +63,7 @@ func (r *queryResolver) FindApplications(ctx context.Context, input *cubawheeler
 func (r *queryResolver) NearByDrivers(ctx context.Context, input *cubawheeler.PointInput) ([]*cubawheeler.NearByResponse, error) {
 	locations, err := r.realTimeLocation.FindNearByDrivers(ctx, cubawheeler.GeoLocation{
 		Type: "Point",
-		Long: input.Lon,
+		Long: input.Lng,
 		Lat:  input.Lat,
 	})
 	if err != nil {

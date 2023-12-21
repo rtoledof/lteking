@@ -158,3 +158,31 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.CreateOrderRequest
   CreateOrderResponse: 
     model: cubawheeler.io/pkg/cubawheeler.CreateOrderResponse
+  CategoryPrice: 
+    model: cubawheeler.io/pkg/cubawheeler.CategoryPrice
+  DirectionResponse: 
+    model: cubawheeler.io/pkg/cubawheeler.DirectionResponse
+  BannerInstructions: 
+    model: cubawheeler.io/pkg/cubawheeler.BannerInstructions
+  Component: 
+    model: cubawheeler.io/pkg/cubawheeler.Component
+  Intersection: 
+    model: cubawheeler.io/pkg/cubawheeler.Intersection
+  Legs: 
+    model: cubawheeler.io/pkg/cubawheeler.Legs
+  Maneuver: 
+    model: cubawheeler.io/pkg/cubawheeler.Maneuver
+  Primary: 
+    model: cubawheeler.io/pkg/cubawheeler.Primary
+  Route: 
+    model: cubawheeler.io/pkg/cubawheeler.Route
+  Step: 
+    model: cubawheeler.io/pkg/cubawheeler.Step
+  VoiceInstructions: 
+    model: cubawheeler.io/pkg/cubawheeler.VoiceInstructions
+  WaitPoint: 
+    model: cubawheeler.io/pkg/cubawheeler.WaitPoint
+  DirectionRequest: 
+    model: cubawheeler.io/pkg/cubawheeler.DirectionRequest
+
+    

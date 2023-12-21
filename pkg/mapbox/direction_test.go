@@ -46,7 +46,7 @@ func TestDirectionService_GetRoute(t *testing.T) {
 						Geometry: "mnn_Ick}pAfBiF`CzA",
 						Duration: 26.2,
 						Distance: 176.7,
-						Waitpoints: []*cubawheeler.Waitpoint{
+						Waitpoints: []*cubawheeler.WaitPoint{
 							{
 								Location: []float64{13.426579, 52.508068},
 								Name:     "Köpenicker Straße",

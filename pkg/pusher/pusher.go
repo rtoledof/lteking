@@ -3,7 +3,6 @@ package pusher
 import (
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/pusher/pusher-http-go/v5"
 
@@ -67,20 +66,7 @@ func (p *Pusher) Authenticate(params []byte, usr *cubawheeler.User, presence boo
 
 func (p *Pusher) createOrderChannel() {
 	// 1. Create the presence channel for the order
-	for order := range NewOrdersChannel {
-		params := map[string]string{
-			"rider":       order.Rider,
-			"pickup_lat":  strconv.Itoa(int(order.Items[0].PickUp.Lat)),
-			"pickup_lon":  strconv.Itoa(int(order.Items[0].PickUp.Lng)),
-			"dropoff_lat": strconv.Itoa(int(order.Items[0].DropOff.Lat)),
-			"dropoff_lon": strconv.Itoa(int(order.Items[0].DropOff.Lng)),
-			"price":       strconv.FormatInt(int64(order.Price), 10),
-		}
-		channelName := fmt.Sprintf("%s-%s", presencePrefixFilter, order.ID)
-		if err := p.client.Trigger(channelName, cubawheeler.ChannelEventNewOrder.String(), params); err != nil {
-			log.Printf("unable to create channel for order: %s", order.ID)
-		}
-	}
+
 	// 2. Send new order event to nearby drivers - (Push notification)
 }
 

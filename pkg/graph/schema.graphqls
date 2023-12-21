@@ -223,12 +223,99 @@ type Point {
 }
 
 type OrderItem {
-  id: ID!
   pick_up: Point
   drop_off: Point
-  route: [Point!]!
-  seconds: Int!
-  m: Float!
+}
+
+type CategoryPrice {
+  category: VehicleCategory!
+  price: Int!
+}
+
+type WaitPoint {
+  location: [Float!]
+  name: String
+}
+
+type Maneuver {
+  bearing_after: Int!
+  bearing_before: Int!
+  location: [Float!]
+  modifier: String!
+  type: String!
+  instruction: String!
+}
+
+type VoiceInstructions {
+  distanceAlongGeometry: Int!
+  announcement: String!
+  ssmlAnnouncement: String!
+}
+
+type Component {
+  text: String!
+}
+
+type Primary {
+  text: String!
+  type: String!
+  modifier: String!
+  components: [Component]
+}
+
+type BannerInstructions {
+  distanceAlongGeometry: Float!
+  primary: Primary
+  secondary: Primary
+}
+
+type Intersection {
+  out: Int!
+  entry: [Boolean]
+  bearings: [Int]
+  location: [Float!]
+  in: Int
+}
+
+type Step {
+  distance: Int!
+  duration: Int!
+  geometry: String!
+  name: String!
+  weight: Float!
+  mode: String!
+  driving_side: String!
+  ref: String!
+  maneuver: Maneuver
+  voiceInstructions: [VoiceInstructions]
+  bannerInstructions: [BannerInstructions]
+  intersections: [Intersection]
+}
+
+type Legs {
+  distance: Int!
+  duration: Int!
+  steps: [Step]
+  summary: String!
+  weight: Float!
+}
+
+type Route {
+  distance: Int!
+  duration: Int!
+  geometry: String!
+  waitpoints: [WaitPoint]
+  weight: Float
+  weight_name: String
+  legs: [Legs]
+}
+
+type DirectionResponse {
+  distance: Int!
+  duration: Int!
+  geometry: String!
+  waitpoints: [WaitPoint]
+  routes: [Route]
 }
 
 type Order {
@@ -245,6 +332,8 @@ type Order {
   end_at: Int!
   review: [Review]
   items: [OrderItem!]!
+  cost: [CategoryPrice!]
+  selected_cost: CategoryPrice
 }
 
 type Client {
@@ -469,7 +558,7 @@ input LoginRequest {
 
 input PointInput {
   lat: Float!
-  lon: Float!
+  lng: Float!
 }
 
 input Item {
@@ -524,8 +613,9 @@ input ApplicationRequest {
   secret: String!
 }
 
-input CreateOrderRequest {
-  route: [PointInput!]!
+input DirectionRequest {
+  id: ID
+  points: [PointInput!]!
   coupon: String
   riders: Int
   baggages: Int
@@ -537,12 +627,6 @@ type CostPerBrand {
   price: Int!
 }
 
-type CreateOrderResponse {
-  order: Order!
-  cost: [CostPerBrand!]!
-  price: Int!
-}
-
 type Mutation {
   login(input: LoginRequest!): Token!
   otp(email: String!): Response!
@@ -551,8 +635,8 @@ type Mutation {
   changePin(old: String, pin: String!): Response!
   addDevice(decive: String!): Response!
 
-  createOrder(input: CreateOrderRequest): CreateOrderResponse!
-  updateOrder(input: CreateOrderRequest): CreateOrderResponse!
+  createOrder(input: DirectionRequest): Order!
+  updateOrder(input: DirectionRequest): Order!
   confirmOrder(order: String!, cost: ID!): Response!
   cancelOrder(order: String!): Response!
   acceptOrder(order: String!): Response!

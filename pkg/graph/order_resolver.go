@@ -10,6 +10,21 @@ var _ OrderResolver = &orderResolver{}
 
 type orderResolver struct{ *Resolver }
 
+// Items implements OrderResolver.
+func (*orderResolver) Items(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.OrderItem, error) {
+	panic("unimplemented")
+}
+
+// Cost implements OrderResolver.
+func (*orderResolver) Cost(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.CategoryPrice, error) {
+	return obj.CategoryPrice, nil
+}
+
+// SelectedCost implements OrderResolver.
+func (*orderResolver) SelectedCost(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.CategoryPrice, error) {
+	return &obj.SelectedCategory, nil
+}
+
 func (r *orderResolver) Price(ctx context.Context, obj *cubawheeler.Order) (int, error) {
 	return int(obj.Price), nil
 }
@@ -40,23 +55,6 @@ func (r *orderResolver) Review(ctx context.Context, obj *cubawheeler.Order) ([]*
 		From: obj.Rider,
 	})
 	return reviews, err
-}
-
-// Items is the resolver for the items field.
-func (r *orderResolver) Items(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.OrderItem, error) {
-	return obj.Items, nil
-}
-
-type orderItemResolver struct{ *Resolver }
-
-// Seconds is the resolver for the seconds field.
-func (r *orderItemResolver) Seconds(ctx context.Context, obj *cubawheeler.OrderItem) (int, error) {
-	return int(obj.Seconds), nil
-}
-
-// M is the resolver for the m field.
-func (r *orderItemResolver) M(ctx context.Context, obj *cubawheeler.OrderItem) (float64, error) {
-	return float64(obj.Meters), nil
 }
 
 type createOrderRequestResolver struct{ *Resolver }

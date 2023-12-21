@@ -36,43 +36,19 @@ func NewOrderService(db *DB) *OrderService {
 	}
 }
 
-func (s *OrderService) Create(ctx context.Context, input []*cubawheeler.OrderItem) (_ *cubawheeler.Order, err error) {
+func (s *OrderService) Create(ctx context.Context, req *cubawheeler.DirectionRequest) (_ *cubawheeler.Order, err error) {
 	defer derrors.Wrap(&err, "mongo.OrderService.Create")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
 		return nil, errors.New("invalid token provided")
 	}
-
-	// Must connect to to mapbox and get the route.
-	mapbox := mapbox.NewClient(os.Getenv("MAPBOX_TOKEN"))
-	// Get brands y rate to be aplied
-	// Calculate the price of the trip and store it in the order
-	// Send the order, brand and price to the client
-	order := cubawheeler.Order{
-		ID:        cubawheeler.NewID().String(),
-		Items:     input,
-		Rider:     usr.ID,
-		Status:    cubawheeler.OrderStatusNew,
-		CreatedAt: time.Now().UTC().Unix(),
+	if usr.Role != cubawheeler.RoleRider {
+		return nil, fmt.Errorf("invalid user to create the order: %w", cubawheeler.ErrAccessDenied)
 	}
 
-	var req cubawheeler.DirectionRequest
-	for _, l := range input {
-		req.AddPoint(&l.PickUp)
-		req.AddPoint(&l.DropOff)
-	}
-
-	route, err := mapbox.Directions.GetRoute(ctx, req)
+	order, err := s.prepareOrder(ctx, nil, req)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get the route: %w", err)
-	}
-	order.Distance = route.Distance
-	order.Duration = route.Duration
-	order.Route = route
-
-	order.Price, err = s.CalculatePrice(&order)
-	if err != nil {
-		return nil, fmt.Errorf("unable to calculate the price: %w", err)
+		return nil, err
 	}
 
 	_, err = s.collection.InsertOne(ctx, order)
@@ -80,17 +56,19 @@ func (s *OrderService) Create(ctx context.Context, input []*cubawheeler.OrderIte
 		return nil, fmt.Errorf("unable to store the trip: %w", err)
 	}
 
-	// realtime.OrderChan <- &order
-
-	return &order, nil
+	return order, nil
 }
 
-func (s *OrderService) CalculatePrice(o *cubawheeler.Order) (uint64, error) {
+func (s *OrderService) CalculatePrice(o *cubawheeler.Order) error {
 	// Get brands y rate to be aplied
+	brands, _, err := findVehicleCategoriesRate(context.Background(), s.db, cubawheeler.VehicleCategoryRateFilter{})
+	if err != nil {
+		return err
+	}
 	// Calculate the price of the trip and store it in the order
 	rates, _, err := findRates(context.Background(), s.db, &cubawheeler.RateFilter{})
 	if err != nil {
-		return 0, err
+		return err
 	}
 	var rate *cubawheeler.Rate
 	for _, r := range rates {
@@ -99,7 +77,14 @@ func (s *OrderService) CalculatePrice(o *cubawheeler.Order) (uint64, error) {
 			break
 		}
 	}
-	return uint64(rate.BasePrice) + uint64(float64(rate.PricePerKm)*o.Distance) + uint64(float64(rate.PricePerMin)*o.Duration), nil
+	price := uint64(rate.BasePrice) + uint64(float64(rate.PricePerKm)*o.Distance) + uint64(float64(rate.PricePerMin)*o.Duration)
+	for _, b := range brands {
+		o.CategoryPrice = append(o.CategoryPrice, &cubawheeler.CategoryPrice{
+			Category: b.Category,
+			Price:    uint64(float64(price) * b.Factor),
+		})
+	}
+	return nil
 }
 
 func checkRate(r *cubawheeler.Rate) bool {
@@ -133,9 +118,30 @@ func checkRate(r *cubawheeler.Rate) bool {
 // Accept the order for the client
 // Send the order to the near by drivers with are riding a vehicle of the same brand
 
-func (s *OrderService) Update(ctx context.Context, trip *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *OrderService) Update(ctx context.Context, req *cubawheeler.DirectionRequest) (_ *cubawheeler.Order, err error) {
+	defer derrors.Wrap(&err, "mongo.OrderService.Update")
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, errors.New("invalid token provided")
+	}
+	if usr.Role != cubawheeler.RoleRider {
+		return nil, fmt.Errorf("invalid user to update the order: %w", cubawheeler.ErrAccessDenied)
+	}
+	order, err := findOrderById(ctx, s.db, req.ID)
+	if err != nil {
+		return nil, err
+	}
+	order, err = s.prepareOrder(ctx, order, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
+		return nil, err
+	}
+
+	return order, nil
+
 }
 
 func (s *OrderService) FindByID(ctx context.Context, id string) (*cubawheeler.Order, error) {
@@ -172,7 +178,7 @@ func (s *OrderService) AcceptOrder(ctx context.Context, id string) (*cubawheeler
 	f = append(f, bson.E{Key: "driver", Value: usr.ID})
 	order.Status = cubawheeler.OrderStatusOnTheWay
 	f = append(f, bson.E{Key: "status", Value: order.Status})
-	if err := updateOrder(ctx, s.db, order.ID, f); err != nil {
+	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
 	return order, nil
@@ -193,8 +199,7 @@ func (s *OrderService) CancelOrder(ctx context.Context, id string) (*cubawheeler
 		return nil, err
 	}
 	order.Status = cubawheeler.OrderStatusDropOff
-	f := bson.D{{Key: "status", Value: order.Status}}
-	if err = updateOrder(ctx, s.db, order.ID, f); err != nil {
+	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
 	return order, nil
@@ -218,7 +223,7 @@ func (s *OrderService) CompleteOrder(ctx context.Context, id string) (*cubawheel
 	f := bson.D{{Key: "status", Value: order.Status}}
 	order.EndAt = time.Now().UTC().Unix()
 	f = append(f, bson.E{Key: "end_at", Value: order.EndAt})
-	if err = updateOrder(ctx, s.db, order.ID, f); err != nil {
+	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
 	return order, nil
@@ -245,7 +250,7 @@ func (s *OrderService) StartOrder(ctx context.Context, id string) (*cubawheeler.
 	f := bson.D{{Key: "status", Value: order.Status}}
 	order.StartAt = time.Now().UTC().Unix()
 	f = append(f, bson.E{Key: "start_at", Value: order.EndAt})
-	if err = updateOrder(ctx, s.db, order.ID, f); err != nil {
+	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
 	return order, nil
@@ -312,9 +317,9 @@ func findOrderById(ctx context.Context, db *DB, id string) (*cubawheeler.Order, 
 	return trips[0], nil
 }
 
-func updateOrder(ctx context.Context, db *DB, id string, f bson.D) error {
+func updateOrder(ctx context.Context, db *DB, id string, order *cubawheeler.Order) error {
 	collection := db.client.Database(database).Collection(OrderCollection.String())
-	if _, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, bson.D{{Key: "$set", Value: f}}); err != nil {
+	if _, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, bson.D{{Key: "$set", Value: order}}); err != nil {
 		return fmt.Errorf("unabe to update the order: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
@@ -339,4 +344,39 @@ func (s *OrderService) orderUnlock(key string) {
 	l := l_.(*sync.Mutex)
 	s.mutex.Delete(key)
 	l.Unlock()
+}
+
+func assambleOrder(o *cubawheeler.Order, req *cubawheeler.DirectionRequest) *cubawheeler.Order {
+	o.Items = *req
+	o.Distance = 0
+	o.Duration = 0
+	return o
+}
+
+func (s *OrderService) prepareOrder(ctx context.Context, order *cubawheeler.Order, req *cubawheeler.DirectionRequest) (*cubawheeler.Order, error) {
+	if order == nil {
+		order = &cubawheeler.Order{
+			ID:        cubawheeler.NewID().String(),
+			Status:    cubawheeler.OrderStatusNew,
+			CreatedAt: time.Now().UTC().Unix(),
+		}
+	}
+	mapbox := mapbox.NewClient(os.Getenv("MAPBOX_TOKEN"))
+	assambleOrder(order, req)
+
+	order.Items = *req
+
+	route, err := mapbox.Directions.GetRoute(ctx, *req)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the route: %w", err)
+	}
+	order.Distance = route.Distance
+	order.Duration = route.Duration
+	order.Route = route
+
+	err = s.CalculatePrice(order)
+	if err != nil {
+		return nil, fmt.Errorf("unable to calculate the price: %w", err)
+	}
+	return order, nil
 }

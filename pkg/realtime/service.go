@@ -2,7 +2,6 @@ package realtime
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"cubawheeler.io/pkg/cubawheeler"
@@ -87,27 +86,7 @@ func storeOrUpdateDriversLocation(s Updater) {
 }
 
 func processNewOrder(s *RealTimeService) {
-	ctx := context.Background()
-	for order := range OrderChan {
-		locations, err := s.FindNearByDrivers(ctx, cubawheeler.GeoLocation{
-			Type:        "Point",
-			Coordinates: []float64{order.Items[0].PickUp.Lng, order.Items[0].PickUp.Lat},
-			Lat:         order.Items[0].PickUp.Lat,
-			Long:        order.Items[0].PickUp.Lng,
-		})
-		if err != nil {
-			slog.Info(fmt.Sprintf("no driver found: %v", err))
-			continue
-		}
-		var users []string
-		for _, l := range locations {
-			users = append(users, l.User)
-		}
 
-		if err := s.NotifyToDevices(ctx, users); err != nil {
-			slog.Info("unable to send push notification to the drivers")
-		}
-	}
 }
 
 func updateUserStatus(s UserUpdateService) {

@@ -176,18 +176,21 @@ type BannerInstructions struct {
 }
 
 type Step struct {
-	Intersections      []*Intersection       `json:"intersections" bson:"intersections"`
-	DrivingSide        string                `json:"driving_side" bson:"driving_side"`
-	Geometry           string                `json:"geometry" bson:"geometry"`
-	Mode               string                `json:"mode" bson:"mode"`
-	Maneuver           *Maneuver             `json:"maneuver" bson:"maneuver"`
-	Weight             float64               `json:"weight" bson:"weight"`
-	Duration           float64               `json:"duration" bson:"duration"`
-	Name               string                `json:"name" bson:"name"`
-	Distance           float64               `json:"distance" bson:"distance"`
-	Ref                string                `json:"ref" bson:"ref"`
+	Distance float64 `json:"distance" bson:"distance"`
+	Duration float64 `json:"duration" bson:"duration"`
+	Geometry string  `json:"geometry" bson:"geometry"`
+	Name     string  `json:"name" bson:"name"`
+	Weight   float64 `json:"weight" bson:"weight"`
+
+	DrivingSide string `json:"driving_side" bson:"driving_side"`
+	Mode        string `json:"mode" bson:"mode"`
+	Ref         string `json:"ref" bson:"ref"`
+
+	Maneuver *Maneuver `json:"maneuver" bson:"maneuver"`
+
 	VoiceInstructions  []*VoiceInstructions  `json:"voiceInstructions" bson:"voiceInstructions"`
 	BannerInstructions []*BannerInstructions `json:"bannerInstructions" bson:"bannerInstructions"`
+	Intersections      []*Intersection       `json:"intersections" bson:"intersections"`
 }
 
 type Legs struct {
@@ -202,7 +205,7 @@ type Geometry struct {
 	Coordinates []Point `json:"coordinates" bson:"coordinates"`
 }
 
-type Waitpoint struct {
+type WaitPoint struct {
 	Location []float64 `json:"location" bson:"location"`
 	Name     string    `json:"name" bson:"name"`
 }
@@ -214,19 +217,23 @@ type Route struct {
 	Weight     float64      `json:"weight" bson:"weight"`
 	Distance   float64      `json:"distance" bson:"distance"`
 	Duration   float64      `json:"duration" bson:"duration"`
-	Waitpoints []*Waitpoint `json:"waypoints" bson:"waypoints"`
+	Waitpoints []*WaitPoint `json:"waypoints" bson:"waypoints"`
 }
 
 type DirectionResponse struct {
 	Geometry  string       `json:"geometry" bson:"geometry"`
 	Duration  float64      `json:"duration" bson:"duration"`
 	Distance  float64      `json:"distance" bson:"distance"`
-	Waypoints []*Waitpoint `json:"waypoints" bson:"waypoints"`
+	WayPoints []*WaitPoint `json:"waypoints" bson:"waypoints"`
 	Routes    []*Route     `json:"routes" bson:"routes"`
 }
 
 type DirectionRequest struct {
-	Points []*Point `json:"points" bson:"points"`
+	ID       string   `json:"id" bson:"_id"`
+	Points   []*Point `json:"points" bson:"points"`
+	Coupon   string   `json:"coupon" bson:"coupon"`
+	Riders   int      `json:"riders" bson:"riders"`
+	Baggages int      `json:"baggages" bson:"baggages"`
 }
 
 func (r *DirectionRequest) AddPoint(point *Point) {
