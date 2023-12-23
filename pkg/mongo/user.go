@@ -22,7 +22,6 @@ const UsersCollection Collections = "users"
 
 type UserService struct {
 	db         *DB
-	collection *mongo.Collection
 	beansToken *redis.BeansToken
 	beans      *pusher.PushNotification
 }
@@ -45,7 +44,6 @@ func NewUserService(
 
 	s := &UserService{
 		db:         db,
-		collection: db.client.Database(database).Collection(UsersCollection.String()),
 		beansToken: beansToken,
 		beans:      beans,
 	}
@@ -105,7 +103,7 @@ func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (e
 	if err := tx.StartTransaction(); err != nil {
 		return fmt.Errorf("unable to start a new transaction: %v: %w", err, cubawheeler.ErrInternal)
 	}
-	_, err = s.collection.InsertOne(ctx, user)
+	_, err = s.db.Collection(UsersCollection).InsertOne(ctx, user)
 	if err != nil {
 		tx.AbortTransaction(ctx)
 		return fmt.Errorf("unable to store the user: %w", err)
@@ -399,27 +397,27 @@ func findUserByID(ctx context.Context, db *DB, id string) (*cubawheeler.User, er
 }
 
 func findAllUsers(ctx context.Context, db *DB, filter *cubawheeler.UserFilter) ([]*cubawheeler.User, string, error) {
-	collection := db.client.Database(database).Collection(UsersCollection.String())
+	collection := db.Collection(UsersCollection)
 	var users []*cubawheeler.User
 	var token string
 	f := bson.D{}
 	if len(filter.Ids) > 0 {
-		f = append(f, primitive.E{Key: "_id", Value: primitive.A{"$in", filter.Ids}})
+		f = append(f, bson.E{Key: "_id", Value: bson.A{"$in", filter.Ids}})
 	}
 	if filter.Email != "" {
-		f = append(f, primitive.E{Key: "email", Value: filter.Email})
+		f = append(f, bson.E{Key: "email", Value: filter.Email})
 	}
 	if len(filter.Otp) > 0 {
-		f = append(f, primitive.E{Key: "otp", Value: filter.Otp})
+		f = append(f, bson.E{Key: "otp", Value: filter.Otp})
 	}
 	if len(filter.Pin) > 0 {
-		f = append(f, primitive.E{Key: "pin", Value: filter.Email})
+		f = append(f, bson.E{Key: "pin", Value: filter.Email})
 	}
 	if len(filter.Status) > 0 {
-		f = append(f, primitive.E{Key: "status", Value: primitive.A{"$in", filter.Status}})
+		f = append(f, bson.E{Key: "status", Value: primitive.A{"$in", filter.Status}})
 	}
 	if len(filter.Role) > 0 {
-		f = append(f, primitive.E{Key: "role", Value: filter.Role})
+		f = append(f, bson.E{Key: "role", Value: filter.Role})
 	}
 	cur, err := collection.Find(ctx, f)
 	if err != nil {

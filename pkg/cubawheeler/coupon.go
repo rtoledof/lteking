@@ -13,13 +13,14 @@ type Coupon struct {
 	Percent    *float64     `json:"percent,omitempty" bson:"percent,omitempty"`
 	Amount     *int         `json:"amount,omitempty" bson:"amount,omitempty"`
 	Status     CouponStatus `json:"status" bson:"status"`
-	ValidFrom  *int         `json:"valid_from,omitempty" bson:"valid_from,omitempty"`
-	ValidUntil *int         `json:"valid_until,omitempty" bson:"valid_until,omitempty"`
-	CreatedAt  uint         `json:"-" bson:"created_at"`
-	UpdatedAt  uint         `json:"updated_at" bson:"updated_at"`
+	ValidFrom  int64        `json:"valid_from,omitempty" bson:"valid_from,omitempty"`
+	ValidUntil int64        `json:"valid_until,omitempty" bson:"valid_until,omitempty"`
+	CreatedAt  int64        `json:"-" bson:"created_at"`
+	UpdatedAt  int64        `json:"updated_at" bson:"updated_at"`
 }
 
 type CouponRequest struct {
+	ID         string
 	Limit      int
 	Token      string
 	Ids        []string
@@ -27,8 +28,8 @@ type CouponRequest struct {
 	Percent    *float64
 	Amount     *int
 	Status     CouponStatus
-	ValidFrom  *int
-	ValidUntil *int
+	ValidFrom  *int64
+	ValidUntil *int64
 }
 
 type CouponService interface {

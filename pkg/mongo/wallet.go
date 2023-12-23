@@ -6,6 +6,7 @@ import (
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const WalletCollection Collections = "wallets"
@@ -17,6 +18,13 @@ type WalletService struct {
 }
 
 func NewWalletService(db *DB) *WalletService {
+	index := mongo.IndexModel{
+		Keys: bson.D{{Key: "owner", Value: "string"}},
+	}
+	_, err := db.client.Database(database).Collection(WalletCollection.String()).Indexes().CreateOne(context.Background(), index)
+	if err != nil {
+		panic("unable to create user index")
+	}
 	return &WalletService{db: db}
 }
 
