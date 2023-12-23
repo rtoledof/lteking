@@ -12,6 +12,21 @@ var _ MutationResolver = &mutationResolver{}
 
 type mutationResolver struct{ *Resolver }
 
+// Redeem implements MutationResolver.
+func (r *mutationResolver) Redeem(ctx context.Context, input string) (*cubawheeler.Response, error) {
+	var rsp = cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusOK,
+	}
+	_, err := r.coupon.Redeem(ctx, input)
+	if err != nil {
+		rsp.Success = false
+		rsp.Code = http.StatusBadRequest
+		rsp.Message = err.Error()
+	}
+	return &rsp, nil
+}
+
 // CreateOrder implements MutationResolver.
 func (r *mutationResolver) CreateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error) {
 	return r.order.Create(ctx, input)
@@ -20,11 +35,6 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, input *cubawheeler.D
 // UpdateOrder implements MutationResolver.
 func (r *mutationResolver) UpdateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error) {
 	return r.order.Update(ctx, input)
-}
-
-// AuthPusher implements MutationResolver.
-func (*mutationResolver) AuthPusher(ctx context.Context, socketID string, channelName string) (*string, error) {
-	panic("unimplemented")
 }
 
 // CancelOrder implements MutationResolver.
@@ -82,25 +92,6 @@ func (r *mutationResolver) ConfirmOrder(ctx context.Context, order string, cost 
 	// return &response, nil
 	panic(fmt.Errorf("not implemented: ConfirmOrder - confirmOrder"))
 }
-
-// func (r *mutationResolver) UpdatOrder(ctx context.Context, update *cubawheeler.CreateOrderRequest) (*cubawheeler.CreateOrderResponse, error) {
-// 	// return r.order.Update(ctx, update)
-// 	panic(fmt.Errorf("not implemented: UpdatOrder - updatOrder"))
-// }
-
-// func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*cubawheeler.Response, error) {
-// 	response := cubawheeler.Response{
-// 		Success: true,
-// 		Code:    http.StatusOK,
-// 	}
-// 	_, err := r.order.CancelOrder(ctx, id)
-// 	if err != nil {
-// 		response.Success = false
-// 		response.Code = http.StatusBadRequest
-// 		response.Message = err.Error()
-// 	}
-// 	return &response, nil
-// }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.Token, error) {

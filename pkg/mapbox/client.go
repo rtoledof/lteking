@@ -3,6 +3,7 @@ package mapbox
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -36,6 +37,7 @@ func NewClient(accessToken string) *Client {
 	c := &Client{
 		AccessToken: accessToken,
 		BaseURL:     baseURL,
+		client:      http.DefaultClient,
 	}
 
 	c.common.client = c
@@ -66,32 +68,36 @@ func (c *Client) newRequest(method string, u *url.URL, body any) (*http.Request,
 	}
 	uid := cubawheeler.NewID().String()
 	req.Header.Add("request-id", uid)
-	if body != nil {
-		req.Header.Add("Content-Type", defaultMediaType)
-	}
+	// if body != nil {
+	// 	req.Header.Add("Content-Type", defaultMediaType)
+	// }
 	return req, nil
 }
 
-func (c *Client) Do(req *http.Request, v any) (*http.Response, error) {
+func (c *Client) Do(req *http.Request, v any) (*http.Response, string, error) {
+	fmt.Println(req.URL.String())
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if err := CheckResponse(resp); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer resp.Body.Close()
+	var bodyResponse string
 	if v != nil {
 		if w, ok := v.(io.Writer); ok {
 			io.Copy(w, resp.Body)
 		} else {
-			err := json.NewDecoder(resp.Body).Decode(v)
+			data, _ := io.ReadAll(resp.Body)
+			err := json.Unmarshal(data, v)
 			if err == io.EOF {
 				err = nil
 			}
+			bodyResponse = string(data)
 		}
 	}
-	return resp, err
+	return resp, bodyResponse, err
 }
 
 func CheckResponse(r *http.Response) (err error) {
@@ -104,6 +110,7 @@ func CheckResponse(r *http.Response) (err error) {
 		Message string `json:"message"`
 	}
 	data, err := io.ReadAll(r.Body)
+	fmt.Printf("%s\n", data)
 	if err == nil && data != nil {
 		r.Body.Close()
 		var errRsp = struct {

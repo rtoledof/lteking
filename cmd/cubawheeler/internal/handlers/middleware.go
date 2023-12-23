@@ -45,12 +45,12 @@ func AuthMiddleware(srv cubawheeler.UserService) func(http.Handler) http.Handler
 			}
 
 			claim, ok := token.Claims.(jwt.MapClaims)
-			if !ok || !token.Valid {
+			if !ok || !token.Valid || claim == nil || claim["email"] == nil {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			user, err := srv.FindByEmail(r.Context(), claim["jti"].(string))
+			user, err := srv.FindByEmail(r.Context(), claim["email"].(string))
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return

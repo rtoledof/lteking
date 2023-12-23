@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -70,14 +71,24 @@ func (s *OrderService) CalculatePrice(o *cubawheeler.Order) error {
 	if err != nil {
 		return err
 	}
-	var rate *cubawheeler.Rate
+	var rate *cubawheeler.Rate = rates[0]
 	for _, r := range rates {
 		if checkRate(r) {
 			rate = r
 			break
 		}
 	}
-	price := uint64(rate.BasePrice) + uint64(float64(rate.PricePerKm)*o.Distance) + uint64(float64(rate.PricePerMin)*o.Duration)
+	if rate == nil {
+		return fmt.Errorf("no rate found: %w", cubawheeler.ErrNotFound)
+	}
+	price := uint64(rate.BasePrice) + uint64(float64(rate.PricePerKm)*(o.Distance/1000)) + uint64(float64(rate.PricePerMin)*o.Duration/60) + uint64(float64(rate.PricePerPassenger)*float64(o.Items.Riders))
+	if o.Items.Baggages {
+		price += uint64(rate.PricePerBaggage)
+	}
+	if rate.PricePerCarryPet != 0 {
+		price += uint64(rate.PricePerCarryPet)
+	}
+
 	for _, b := range brands {
 		o.CategoryPrice = append(o.CategoryPrice, &cubawheeler.CategoryPrice{
 			Category: b.Category,
@@ -85,33 +96,6 @@ func (s *OrderService) CalculatePrice(o *cubawheeler.Order) error {
 		})
 	}
 	return nil
-}
-
-func checkRate(r *cubawheeler.Rate) bool {
-	currentTime := time.Now().UTC()
-	if (r.StartDate != 0 && currentTime.Unix() < r.StartDate || currentTime.Unix() > r.EndDate) ||
-		(r.EndDate != 0 && currentTime.Unix() > r.EndDate || r.StartDate < currentTime.Unix()) {
-		return false
-	}
-	if r.StartTime != "" {
-		rateStartTime, err := time.Parse("15:04", r.StartTime)
-		if err != nil {
-			return false
-		}
-		if currentTime.Before(rateStartTime) {
-			return false
-		}
-	}
-	if r.EndTime != "" {
-		rateEndTime, err := time.Parse("15:04", r.EndTime)
-		if err != nil {
-			return false
-		}
-		if currentTime.After(rateEndTime) {
-			return false
-		}
-	}
-	return true
 }
 
 // Request with brand and price
@@ -173,14 +157,12 @@ func (s *OrderService) AcceptOrder(ctx context.Context, id string) (*cubawheeler
 	if order.Driver != "" {
 		return nil, cubawheeler.ErrOrderAccepted
 	}
-	f := bson.D{}
 	order.Driver = usr.ID
-	f = append(f, bson.E{Key: "driver", Value: usr.ID})
-	order.Status = cubawheeler.OrderStatusOnTheWay
-	f = append(f, bson.E{Key: "status", Value: order.Status})
+	order.Status = cubawheeler.OrderStatusConfirmed
 	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
+	// TODO: send the order to the drivers
 	return order, nil
 }
 
@@ -202,6 +184,7 @@ func (s *OrderService) CancelOrder(ctx context.Context, id string) (*cubawheeler
 	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
+	// TODO: if the order was sent to the drivers, cancel it
 	return order, nil
 }
 
@@ -220,12 +203,18 @@ func (s *OrderService) CompleteOrder(ctx context.Context, id string) (*cubawheel
 		return nil, err
 	}
 	order.Status = cubawheeler.OrderStatusDropOff
-	f := bson.D{{Key: "status", Value: order.Status}}
 	order.EndAt = time.Now().UTC().Unix()
-	f = append(f, bson.E{Key: "end_at", Value: order.EndAt})
 	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
+	lastPoint := order.Items.Points[len(order.Items.Points)-1]
+	user.LastLocations = append(user.LastLocations, &cubawheeler.Location{
+		Name: "",
+		Geolocation: cubawheeler.GeoLocation{
+			Lat:  lastPoint.Lat,
+			Long: lastPoint.Lng,
+		},
+	})
 	return order, nil
 }
 
@@ -247,9 +236,7 @@ func (s *OrderService) StartOrder(ctx context.Context, id string) (*cubawheeler.
 		return nil, cubawheeler.ErrAccessDenied
 	}
 	order.Status = cubawheeler.OrderStatusPickUp
-	f := bson.D{{Key: "status", Value: order.Status}}
 	order.StartAt = time.Now().UTC().Unix()
-	f = append(f, bson.E{Key: "start_at", Value: order.EndAt})
 	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
@@ -347,6 +334,9 @@ func (s *OrderService) orderUnlock(key string) {
 }
 
 func assambleOrder(o *cubawheeler.Order, req *cubawheeler.DirectionRequest) *cubawheeler.Order {
+	if req.Riders == 0 {
+		req.Riders = 1
+	}
 	o.Items = *req
 	o.Distance = 0
 	o.Duration = 0
@@ -366,17 +356,53 @@ func (s *OrderService) prepareOrder(ctx context.Context, order *cubawheeler.Orde
 
 	order.Items = *req
 
-	route, err := mapbox.Directions.GetRoute(ctx, *req)
+	routes, strBody, err := mapbox.Directions.GetRoute(ctx, *req)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the route: %w", err)
 	}
+
+	if len(routes.Routes) == 0 {
+		return nil, fmt.Errorf("no routes found: %w", cubawheeler.ErrNotFound)
+	}
+
+	route := routes.Routes[0]
 	order.Distance = route.Distance
 	order.Duration = route.Duration
-	order.Route = route
+	order.RouteString = base64.StdEncoding.EncodeToString([]byte(strBody))
 
 	err = s.CalculatePrice(order)
 	if err != nil {
 		return nil, fmt.Errorf("unable to calculate the price: %w", err)
 	}
 	return order, nil
+}
+
+func checkRate(r *cubawheeler.Rate) bool {
+	currentTime := time.Now().UTC()
+	if r.StartDate != 0 {
+		if (currentTime.Unix() < r.StartDate || currentTime.Unix() > r.EndDate) ||
+			(r.EndDate != 0 && currentTime.Unix() > r.EndDate || r.StartDate < currentTime.Unix()) {
+			return false
+		}
+	}
+	today := currentTime.Format("2006-01-02")
+	if r.StartTime != "" {
+		rateStartTime, err := time.Parse("2006-01-02 15:04", fmt.Sprintf("%s %s", today, r.StartTime))
+		if err != nil {
+			return false
+		}
+		if currentTime.Before(rateStartTime) {
+			return false
+		}
+	}
+	if r.EndTime != "" {
+		rateEndTime, err := time.Parse("2006-01-02 15:04", fmt.Sprintf("%s %s", today, r.EndTime))
+		if err != nil {
+			return false
+		}
+		if currentTime.After(rateEndTime) {
+			return false
+		}
+	}
+	return true
 }

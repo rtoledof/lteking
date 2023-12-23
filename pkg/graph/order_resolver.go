@@ -62,6 +62,10 @@ type createOrderRequestResolver struct{ *Resolver }
 // Riders is the resolver for the riders field.
 func (r *createOrderRequestResolver) Riders(ctx context.Context, obj *cubawheeler.CreateOrderRequest, data *int) error {
 	obj.Riders = data
+	if obj.Riders == nil {
+		riders := 1
+		obj.Riders = &riders
+	}
 	return nil
 }
 

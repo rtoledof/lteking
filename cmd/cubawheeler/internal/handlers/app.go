@@ -44,7 +44,7 @@ type App struct {
 	config       Config
 	pusher       *pusher.Pusher
 	notification *pusher.PushNotification
-	seed         seed.Seed
+	seed         seed.Seeder
 	dialer       *gomail.Dialer
 	done         chan struct{}
 	orderChan    chan *cubawheeler.Order

@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -41,12 +42,58 @@ func (s *CouponService) Create(ctx context.Context, request *cubawheeler.CouponR
 	return coupon, nil
 }
 
-func (s *CouponService) Update(ctx context.Context, request *cubawheeler.CouponRequest) (*cubawheeler.Coupon, error) {
-	//TODO implement me
-	panic("implement me")
+// FindByCode implements cubawheeler.CouponService.
+func (s *CouponService) FindByCode(ctx context.Context, code string) (*cubawheeler.Coupon, error) {
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	return findByCode(ctx, s.collection, code)
+}
+
+// Redeem implements cubawheeler.CouponService.
+func (s *CouponService) Redeem(ctx context.Context, code string) (*cubawheeler.Coupon, error) {
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+
+	coupon, err := findByCode(ctx, s.collection, code)
+	if err != nil {
+		return nil, err
+	}
+	coupon.Status = cubawheeler.CouponStatusRedeemed
+	tx, err := s.db.client.StartSession()
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.StartTransaction(); err != nil {
+		return nil, err
+	}
+	err = updateCoupon(ctx, s.db, coupon)
+	if err != nil {
+		tx.AbortTransaction(ctx)
+		return nil, err
+	}
+	w, err := findWalletByOwner(ctx, s.db, user.ID)
+	if err != nil {
+		tx.AbortTransaction(ctx)
+		return nil, err
+	}
+	w.Deposit(*coupon.Amount)
+	err = updateWallet(ctx, s.db, w)
+	if err != nil {
+		tx.AbortTransaction(ctx)
+		return nil, err
+	}
+	return coupon, tx.CommitTransaction(ctx)
 }
 
 func (s *CouponService) FindByID(ctx context.Context, id string) (*cubawheeler.Coupon, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
 	users, _, err := findAllCoupon(ctx, s.collection, &cubawheeler.CouponRequest{Ids: []string{id}})
 	if err != nil {
 		return nil, err
@@ -55,6 +102,10 @@ func (s *CouponService) FindByID(ctx context.Context, id string) (*cubawheeler.C
 }
 
 func (s *CouponService) FindAll(ctx context.Context, request *cubawheeler.CouponRequest) ([]*cubawheeler.Coupon, string, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, "", cubawheeler.ErrAccessDenied
+	}
 	return findAllCoupon(ctx, s.collection, request)
 }
 
@@ -90,4 +141,22 @@ func findAllCoupon(ctx context.Context, collection *mongo.Collection, filter *cu
 	}
 	cur.Close(ctx)
 	return coupons, token, nil
+}
+
+func updateCoupon(ctx context.Context, db *DB, coupon *cubawheeler.Coupon) error {
+	collection := db.Collection("coupons")
+	_, err := collection.UpdateOne(ctx, bson.M{"_id": coupon.ID}, bson.M{"$set": coupon})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func findByCode(ctx context.Context, collection *mongo.Collection, code string) (*cubawheeler.Coupon, error) {
+	var coupon cubawheeler.Coupon
+	err := collection.FindOne(ctx, bson.M{"code": code}).Decode(&coupon)
+	if err != nil {
+		return nil, fmt.Errorf("error finding coupon: %v: %w", err, cubawheeler.ErrNotFound)
+	}
+	return &coupon, nil
 }

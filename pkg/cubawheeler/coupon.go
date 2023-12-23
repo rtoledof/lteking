@@ -33,9 +33,10 @@ type CouponRequest struct {
 
 type CouponService interface {
 	Create(context.Context, *CouponRequest) (*Coupon, error)
-	Update(context.Context, *CouponRequest) (*Coupon, error)
 	FindByID(context.Context, string) (*Coupon, error)
 	FindAll(context.Context, *CouponRequest) ([]*Coupon, string, error)
+	FindByCode(context.Context, string) (*Coupon, error)
+	Redeem(context.Context, string) (*Coupon, error)
 }
 
 type CouponStatus string

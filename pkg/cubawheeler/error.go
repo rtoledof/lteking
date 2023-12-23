@@ -7,12 +7,13 @@ import (
 )
 
 var (
-	ErrNotFound         = errors.New("not found")
-	ErrAccessDenied     = errors.New("access denied")
-	ErrInvalidInput     = errors.New("invalid input")
-	ErrInternal         = errors.New("internal server error")
-	ErrOrderAccepted    = errors.New("order already accepted")
-	ErrNilUserInContext = errors.New("nil user in context")
+	ErrNotFound          = errors.New("not found")
+	ErrAccessDenied      = errors.New("access denied")
+	ErrInvalidInput      = errors.New("invalid input")
+	ErrInternal          = errors.New("internal server error")
+	ErrOrderAccepted     = errors.New("order already accepted")
+	ErrNilUserInContext  = errors.New("nil user in context")
+	ErrInsufficientFunds = errors.New("insufficient funds")
 
 	ErrInvalid    = errors.New("invalid argument")           // validation failed
 	ErrPermission = errors.New("permission denied")          // permission error action cannot be perform.

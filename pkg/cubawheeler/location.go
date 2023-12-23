@@ -233,7 +233,7 @@ type DirectionRequest struct {
 	Points   []*Point `json:"points" bson:"points"`
 	Coupon   string   `json:"coupon" bson:"coupon"`
 	Riders   int      `json:"riders" bson:"riders"`
-	Baggages int      `json:"baggages" bson:"baggages"`
+	Baggages bool     `json:"baggages" bson:"baggages"`
 }
 
 func (r *DirectionRequest) AddPoint(point *Point) {
@@ -248,7 +248,7 @@ func (r *DirectionRequest) String() string {
 	var response []string
 
 	for _, point := range r.Points {
-		response = append(response, fmt.Sprintf("%f,%f", point.Lat, point.Lng))
+		response = append(response, fmt.Sprintf("%f,%f", point.Lng, point.Lat))
 	}
 	return strings.Join(response, ";")
 }

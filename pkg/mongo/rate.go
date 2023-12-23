@@ -65,6 +65,22 @@ func (s *RateService) FindByID(ctx context.Context, id string) (*cubawheeler.Rat
 	return findRateByID(ctx, s.db, id)
 }
 
+// FindByCode implements cubawheeler.RateService.
+func (s *RateService) FindByCode(ctx context.Context, code string) (*cubawheeler.Rate, error) {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil || usr.Role != cubawheeler.RoleAdmin {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	rates, _, err := findRates(ctx, s.db, &cubawheeler.RateFilter{Code: []string{code}, Limit: 1})
+	if err != nil {
+		return nil, err
+	}
+	if len(rates) == 0 {
+		return nil, fmt.Errorf("unable to find rate: %v: %w", code, cubawheeler.ErrNotFound)
+	}
+	return rates[0], nil
+}
+
 func (s *RateService) FindAll(ctx context.Context, request cubawheeler.RateFilter) ([]*cubawheeler.Rate, string, error) {
 	return findRates(ctx, s.db, &request)
 }

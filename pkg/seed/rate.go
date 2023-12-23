@@ -2,6 +2,7 @@ package seed
 
 import (
 	"context"
+	"errors"
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/mongo"
@@ -62,7 +63,7 @@ func NewRate(db *mongo.DB) *Rate {
 			},
 			{
 				ID:                cubawheeler.NewID().String(),
-				Code:              "R4",
+				Code:              "R5",
 				BasePrice:         1000,
 				PricePerKm:        func() *int { p := 200; return &p }(),
 				PricePerPassenger: func() *int { p := 100; return &p }(),
@@ -81,9 +82,13 @@ func (s *Rate) Up() error {
 	}
 	ctx := cubawheeler.NewContextWithUser(context.TODO(), &usr)
 	for _, r := range s.features {
-		if _, err := s.service.Create(ctx, r); err != nil {
-			return err
+		_, err := s.service.FindByCode(ctx, r.Code)
+		if err != nil && errors.Is(err, cubawheeler.ErrNotFound) {
+			if _, err := s.service.Create(ctx, r); err != nil {
+				return err
+			}
 		}
+
 	}
 	return nil
 }

@@ -9,7 +9,7 @@ import (
 	"cubawheeler.io/pkg/mongo"
 )
 
-var _ Seed = &Application{}
+var _ Seeder = &Application{}
 
 type Application struct {
 	service  cubawheeler.ApplicationService

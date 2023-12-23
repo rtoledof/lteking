@@ -334,6 +334,8 @@ type Order {
   items: [OrderItem!]!
   cost: [CategoryPrice!]
   selected_cost: CategoryPrice
+  route: DirectionResponse
+  route_string: String
 }
 
 type Client {
@@ -400,10 +402,14 @@ enum ChargeStatus {
   FAILED
 }
 
-type Charge {
-  id: ID!
+type Amount {
   amount: Int!
   currency: String!
+}
+
+type Charge {
+  id: ID!
+  amount: Amount!
   rider: User!
   description: String!
   order: Order!
@@ -424,6 +430,7 @@ type Rate {
   price_per_km: Int!
   price_per_passenger: Int
   price_per_baggage: Int!
+  price_per_carry_pet: Int!
   start_time: String
   end_time: String
   start_date: Int
@@ -511,6 +518,16 @@ type Response {
 type NearByResponse {
   driver: User!
   location: Location!
+}
+
+enum ChargeMethod {
+  CASH
+  CARD
+  BANK
+  Paypal
+  Bitcoin
+  Ethereum
+  Balance
 }
 
 type Query {
@@ -618,7 +635,7 @@ input DirectionRequest {
   points: [PointInput!]!
   coupon: String
   riders: Int
-  baggages: Int
+  baggages: Boolean
 }
 
 type CostPerBrand {
@@ -656,5 +673,5 @@ type Mutation {
   createApplication(input: ApplicationRequest!): Application!
   updateApplicationCredentials(application: String!): Application!
 
-  authPusher(socket_id: String!, channel_name: String!): String
+  redeem(input: String!): Response!
 }

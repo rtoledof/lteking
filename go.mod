@@ -12,6 +12,7 @@ require (
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/google/go-cmp v0.5.2
+	github.com/google/uuid v1.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/pusher/push-notifications-go v0.0.0-20200210154345-764224c311b8
@@ -27,7 +28,6 @@ require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.3 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
@@ -66,5 +66,5 @@ require (
 	github.com/segmentio/asm v1.2.0 // indirect
 	golang.org/x/crypto v0.16.0
 	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.14.0
 )

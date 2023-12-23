@@ -13,6 +13,7 @@ type Rate struct {
 	PricePerKm        int    `json:"price_per_km" bson:"price_per_km"`
 	PricePerPassenger int    `json:"price_per_passenger,omitempty" bson:"price_per_passenger,omitempty"`
 	PricePerBaggage   int    `json:"price_per_baggage" bson:"price_per_baggage"`
+	PricePerCarryPet  int    `json:"price_per_carry_pet" bson:"price_per_carry_pet"`
 	StartTime         string `json:"start_time,omitempty" bson:"start_time,omitempty"`
 	EndTime           string `json:"end_time,omitempty" bson:"end_time,omitempty"`
 	StartDate         int64  `json:"start_date,omitempty" bson:"start_date,omitempty"`
@@ -70,6 +71,7 @@ type RateService interface {
 	Create(context.Context, RateRequest) (*Rate, error)
 	Update(context.Context, *RateRequest) (*Rate, error)
 	FindByID(context.Context, string) (*Rate, error)
+	FindByCode(context.Context, string) (*Rate, error)
 	FindAll(context.Context, RateFilter) ([]*Rate, string, error)
 }
 

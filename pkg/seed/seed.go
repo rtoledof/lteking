@@ -2,22 +2,23 @@ package seed
 
 import "cubawheeler.io/pkg/mongo"
 
-type Seed interface {
+type Seeder interface {
 	Up() error
 	Down() error
 }
 
 type seed struct {
-	seeders []Seed
+	seeders []Seeder
 }
 
-func NewSeed(db *mongo.DB) Seed {
+func NewSeed(db *mongo.DB) Seeder {
 	return &seed{
-		seeders: []Seed{
+		seeders: []Seeder{
 			NewApplication(db),
 			NewPlan(db),
 			NewRate(db),
 			NewVehicleCategoryRate(db),
+			NewWallet(db),
 		},
 	}
 }

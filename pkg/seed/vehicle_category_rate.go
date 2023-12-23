@@ -56,9 +56,16 @@ func NewVehicleCategoryRate(db *mongo.DB) *VehicleCategoryRate {
 }
 
 func (r *VehicleCategoryRate) Up() error {
+	usr := cubawheeler.User{
+		Role: cubawheeler.RoleAdmin,
+	}
+	ctx := cubawheeler.NewContextWithUser(context.Background(), &usr)
 	for _, feature := range r.features {
-		if _, err := r.service.Create(context.Background(), &feature); err != nil {
-			return err
+		_, err := r.service.FindByCategory(ctx, feature.Category)
+		if err != nil && err == cubawheeler.ErrNotFound {
+			if _, err := r.service.Create(ctx, &feature); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

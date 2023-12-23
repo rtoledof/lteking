@@ -50,21 +50,6 @@ func NewUserService(
 		beans:      beans,
 	}
 
-	//	ticker := time.NewTicker(time.Hour * 1)
-	//	go func() {
-	//
-	//		for {
-	//			select {
-	//			case <-ticker.C:
-	//				if err := s.generateTokens(context.Background()); err != nil {
-	//					slog.Info(err.Error())
-	//				}
-	//			case <-done:
-	//				return
-	//			}
-	//		}
-	//
-	//	}()
 	return s
 }
 
@@ -112,14 +97,31 @@ func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest)
 
 func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.CreateUser")
+
+	tx, err := s.db.client.StartSession()
+	if err != nil {
+		return fmt.Errorf("unable to start a new session: %w", err)
+	}
+	if err := tx.StartTransaction(); err != nil {
+		return fmt.Errorf("unable to start a new transaction: %v: %w", err, cubawheeler.ErrInternal)
+	}
 	_, err = s.collection.InsertOne(ctx, user)
 	if err != nil {
+		tx.AbortTransaction(ctx)
 		return fmt.Errorf("unable to store the user: %w", err)
 	}
 	if _, err := createProfile(ctx, s.db, &cubawheeler.UpdateProfile{}, user); err != nil {
+		tx.AbortTransaction(ctx)
 		return err
 	}
-	return nil
+	w := cubawheeler.NewWallet()
+	w.Owner = user.ID
+
+	if err = storeWallet(ctx, s.db, w); err != nil {
+		tx.AbortTransaction(ctx)
+		return fmt.Errorf("unable to store the wallet: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return tx.CommitTransaction(ctx)
 }
 
 func (s *UserService) FindByID(ctx context.Context, id string) (_ *cubawheeler.User, err error) {
@@ -434,7 +436,7 @@ func findAllUsers(ctx context.Context, db *DB, filter *cubawheeler.UserFilter) (
 		}
 		users = append(users, &user)
 
-		if len(users) == filter.Limit+1 {
+		if len(users) == filter.Limit+1 && filter.Limit > 0 {
 			token = users[filter.Limit].ID
 			users = users[:filter.Limit]
 			break

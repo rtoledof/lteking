@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/currency"
 	"cubawheeler.io/pkg/derrors"
 )
 
@@ -39,17 +40,23 @@ func (s *ChargeService) Create(ctx context.Context, request *cubawheeler.ChargeR
 		request.ReceiptEmail = usr.Email
 	}
 	id := cubawheeler.NewID().String()
+	cur, err := currency.Parse(request.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("invalid currency: %w", err)
+	}
 	charge := &cubawheeler.Charge{
-		ID:                id,
-		Amount:            request.Amount,
-		Currency:          request.Currency,
+		ID: id,
+		Amount: currency.Amount{
+			Currency: cur,
+			Amount:   int64(request.Amount),
+		},
 		Description:       request.Description,
-		Trip:              request.Trip,
-		Disputed:          request.Disputed,
+		Order:             request.Order,
+		Disputed:          *request.Disputed,
 		ReceiptEmail:      request.ReceiptEmail,
 		Status:            cubawheeler.ChargeStatusPending,
 		Method:            request.Method,
-		ExternalReference: request.Reference,
+		ExternalReference: *request.Reference,
 	}
 	// TODO: calculate the fees and apply it to the charge
 	_, err = s.collection.InsertOne(ctx, charge)

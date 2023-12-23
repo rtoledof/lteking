@@ -152,6 +152,7 @@ type Order struct {
 	Duration         float64               `json:"duration,omitempty" bson:"duration,omitempty"`
 	SelectedCategory CategoryPrice         `json:"selected_category,omitempty" bson:"selected_category,omitempty"`
 	CategoryPrice    []*CategoryPrice      `json:"categories_prices,omitempty" bson:"categories_prices,omitempty"`
+	RouteString      string                `json:"route_string,omitempty" bson:"route_string,omitempty"`
 }
 
 type Item struct {
@@ -230,16 +231,18 @@ type OrderStatusHistory struct {
 type OrderStatus string
 
 const (
-	OrderStatusNew      OrderStatus = "NEW"
-	OrderStatusPickUp   OrderStatus = "PICKED_UP"
-	OrderStatusOnTheWay OrderStatus = "ON_THE_WAY"
-	OrderStatusDropOff  OrderStatus = "DROPED_OFF"
-	OrderStatusCancel   OrderStatus = "CANCELED"
+	OrderStatusNew       OrderStatus = "NEW"
+	OrderStatusPickUp    OrderStatus = "PICKED_UP"
+	OrderStatusConfirmed OrderStatus = "CONFIRMED"
+	OrderStatusOnTheWay  OrderStatus = "ON_THE_WAY"
+	OrderStatusDropOff   OrderStatus = "DROPED_OFF"
+	OrderStatusCancel    OrderStatus = "CANCELED"
 )
 
 var AllOrderStatus = []OrderStatus{
 	OrderStatusNew,
 	OrderStatusPickUp,
+	OrderStatusConfirmed,
 	OrderStatusOnTheWay,
 	OrderStatusDropOff,
 	OrderStatusCancel,
