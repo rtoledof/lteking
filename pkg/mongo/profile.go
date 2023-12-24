@@ -143,14 +143,6 @@ func (s *ProfileService) FindByUser(ctx context.Context) (*cubawheeler.Profile, 
 	return profiles[0], nil
 }
 
-func addLastLocations(ctx context.Context, db *mongo.Client, location cubawheeler.Location) error {
-	collection := db.Database(database).Collection(ProfileCollection.String())
-	if collection == nil {
-		return errors.New("unable to retrieve the collectoion")
-	}
-	panic("implement me")
-}
-
 func findAllProfiles(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.ProfileFilter) ([]*cubawheeler.Profile, string, error) {
 	var profiles []*cubawheeler.Profile
 	var token string

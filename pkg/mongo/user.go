@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -276,45 +275,34 @@ func (s *UserService) UpdateProfile(ctx context.Context, request *cubawheeler.Up
 	if usr == nil {
 		return errors.New("invalid token provided")
 	}
-	params := bson.D{}
 	if request.Name != nil {
-		params = append(params, primitive.E{Key: "name", Value: *request.Name})
 		usr.Profile.Name = *request.Name
 	}
 	if request.LastName != nil {
-		params = append(params, primitive.E{Key: "profile.last_name", Value: *request.LastName})
 		usr.Profile.LastName = *request.LastName
 	}
 	if request.Dob != nil {
-		params = append(params, primitive.E{Key: "profile.dob", Value: *request.Dob})
 		usr.Profile.DOB = *request.Dob
 	}
 	if request.Phone != nil {
-		params = append(params, primitive.E{Key: "profile.phone", Value: *request.Phone})
 		usr.Profile.Phone = *request.Phone
 	}
 	if request.Photo != nil {
-		params = append(params, primitive.E{Key: "profile.photo", Value: *request.Photo})
 		usr.Profile.Photo = *request.Photo
 	}
 	if request.Gender != nil {
-		params = append(params, primitive.E{Key: "profile.gender", Value: *request.Gender})
 		usr.Profile.Gender = *request.Gender
 	}
 	if request.Licence != nil {
-		params = append(params, primitive.E{Key: "profile.licence", Value: *request.Licence})
 		usr.Profile.Licence = *request.Licence
 	}
 	if request.Dni != nil {
-		params = append(params, primitive.E{Key: "profile.dni", Value: *request.Dni})
 		usr.Profile.Dni = *request.Dni
 	}
 
 	if usr.Profile.IsCompleted(usr.Role) {
 		usr.Profile.Status = cubawheeler.ProfileStatusCompleted
 		usr.Status = cubawheeler.UserStatusActive
-		params = append(params, primitive.E{Key: "profile.status", Value: usr.Profile.Status})
-		params = append(params, primitive.E{Key: "status", Value: usr.Status})
 	}
 
 	if err := updateUser(ctx, s.db, usr); err != nil {
@@ -347,28 +335,6 @@ func (s *UserService) SetAvailability(ctx context.Context, user string, availabl
 	}
 	usr.Available = available
 	return updateUser(ctx, s.db, usr)
-}
-
-func (s *UserService) generateTokens(ctx context.Context) error {
-	users, _, err := findAllUsers(ctx, s.db, &cubawheeler.UserFilter{
-		Status: []cubawheeler.UserStatus{cubawheeler.UserStatusActive},
-	})
-	if err != nil {
-		return err
-	}
-	for _, v := range users {
-		if _, err := s.beansToken.GetBeansToken(ctx, v.ID); err != nil && errors.Is(cubawheeler.ErrNotFound, err) {
-			token, err := s.beans.GenerateToken(v.ID)
-			if err != nil {
-				slog.Info("unabe to generate a new beans token: %v", err)
-				continue
-			}
-			if err := s.beansToken.StoreBeansToken(ctx, v.ID, token); err != nil {
-				slog.Info("unabe to store a beans token: %v", err)
-			}
-		}
-	}
-	return nil
 }
 
 func findUserByEmail(ctx context.Context, db *DB, email string) (*cubawheeler.User, error) {

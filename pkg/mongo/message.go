@@ -2,9 +2,10 @@ package mongo
 
 import (
 	"context"
-	"cubawheeler.io/pkg/cubawheeler"
 	"errors"
 	"fmt"
+
+	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -64,19 +65,19 @@ func findAllMessages(ctx context.Context, collection *mongo.Collection, filter *
 	var token string
 	f := bson.D{}
 	if len(filter.Ids) > 0 {
-		f = append(f, primitive.E{"_id", primitive.D{{"$in", filter.Ids}}})
+		f = append(f, primitive.E{Key: "_id", Value: primitive.D{{Key: "$in", Value: filter.Ids}}})
 	}
 	if len(filter.Token) > 0 {
-		f = append(f, bson.E{"token", primitive.E{"$gt", filter.Token}})
+		f = append(f, bson.E{Key: "token", Value: primitive.E{Key: "$gt", Value: filter.Token}})
 	}
 	if len(filter.Trip) > 0 {
-		f = append(f, bson.E{"trip", filter.Trip})
+		f = append(f, bson.E{Key: "trip", Value: filter.Trip})
 	}
 	if len(filter.From) > 0 {
-		f = append(f, bson.E{"from", filter.From})
+		f = append(f, bson.E{Key: "from", Value: filter.From})
 	}
 	if len(filter.To) > 0 {
-		f = append(f, bson.E{"to", filter.To})
+		f = append(f, bson.E{Key: "to", Value: filter.To})
 	}
 	cur, err := collection.Find(ctx, f)
 	if err != nil {

@@ -40,7 +40,7 @@ func TestWalletServiceFindByOwner(t *testing.T) {
 	database = "test"
 	db := NewTestDB()
 	defer func() {
-		db.client.Database(database).Collection("wallets").Drop(context.Background())
+		db.Collection(WalletCollection).Drop(context.Background())
 		db.client.Disconnect(context.Background())
 	}()
 	s := NewWalletService(db)
@@ -70,7 +70,7 @@ func TestWalletServiceDeposit(t *testing.T) {
 	}()
 	s := NewWalletService(db)
 
-	w, err := s.Create(context.Background(), "test")
+	_, err := s.Create(context.Background(), "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestWalletServiceDeposit(t *testing.T) {
 	}
 
 	for _, tt := range test {
-		w, err = s.Deposit(context.Background(), tt.owner, tt.amount)
+		w, err := s.Deposit(context.Background(), tt.owner, tt.amount)
 		if err != nil && !tt.wantErr {
 			t.Fatal(err)
 		}
@@ -107,7 +107,7 @@ func TestWalletServiceWithdraw(t *testing.T) {
 	}()
 	s := NewWalletService(db)
 
-	w, err := s.Create(context.Background(), "test")
+	_, err := s.Create(context.Background(), "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestWalletServiceWithdraw(t *testing.T) {
 	}
 
 	for _, tt := range test {
-		w, err = s.Withdraw(context.Background(), tt.owner, tt.amount)
+		w, err := s.Withdraw(context.Background(), tt.owner, tt.amount)
 		if err != nil && !tt.wantErr {
 			t.Fatalf("expected no error, got %v, want: %v", err, tt.wantErr)
 		}

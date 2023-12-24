@@ -66,26 +66,26 @@ func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVeh
 
 	if len(input.Plate) > 0 {
 		vehicle.Plate = &input.Plate
-		params = append(params, bson.E{"plate", vehicle.Plate})
+		params = append(params, bson.E{Key: "plate", Value: vehicle.Plate})
 	}
 	if input.Category.IsValid() {
 		vehicle.Category = input.Category
-		params = append(params, bson.E{"category", vehicle.Category})
+		params = append(params, bson.E{Key: "category", Value: vehicle.Category})
 	}
 	if input.Type.IsValid() {
 		vehicle.Type = input.Type
-		params = append(params, bson.E{"type", vehicle.Type})
+		params = append(params, bson.E{Key: "type", Value: vehicle.Type})
 	}
 	if input.Year > 0 {
 		vehicle.Year = input.Year
-		params = append(params, bson.E{"year", vehicle.Year})
+		params = append(params, bson.E{Key: "year", Value: vehicle.Year})
 	}
 	if len(input.Facilities) > 0 {
 		vehicle.Facilities = input.Facilities
-		params = append(params, bson.E{"facilities", vehicle.Facilities})
+		params = append(params, bson.E{Key: "facilities", Value: vehicle.Facilities})
 	}
-	f = append(bson.D{{"$set", params}})
-	_, err = s.collection.UpdateOne(ctx, bson.D{{"_id", input.ID}}, f)
+	f = append(f, bson.E{Key: "$set", Value: params})
+	_, err = s.collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: input.ID}}, f)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update the vehicle")
 	}
@@ -137,19 +137,19 @@ func findAllVehicles(ctx context.Context, collection *mongo.Collection, filter *
 		f = append(f, primitive.E{Key: "_id", Value: primitive.A{"$in", filter.Ids}})
 	}
 	if len(filter.Token) > 0 {
-		f = append(f, bson.E{"_id", primitive.E{"$gt", filter.Token}})
+		f = append(f, bson.E{Key: "_id", Value: primitive.E{Key: "$gt", Value: filter.Token}})
 	}
 	if len(filter.Plate) > 0 {
-		f = append(f, bson.E{"plate", filter.Plate})
+		f = append(f, bson.E{Key: "plate", Value: filter.Plate})
 	}
 	if len(filter.Color) > 0 {
-		f = append(f, bson.E{"color", filter.Color})
+		f = append(f, bson.E{Key: "color", Value: filter.Color})
 	}
 	if len(filter.Model) > 0 {
-		f = append(f, bson.E{"model", filter.Model})
+		f = append(f, bson.E{Key: "model", Value: filter.Model})
 	}
 	if len(filter.User) > 0 {
-		f = append(f, bson.E{"user_id", filter.User})
+		f = append(f, bson.E{Key: "user_id", Value: filter.User})
 	}
 
 	cur, err := collection.Find(ctx, f)
