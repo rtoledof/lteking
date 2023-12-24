@@ -322,7 +322,7 @@ type DirectionResponse {
 type Order {
   id: ID!
   rate: Int!
-  price: Int!
+  price: Amount!
   rider: User!
   driver: User
   status: OrderStatus!

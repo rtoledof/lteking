@@ -2,8 +2,10 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/graph/model"
 )
 
 var _ OrderResolver = &orderResolver{}
@@ -15,6 +17,14 @@ func (*orderResolver) Items(ctx context.Context, obj *cubawheeler.Order) ([]*cub
 	panic("unimplemented")
 }
 
+// Price implements OrderResolver.
+func (*orderResolver) Price(ctx context.Context, obj *cubawheeler.Order) (*model.Amount, error) {
+	return &model.Amount{
+		Amount:   int(obj.Price.Amount),
+		Currency: obj.Price.Currency.String(),
+	}, nil
+}
+
 // Cost implements OrderResolver.
 func (*orderResolver) Cost(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.CategoryPrice, error) {
 	return obj.CategoryPrice, nil
@@ -23,10 +33,6 @@ func (*orderResolver) Cost(ctx context.Context, obj *cubawheeler.Order) ([]*cuba
 // SelectedCost implements OrderResolver.
 func (*orderResolver) SelectedCost(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.CategoryPrice, error) {
 	return &obj.SelectedCategory, nil
-}
-
-func (r *orderResolver) Price(ctx context.Context, obj *cubawheeler.Order) (int, error) {
-	return int(obj.Price.Amount), nil
 }
 
 // / Rider is the resolver for the rider field.
@@ -81,4 +87,24 @@ type confirmOrderResolver struct{ *Resolver }
 func (r *confirmOrderResolver) Order(ctx context.Context, obj *cubawheeler.ConfirmOrder, data string) error {
 	obj.OrderID = data
 	return nil
+}
+
+var _ OrderItemResolver = &orderItemResolver{}
+
+type orderItemResolver struct{ *Resolver }
+
+// DropOff implements OrderItemResolver.
+func (*orderItemResolver) DropOff(ctx context.Context, obj *cubawheeler.OrderItem) (*cubawheeler.Point, error) {
+	if len(obj.Points) == 0 {
+		return nil, fmt.Errorf("no points")
+	}
+	return obj.Points[0], nil
+}
+
+// PickUp is the resolver for the pick_up field.
+func (r *orderItemResolver) PickUp(ctx context.Context, obj *cubawheeler.OrderItem) (*cubawheeler.Point, error) {
+	if len(obj.Points) < 2 {
+		return nil, fmt.Errorf("no points")
+	}
+	return obj.Points[len(obj.Points)-1], nil
 }

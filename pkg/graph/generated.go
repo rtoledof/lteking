@@ -49,6 +49,7 @@ type ResolverRoot interface {
 	Message() MessageResolver
 	Mutation() MutationResolver
 	Order() OrderResolver
+	OrderItem() OrderItemResolver
 	Plan() PlanResolver
 	Point() PointResolver
 	Profile() ProfileResolver
@@ -521,7 +522,7 @@ type MutationResolver interface {
 	Redeem(ctx context.Context, input string) (*cubawheeler.Response, error)
 }
 type OrderResolver interface {
-	Price(ctx context.Context, obj *cubawheeler.Order) (int, error)
+	Price(ctx context.Context, obj *cubawheeler.Order) (*model.Amount, error)
 	Rider(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.User, error)
 	Driver(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.User, error)
 
@@ -531,6 +532,10 @@ type OrderResolver interface {
 	Items(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.OrderItem, error)
 	Cost(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.CategoryPrice, error)
 	SelectedCost(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.CategoryPrice, error)
+}
+type OrderItemResolver interface {
+	PickUp(ctx context.Context, obj *cubawheeler.OrderItem) (*cubawheeler.Point, error)
+	DropOff(ctx context.Context, obj *cubawheeler.OrderItem) (*cubawheeler.Point, error)
 }
 type PlanResolver interface {
 	Orders(ctx context.Context, obj *cubawheeler.Plan) (int, error)
@@ -9480,9 +9485,9 @@ func (ec *executionContext) _Order_price(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(*model.Amount)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNAmount2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐAmount(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Order_price(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -9492,7 +9497,13 @@ func (ec *executionContext) fieldContext_Order_price(ctx context.Context, field 
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			switch field.Name {
+			case "amount":
+				return ec.fieldContext_Amount_amount(ctx, field)
+			case "currency":
+				return ec.fieldContext_Amount_currency(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Amount", field.Name)
 		},
 	}
 	return fc, nil
@@ -10255,7 +10266,7 @@ func (ec *executionContext) _OrderItem_pick_up(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.PickUp, nil
+		return ec.resolvers.OrderItem().PickUp(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10264,17 +10275,17 @@ func (ec *executionContext) _OrderItem_pick_up(ctx context.Context, field graphq
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(cubawheeler.Point)
+	res := resTmp.(*cubawheeler.Point)
 	fc.Result = res
-	return ec.marshalOPoint2cubawheelerᚗioᚋpkgᚋcubawheelerᚐPoint(ctx, field.Selections, res)
+	return ec.marshalOPoint2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐPoint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_OrderItem_pick_up(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "OrderItem",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "lat":
@@ -10302,7 +10313,7 @@ func (ec *executionContext) _OrderItem_drop_off(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.DropOff, nil
+		return ec.resolvers.OrderItem().DropOff(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10311,17 +10322,17 @@ func (ec *executionContext) _OrderItem_drop_off(ctx context.Context, field graph
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(cubawheeler.Point)
+	res := resTmp.(*cubawheeler.Point)
 	fc.Result = res
-	return ec.marshalOPoint2cubawheelerᚗioᚋpkgᚋcubawheelerᚐPoint(ctx, field.Selections, res)
+	return ec.marshalOPoint2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐPoint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_OrderItem_drop_off(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "OrderItem",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "lat":
@@ -21385,9 +21396,71 @@ func (ec *executionContext) _OrderItem(ctx context.Context, sel ast.SelectionSet
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("OrderItem")
 		case "pick_up":
-			out.Values[i] = ec._OrderItem_pick_up(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._OrderItem_pick_up(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "drop_off":
-			out.Values[i] = ec._OrderItem_drop_off(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._OrderItem_drop_off(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -25624,10 +25697,6 @@ func (ec *executionContext) marshalOPlan2ᚖcubawheelerᚗioᚋpkgᚋcubawheeler
 		return graphql.Null
 	}
 	return ec._Plan(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOPoint2cubawheelerᚗioᚋpkgᚋcubawheelerᚐPoint(ctx context.Context, sel ast.SelectionSet, v cubawheeler.Point) graphql.Marshaler {
-	return ec._Point(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalOPoint2ᚕᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐPoint(ctx context.Context, sel ast.SelectionSet, v []*cubawheeler.Point) graphql.Marshaler {

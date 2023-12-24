@@ -33,6 +33,9 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 // Order returns OrderResolver implementation.
 func (r *Resolver) Order() OrderResolver { return &orderResolver{r} }
 
+// OrderItem returns OrderItemResolver implementation.
+func (r *Resolver) OrderItem() OrderItemResolver { return &orderItemResolver{r} }
+
 // Plan returns PlanResolver implementation.
 func (r *Resolver) Plan() PlanResolver { return &planResolver{r} }
 

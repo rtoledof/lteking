@@ -10,8 +10,11 @@ import (
 )
 
 type OrderItem struct {
-	PickUp  Point `json:"pick_up" bson:"pick_up"`
-	DropOff Point `json:"drop_off" bson:"drop_off"`
+	Points   []*Point `json:"points" bson:"points"`
+	Coupon   string   `json:"coupon" bson:"coupon"`
+	Riders   int      `json:"riders" bson:"riders"`
+	Baggages bool     `json:"baggages" bson:"baggages"`
+	Currency string   `json:"currency,omitempty" bson:"currency,omitempty"`
 }
 
 type CategoryPrice struct {
@@ -52,18 +55,14 @@ type Item struct {
 	Route   []*PointInput `json:"route"`
 }
 
-func AssambleOrderItem(items []*Item) []*OrderItem {
+func AssambleOrderItem(items []*DirectionRequest) []*OrderItem {
 	var resp []*OrderItem
 	for _, v := range items {
-		var i = OrderItem{
-			PickUp: Point{
-				Lat: v.PickUp.Lat,
-				Lng: v.PickUp.Lng,
-			},
-			DropOff: Point{
-				Lat: v.DropOff.Lat,
-				Lng: v.DropOff.Lng,
-			},
+		i := OrderItem{
+			Points:   v.Points,
+			Riders:   1,
+			Baggages: false,
+			Currency: v.Currency,
 		}
 		resp = append(resp, &i)
 	}
