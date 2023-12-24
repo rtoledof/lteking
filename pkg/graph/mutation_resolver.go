@@ -2,7 +2,6 @@ package graph
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"cubawheeler.io/pkg/cubawheeler"
@@ -67,30 +66,20 @@ func (r *mutationResolver) StartOrder(ctx context.Context, order string) (*cubaw
 }
 
 func (r *mutationResolver) AcceptOrder(ctx context.Context, order string) (*cubawheeler.Response, error) {
+	panic("not implemented")
+}
+
+func (r *mutationResolver) ConfirmOrder(ctx context.Context, req cubawheeler.ConfirmOrder) (*cubawheeler.Response, error) {
 	response := cubawheeler.Response{
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	_, err := r.order.AcceptOrder(ctx, order)
-	if err != nil {
+	if err := r.order.ConfirmOrder(ctx, req); err != nil {
 		response.Success = false
 		response.Code = http.StatusBadRequest
+		response.Message = err.Error()
 	}
 	return &response, nil
-}
-
-func (r *mutationResolver) ConfirmOrder(ctx context.Context, order string, cost string) (*cubawheeler.Response, error) {
-	// response := cubawheeler.Response{
-	// 	Success: true,
-	// 	Code:    http.StatusOK,
-	// }
-	// _, err := r.order.ConfirmOrder(ctx, order, cost)
-	// if err != nil {
-	// 	response.Success = false
-	// 	response.Code = http.StatusBadRequest
-	// }
-	// return &response, nil
-	panic(fmt.Errorf("not implemented: ConfirmOrder - confirmOrder"))
 }
 
 // Login is the resolver for the login field.

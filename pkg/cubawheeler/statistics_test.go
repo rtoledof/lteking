@@ -3,6 +3,7 @@ package cubawheeler
 import (
 	"testing"
 
+	"cubawheeler.io/pkg/currency"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -16,25 +17,37 @@ func TestOrderStatisticsAddOrder(t *testing.T) {
 		{
 			name: "add order",
 			order: Order{
-				ID:    "1",
-				Price: 100,
+				ID: "1",
+				Price: currency.Amount{
+					Amount:   100,
+					Currency: currency.MustParse("CUP"),
+				},
 			},
 			date: Time{Now().Time},
 			want: &OrderStatistics{
 				Orders: map[string]*Statistics{
 					Time{Now().Time}.Format("2006-01-02"): {
-						Total:  1,
-						Amount: 100,
+						Total: 1,
+						Amount: currency.Amount{
+							Amount:   100,
+							Currency: currency.MustParse("CUP"),
+						},
 						Orders: []string{"1"},
 					},
 					Time{Now().Time}.Format("2006-01"): {
-						Total:  1,
-						Amount: 100,
+						Total: 1,
+						Amount: currency.Amount{
+							Amount:   100,
+							Currency: currency.MustParse("CUP"),
+						},
 						Orders: []string{"1"},
 					},
 					Time{Now().Time}.Format("2006"): {
-						Total:  1,
-						Amount: 100,
+						Total: 1,
+						Amount: currency.Amount{
+							Amount:   100,
+							Currency: currency.MustParse("CUP"),
+						},
 						Orders: []string{"1"},
 					},
 				},

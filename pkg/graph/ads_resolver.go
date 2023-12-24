@@ -6,6 +6,8 @@ import (
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
+var _ AdsResolver = &adsResolver{}
+
 type adsResolver struct{ *Resolver }
 
 // ID is the resolver for the id field.

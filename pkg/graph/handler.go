@@ -6,6 +6,7 @@ import (
 	"cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/mongo"
+	"cubawheeler.io/pkg/processor"
 	"cubawheeler.io/pkg/realtime"
 	"cubawheeler.io/pkg/redis"
 )
@@ -17,6 +18,7 @@ func NewHandler(
 	exit chan struct{},
 	connectionString string,
 	abyKey string,
+	pmConfig cubawheeler.PaymentmethodConfig,
 ) *handler.Server {
 	resolver := &Resolver{
 		user:       user,
@@ -24,7 +26,7 @@ func NewHandler(
 		charge:     mongo.NewChargeService(db),
 		coupon:     mongo.NewCouponService(db),
 		profile:    mongo.NewProfileService(db),
-		order:      mongo.NewOrderService(db),
+		processor:  processor.NewCharge(pmConfig),
 		vehicle:    mongo.NewVehicleService(db),
 		location:   mongo.NewLocationService(db),
 		plan:       mongo.NewPlanService(db),
@@ -32,6 +34,7 @@ func NewHandler(
 		otp:        redis.NewOtpService(client),
 		ablyClient: ably.NewClient(connectionString, exit, abyKey),
 	}
+	resolver.order = mongo.NewOrderService(db, resolver.processor)
 	resolver.realTimeLocation = realtime.NewRealTimeService(
 		redis.NewRealTimeService(client),
 		resolver.ablyClient.Notifier,

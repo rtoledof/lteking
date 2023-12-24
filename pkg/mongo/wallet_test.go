@@ -77,8 +77,8 @@ func TestWalletServiceDeposit(t *testing.T) {
 
 	var test = []struct {
 		owner      string
-		amount     int
-		wantAmount int
+		amount     int64
+		wantAmount int64
 		wantErr    bool
 	}{
 		{"test", 100, 100, false},
@@ -116,8 +116,8 @@ func TestWalletServiceWithdraw(t *testing.T) {
 
 	var test = []struct {
 		owner      string
-		amount     int
-		wantAmount int
+		amount     int64
+		wantAmount int64
 		wantErr    bool
 	}{
 		{"test", 100, 100, false},
@@ -160,9 +160,9 @@ func TestWalletServiceTransfer(t *testing.T) {
 	var test = []struct {
 		from           string
 		to             string
-		amount         int
-		wantFromAmount int
-		wantToAmount   int
+		amount         int64
+		wantFromAmount int64
+		wantToAmount   int64
 		wantErr        bool
 	}{
 		{"test", "test2", 100, 100, 100, false},

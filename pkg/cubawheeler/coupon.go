@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"cubawheeler.io/pkg/currency"
 )
 
 type Coupon struct {
-	ID         string       `json:"id" bson:"_id"`
-	Code       string       `json:"code" bson:"code"`
-	Percent    *float64     `json:"percent,omitempty" bson:"percent,omitempty"`
-	Amount     *int         `json:"amount,omitempty" bson:"amount,omitempty"`
-	Status     CouponStatus `json:"status" bson:"status"`
-	ValidFrom  int64        `json:"valid_from,omitempty" bson:"valid_from,omitempty"`
-	ValidUntil int64        `json:"valid_until,omitempty" bson:"valid_until,omitempty"`
-	CreatedAt  int64        `json:"-" bson:"created_at"`
-	UpdatedAt  int64        `json:"updated_at" bson:"updated_at"`
+	ID         string          `json:"id" bson:"_id"`
+	Code       string          `json:"code" bson:"code"`
+	Percent    *float64        `json:"percent,omitempty" bson:"percent,omitempty"`
+	Amount     currency.Amount `json:"amount,omitempty" bson:"amount,omitempty"`
+	Status     CouponStatus    `json:"status" bson:"status"`
+	ValidFrom  int64           `json:"valid_from,omitempty" bson:"valid_from,omitempty"`
+	ValidUntil int64           `json:"valid_until,omitempty" bson:"valid_until,omitempty"`
+	CreatedAt  int64           `json:"-" bson:"created_at"`
+	UpdatedAt  int64           `json:"updated_at" bson:"updated_at"`
 }
 
 type CouponRequest struct {
@@ -26,7 +28,8 @@ type CouponRequest struct {
 	Ids        []string
 	Code       string
 	Percent    *float64
-	Amount     *int
+	Amount     int64
+	Currency   string
 	Status     CouponStatus
 	ValidFrom  *int64
 	ValidUntil *int64

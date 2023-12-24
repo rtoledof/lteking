@@ -14,8 +14,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/currency"
 	"cubawheeler.io/pkg/derrors"
 	"cubawheeler.io/pkg/mapbox"
+	"cubawheeler.io/pkg/processor"
 )
 
 var _ cubawheeler.OrderService = &OrderService{}
@@ -26,13 +28,15 @@ type OrderService struct {
 	db         *DB
 	collection *mongo.Collection
 	orderChan  chan *cubawheeler.Order
+	charge     *processor.Charge
 	mutex      sync.Map
 }
 
-func NewOrderService(db *DB) *OrderService {
+func NewOrderService(db *DB, charge *processor.Charge) *OrderService {
 	return &OrderService{
 		db:         db,
 		orderChan:  make(chan *cubawheeler.Order, 10000),
+		charge:     charge,
 		collection: db.client.Database(database).Collection(OrderCollection.String()),
 	}
 }
@@ -58,6 +62,35 @@ func (s *OrderService) Create(ctx context.Context, req *cubawheeler.DirectionReq
 	}
 
 	return order, nil
+}
+
+// ConfirmOrder implements cubawheeler.OrderService.
+func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.ConfirmOrder) error {
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil || usr.Role != cubawheeler.RoleRider {
+		return cubawheeler.ErrAccessDenied
+	}
+	o, err := findOrderById(ctx, s.db, req.OrderID)
+	if err != nil {
+		return err
+	}
+	o.Status = cubawheeler.OrderStatusConfirmed
+	for _, c := range o.CategoryPrice {
+		if c.Category == req.Category {
+			o.Price = c.Price
+			o.SelectedCategory = *c
+			break
+		}
+	}
+	o.ChargeMethod = req.Method
+	if err := updateOrder(ctx, s.db, o.ID, o); err != nil {
+		return err
+	}
+
+	// charger, err := s.charge.Charge(ctx, o.Price)
+
+	// TODO: send the order to the channel to be processed
+	return nil
 }
 
 func (s *OrderService) CalculatePrice(o *cubawheeler.Order) error {
@@ -92,7 +125,10 @@ func (s *OrderService) CalculatePrice(o *cubawheeler.Order) error {
 	for _, b := range brands {
 		o.CategoryPrice = append(o.CategoryPrice, &cubawheeler.CategoryPrice{
 			Category: b.Category,
-			Price:    uint64(float64(price) * b.Factor),
+			Price: currency.Amount{
+				Amount:   int64(float64(price) * b.Factor),
+				Currency: o.Price.Currency,
+			},
 		})
 	}
 	return nil
@@ -351,6 +387,27 @@ func (s *OrderService) prepareOrder(ctx context.Context, order *cubawheeler.Orde
 			CreatedAt: time.Now().UTC().Unix(),
 		}
 	}
+	var err error
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	if req.Currency != "" {
+		order.Price.Currency, err = currency.Parse(req.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("invalid currency: %v: %w", err, cubawheeler.ErrInvalidCurrency)
+		}
+	}
+	if order.Price.Currency == currency.XXX {
+		order.Price.Currency = currency.MustParse(currency.CUP)
+		if usr.Profile.PreferedCurrency != "" {
+			order.Price.Currency, err = currency.Parse(usr.Profile.PreferedCurrency)
+			if err != nil {
+				return nil, fmt.Errorf("invalid currency: %v: %w", err, cubawheeler.ErrInvalidCurrency)
+			}
+		}
+	}
+
 	mapbox := mapbox.NewClient(os.Getenv("MAPBOX_TOKEN"))
 	assambleOrder(order, req)
 

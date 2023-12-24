@@ -234,6 +234,7 @@ type DirectionRequest struct {
 	Coupon   string   `json:"coupon" bson:"coupon"`
 	Riders   int      `json:"riders" bson:"riders"`
 	Baggages bool     `json:"baggages" bson:"baggages"`
+	Currency string   `json:"currency,omitempty" bson:"currency,omitempty"`
 }
 
 func (r *DirectionRequest) AddPoint(point *Point) {

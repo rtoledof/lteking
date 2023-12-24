@@ -26,7 +26,7 @@ func (*orderResolver) SelectedCost(ctx context.Context, obj *cubawheeler.Order) 
 }
 
 func (r *orderResolver) Price(ctx context.Context, obj *cubawheeler.Order) (int, error) {
-	return int(obj.Price), nil
+	return int(obj.Price.Amount), nil
 }
 
 // / Rider is the resolver for the rider field.
@@ -72,5 +72,13 @@ func (r *createOrderRequestResolver) Riders(ctx context.Context, obj *cubawheele
 // Baggages is the resolver for the baggages field.
 func (r *createOrderRequestResolver) Baggages(ctx context.Context, obj *cubawheeler.CreateOrderRequest, data *int) error {
 	obj.Baggages = data
+	return nil
+}
+
+type confirmOrderResolver struct{ *Resolver }
+
+// Order is the resolver for the order field.
+func (r *confirmOrderResolver) Order(ctx context.Context, obj *cubawheeler.ConfirmOrder, data string) error {
+	obj.OrderID = data
 	return nil
 }

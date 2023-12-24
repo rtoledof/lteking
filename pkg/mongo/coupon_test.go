@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/currency"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -32,7 +33,6 @@ func TestCouponServiceCreate(t *testing.T) {
 			request: func() *cubawheeler.CouponRequest {
 				code := "test"
 				percent := float64(10)
-				amount := 100
 				status := cubawheeler.CouponStatusActive
 				validFrom := currentTime.Unix()
 				validUntil := currentTime.Add(time.Hour * 24).UTC().Unix()
@@ -40,17 +40,21 @@ func TestCouponServiceCreate(t *testing.T) {
 					ID:         "test",
 					Code:       code,
 					Percent:    &percent,
-					Amount:     &amount,
+					Amount:     100,
+					Currency:   "CUP",
 					Status:     status,
 					ValidFrom:  &validFrom,
 					ValidUntil: &validUntil,
 				}
 			},
 			want: &cubawheeler.Coupon{
-				ID:         "test",
-				Code:       "test",
-				Percent:    func() *float64 { f := float64(10); return &f }(),
-				Amount:     func() *int { i := 100; return &i }(),
+				ID:      "test",
+				Code:    "test",
+				Percent: func() *float64 { f := float64(10); return &f }(),
+				Amount: currency.Amount{
+					Amount:   100,
+					Currency: currency.MustParse("CUP"),
+				},
 				Status:     cubawheeler.CouponStatusActive,
 				ValidFrom:  currentTime.Unix(),
 				ValidUntil: currentTime.Add(time.Hour * 24).Unix(),
@@ -61,14 +65,14 @@ func TestCouponServiceCreate(t *testing.T) {
 			request: func() *cubawheeler.CouponRequest {
 				code := "test"
 				percent := 10.0
-				amount := 100
 				status := cubawheeler.CouponStatus("INVALID")
 				validFrom := currentTime.Unix()
 				validUntil := currentTime.Add(time.Hour * 24).Unix()
 				return &cubawheeler.CouponRequest{
 					Code:       code,
 					Percent:    &percent,
-					Amount:     &amount,
+					Amount:     100,
+					Currency:   "CUP",
 					Status:     status,
 					ValidFrom:  &validFrom,
 					ValidUntil: &validUntil,
@@ -106,10 +110,13 @@ func TestCouponServiceFindByCode(t *testing.T) {
 
 	currentTime := time.Now().UTC()
 	coupon := &cubawheeler.Coupon{
-		ID:         "test",
-		Code:       "test",
-		Percent:    func() *float64 { f := float64(10); return &f }(),
-		Amount:     func() *int { i := 100; return &i }(),
+		ID:      "test",
+		Code:    "test",
+		Percent: func() *float64 { f := float64(10); return &f }(),
+		Amount: currency.Amount{
+			Amount:   100,
+			Currency: currency.MustParse("CUP"),
+		},
 		Status:     cubawheeler.CouponStatusActive,
 		ValidFrom:  currentTime.Unix(),
 		ValidUntil: currentTime.Add(time.Hour * 24).Unix(),
@@ -166,10 +173,13 @@ func TestCouponServiceRedeem(t *testing.T) {
 
 	currentTime := time.Now().UTC()
 	coupon := &cubawheeler.Coupon{
-		ID:         "test",
-		Code:       "test",
-		Percent:    func() *float64 { f := float64(10); return &f }(),
-		Amount:     func() *int { i := 100; return &i }(),
+		ID:      "test",
+		Code:    "test",
+		Percent: func() *float64 { f := float64(10); return &f }(),
+		Amount: currency.Amount{
+			Amount:   100,
+			Currency: currency.MustParse("CUP"),
+		},
 		Status:     cubawheeler.CouponStatusActive,
 		ValidFrom:  currentTime.Unix(),
 		ValidUntil: currentTime.Add(time.Hour * 24).Unix(),
@@ -188,10 +198,13 @@ func TestCouponServiceRedeem(t *testing.T) {
 			name: "redeem a coupon",
 			code: "test",
 			want: &cubawheeler.Coupon{
-				ID:         "test",
-				Code:       "test",
-				Percent:    func() *float64 { f := float64(10); return &f }(),
-				Amount:     func() *int { i := 100; return &i }(),
+				ID:      "test",
+				Code:    "test",
+				Percent: func() *float64 { f := float64(10); return &f }(),
+				Amount: currency.Amount{
+					Amount:   100,
+					Currency: currency.MustParse("CUP"),
+				},
 				Status:     cubawheeler.CouponStatusRedeemed,
 				ValidFrom:  currentTime.Unix(),
 				ValidUntil: currentTime.Add(time.Hour * 24).Unix(),
@@ -231,10 +244,13 @@ func TestCouponServiceFindAll(t *testing.T) {
 
 	currentTime := time.Now().UTC()
 	coupon := &cubawheeler.Coupon{
-		ID:         cubawheeler.NewID().String(),
-		Code:       "test",
-		Percent:    func() *float64 { f := float64(10); return &f }(),
-		Amount:     func() *int { i := 100; return &i }(),
+		ID:      cubawheeler.NewID().String(),
+		Code:    "test",
+		Percent: func() *float64 { f := float64(10); return &f }(),
+		Amount: currency.Amount{
+			Amount:   100,
+			Currency: currency.MustParse("CUP"),
+		},
 		Status:     cubawheeler.CouponStatusActive,
 		ValidFrom:  currentTime.Unix(),
 		ValidUntil: currentTime.Add(time.Hour * 24).Unix(),
@@ -324,10 +340,13 @@ func TestCouponServiceFindByID(t *testing.T) {
 
 	currentTime := time.Now().UTC()
 	coupon := &cubawheeler.Coupon{
-		ID:         cubawheeler.NewID().String(),
-		Code:       "test",
-		Percent:    func() *float64 { f := float64(10); return &f }(),
-		Amount:     func() *int { i := 100; return &i }(),
+		ID:      cubawheeler.NewID().String(),
+		Code:    "test",
+		Percent: func() *float64 { f := float64(10); return &f }(),
+		Amount: currency.Amount{
+			Amount:   100,
+			Currency: currency.MustParse("CUP"),
+		},
 		Status:     cubawheeler.CouponStatusActive,
 		ValidFrom:  currentTime.Unix(),
 		ValidUntil: currentTime.Add(time.Hour * 24).Unix(),
@@ -336,7 +355,8 @@ func TestCouponServiceFindByID(t *testing.T) {
 		ID:         coupon.ID,
 		Code:       coupon.Code,
 		Percent:    coupon.Percent,
-		Amount:     coupon.Amount,
+		Amount:     coupon.Amount.Amount,
+		Currency:   coupon.Amount.Currency.String(),
 		Status:     coupon.Status,
 		ValidFrom:  &coupon.ValidFrom,
 		ValidUntil: &coupon.ValidUntil,

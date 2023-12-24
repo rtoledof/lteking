@@ -41,6 +41,7 @@ type App struct {
 	router       http.Handler
 	rdb          *rdb.Redis
 	mongo        *mongo.DB
+	pmConfig     cubawheeler.PaymentmethodConfig
 	config       Config
 	pusher       *pusher.Pusher
 	notification *pusher.PushNotification
@@ -256,6 +257,7 @@ func (a *App) loader() {
 			a.done,
 			a.config.Amqp.Connection,
 			a.config.Ably.ApiKey,
+			a.pmConfig,
 		)
 		r.Handle("/", playground.Handler("GraphQL playground", "/query"))
 		r.Handle("/query", grapgqlSrv)

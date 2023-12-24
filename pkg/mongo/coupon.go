@@ -9,6 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/currency"
+	"cubawheeler.io/pkg/derrors"
 )
 
 var _ cubawheeler.CouponService = &CouponService{}
@@ -32,12 +34,12 @@ func NewCouponService(db *DB) *CouponService {
 	}
 }
 
-func (s *CouponService) Create(ctx context.Context, request *cubawheeler.CouponRequest) (*cubawheeler.Coupon, error) {
+func (s *CouponService) Create(ctx context.Context, request *cubawheeler.CouponRequest) (_ *cubawheeler.Coupon, err error) {
+	defer derrors.Wrap(&err, "mongo.CouponService.Create")
 	coupon := &cubawheeler.Coupon{
 		ID:         request.ID,
 		Code:       request.Code,
 		Percent:    request.Percent,
-		Amount:     request.Amount,
 		Status:     request.Status,
 		ValidFrom:  *request.ValidFrom,
 		ValidUntil: *request.ValidUntil,
@@ -49,6 +51,14 @@ func (s *CouponService) Create(ctx context.Context, request *cubawheeler.CouponR
 	if !coupon.Status.IsValid() {
 		return nil, fmt.Errorf("invalid status: %w", cubawheeler.ErrInvalidInput)
 	}
+	coupon.Amount = currency.Amount{
+		Amount: request.Amount,
+	}
+	coupon.Amount.Currency, err = currency.Parse(request.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("invalid currency: %w", cubawheeler.ErrInvalidInput)
+	}
+
 	return coupon, insertCoupon(ctx, s.db, coupon)
 }
 
@@ -90,7 +100,7 @@ func (s *CouponService) Redeem(ctx context.Context, code string) (*cubawheeler.C
 		tx.AbortTransaction(ctx)
 		return nil, err
 	}
-	w.Deposit(*coupon.Amount)
+	w.Deposit(coupon.Amount.Amount)
 	err = updateWallet(ctx, s.db, w)
 	if err != nil {
 		tx.AbortTransaction(ctx)

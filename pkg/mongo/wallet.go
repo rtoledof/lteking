@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"cubawheeler.io/pkg/cubawheeler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"cubawheeler.io/pkg/cubawheeler"
 )
 
 const WalletCollection Collections = "wallets"
@@ -19,7 +20,7 @@ type WalletService struct {
 
 func NewWalletService(db *DB) *WalletService {
 	index := mongo.IndexModel{
-		Keys: bson.D{{Key: "owner", Value: "string"}},
+		Keys: bson.D{{Key: "owner", Value: 1}},
 	}
 	_, err := db.client.Database(database).Collection(WalletCollection.String()).Indexes().CreateOne(context.Background(), index)
 	if err != nil {
@@ -44,7 +45,7 @@ func (s *WalletService) FindByOwner(ctx context.Context, owner string) (*cubawhe
 	return &w, nil
 }
 
-func (s *WalletService) Deposit(ctx context.Context, owner string, amount int) (*cubawheeler.Wallet, error) {
+func (s *WalletService) Deposit(ctx context.Context, owner string, amount int64) (*cubawheeler.Wallet, error) {
 	w, err := s.FindByOwner(ctx, owner)
 	if err != nil {
 		return nil, fmt.Errorf("error finding wallet: %v: %w", err, cubawheeler.ErrNotFound)
@@ -56,7 +57,7 @@ func (s *WalletService) Deposit(ctx context.Context, owner string, amount int) (
 	return w, updateWallet(ctx, s.db, w)
 }
 
-func (s *WalletService) Withdraw(ctx context.Context, owner string, amount int) (*cubawheeler.Wallet, error) {
+func (s *WalletService) Withdraw(ctx context.Context, owner string, amount int64) (*cubawheeler.Wallet, error) {
 	w, err := s.FindByOwner(ctx, owner)
 	if err != nil {
 		return nil, err
@@ -69,7 +70,7 @@ func (s *WalletService) Withdraw(ctx context.Context, owner string, amount int) 
 }
 
 // Transfer implements cubawheeler.WalletService.
-func (s *WalletService) Transfer(ctx context.Context, from, to string, amount int) (*cubawheeler.Wallet, *cubawheeler.Wallet, error) {
+func (s *WalletService) Transfer(ctx context.Context, from, to string, amount int64) (*cubawheeler.Wallet, *cubawheeler.Wallet, error) {
 	fromW, err := s.FindByOwner(ctx, from)
 	if err != nil {
 		return nil, nil, err
@@ -109,7 +110,7 @@ func (s *WalletService) Transfer(ctx context.Context, from, to string, amount in
 }
 
 // Balance implements cubawheeler.WalletService.
-func (s *WalletService) Balance(ctx context.Context, owner string) (int, error) {
+func (s *WalletService) Balance(ctx context.Context, owner string) (int64, error) {
 	w, err := s.FindByOwner(ctx, owner)
 	if err != nil {
 		return 0, err

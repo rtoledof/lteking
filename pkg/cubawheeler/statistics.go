@@ -1,12 +1,16 @@
 package cubawheeler
 
-import "context"
+import (
+	"context"
+
+	"cubawheeler.io/pkg/currency"
+)
 
 type Statistics struct {
-	Total  int      `json:"total"`
-	Amount uint64   `json:"amount"`
-	User   string   `json:"user"`
-	Orders []string `json:"orders"`
+	Total  int             `json:"total"`
+	Amount currency.Amount `json:"amount"`
+	User   string          `json:"user"`
+	Orders []string        `json:"orders"`
 }
 
 type OrderStatistics struct {
@@ -27,12 +31,14 @@ func (o *OrderStatistics) AddOrder(order Order, date Time) {
 				User:   o.User,
 				Orders: []string{},
 				Total:  0,
-				Amount: 0,
+				Amount: currency.Amount{
+					Currency: order.Price.Currency,
+				},
 			}
 		}
 		o.Orders[interval].Orders = append(o.Orders[interval].Orders, order.ID)
 		o.Orders[interval].Total++
-		o.Orders[interval].Amount += order.Price
+		o.Orders[interval].Amount.Amount += order.Price.Amount
 	}
 }
 

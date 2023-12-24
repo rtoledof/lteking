@@ -13,6 +13,9 @@ func (r *Resolver) CategoryPrice() CategoryPriceResolver { return &categoryPrice
 // Charge returns ChargeResolver implementation.
 func (r *Resolver) Charge() ChargeResolver { return &chargeResolver{r} }
 
+// Coupon returns CouponResolver implementation.
+func (r *Resolver) Coupon() CouponResolver { return &couponResolver{r} }
+
 // DirectionResponse returns DirectionResponseResolver implementation.
 func (r *Resolver) DirectionResponse() DirectionResponseResolver {
 	return &directionResponseResolver{r}
@@ -67,6 +70,9 @@ func (r *Resolver) AddPlace() AddPlaceResolver { return &addPlaceResolver{r} }
 
 // ChargeRequest returns ChargeRequestResolver implementation.
 func (r *Resolver) ChargeRequest() ChargeRequestResolver { return &chargeRequestResolver{r} }
+
+// ConfirmOrder returns ConfirmOrderResolver implementation.
+func (r *Resolver) ConfirmOrder() ConfirmOrderResolver { return &confirmOrderResolver{r} }
 
 // DirectionRequest returns DirectionRequestResolver implementation.
 func (r *Resolver) DirectionRequest() DirectionRequestResolver { return &directionRequestResolver{r} }

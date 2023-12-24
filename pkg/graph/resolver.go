@@ -6,6 +6,7 @@ import (
 
 	"cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/processor"
 	"cubawheeler.io/pkg/realtime"
 )
 
@@ -32,4 +33,5 @@ type Resolver struct {
 	app              cubawheeler.ApplicationService
 	realTimeLocation *realtime.RealTimeService
 	ablyClient       *ably.Client
+	processor        *processor.Charge
 }

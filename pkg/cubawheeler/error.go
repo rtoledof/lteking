@@ -14,6 +14,7 @@ var (
 	ErrOrderAccepted     = errors.New("order already accepted")
 	ErrNilUserInContext  = errors.New("nil user in context")
 	ErrInsufficientFunds = errors.New("insufficient funds")
+	ErrInvalidCurrency   = errors.New("invalid currency")
 
 	ErrInvalid    = errors.New("invalid argument")           // validation failed
 	ErrPermission = errors.New("permission denied")          // permission error action cannot be perform.

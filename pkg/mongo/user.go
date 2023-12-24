@@ -36,7 +36,7 @@ func NewUserService(
 	_, err := db.client.Database(database).Collection(UsersCollection.String()).Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
-			Keys: bson.D{{Key: "email", Value: "text"}},
+			Keys: bson.D{{Key: "email", Value: 1}},
 		})
 	if err != nil {
 		panic("unable to create user email index")

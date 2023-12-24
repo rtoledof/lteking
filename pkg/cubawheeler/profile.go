@@ -23,6 +23,7 @@ type Profile struct {
 	Status            ProfileStatus `json:"status,omitempty" bson:"status"`
 	Circulation       string        `json:"ciculation,omitempty" bson:"circulation"`
 	TechnicInspection string        `json:"technic_inspection,omitempty" bson:"technic_inspection"`
+	PreferedCurrency  string        `json:"prefered_currency,omitempty" bson:"prefered_currency"`
 }
 
 func (p *Profile) IsCompleted(role Role) bool {

@@ -5,121 +5,9 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-)
 
-// {
-// 	"waypoints": [
-// 	  {
-// 		"location": [
-// 		  -84.518399,
-// 		  39.134126
-// 		],
-// 		"name": ""
-// 	  },
-// 	  {
-// 		"location": [
-// 		  -84.511987,
-// 		  39.102638
-// 		],
-// 		"name": "East 6th Street"
-// 	  }
-// 	],
-// 	"routes": [
-// 	  {
-// 		"legs": [
-// 		  {
-// 			"steps": [],
-// 			"weight": 1332.6,
-// 			"distance": 4205,
-// 			"summary": "",
-// 			"duration": 1126
-// 		  }
-// 		],
-// 		"weight_name": "cyclability",
-// 		"geometry": {
-// 		  "coordinates": [
-// 			[
-// 			  -84.518399,
-// 			  39.134126
-// 			],
-// 			[
-// 			  -84.51841,
-// 			  39.133781
-// 			],
-// 			[
-// 			  -84.520024,
-// 			  39.133456
-// 			],
-// 			[
-// 			  -84.520321,
-// 			  39.132597
-// 			],
-// 			[
-// 			  -84.52085,
-// 			  39.128019
-// 			],
-// 			[
-// 			  -84.52036,
-// 			  39.127901
-// 			],
-// 			[
-// 			  -84.52094,
-// 			  39.122783
-// 			],
-// 			[
-// 			  -84.52022,
-// 			  39.122713
-// 			],
-// 			[
-// 			  -84.520768,
-// 			  39.120841
-// 			],
-// 			[
-// 			  -84.519639,
-// 			  39.120268
-// 			],
-// 			[
-// 			  -84.51233,
-// 			  39.114141
-// 			],
-// 			[
-// 			  -84.512652,
-// 			  39.11311
-// 			],
-// 			[
-// 			  -84.512399,
-// 			  39.112216
-// 			],
-// 			[
-// 			  -84.513232,
-// 			  39.112084
-// 			],
-// 			[
-// 			  -84.512127,
-// 			  39.107599
-// 			],
-// 			[
-// 			  -84.512904,
-// 			  39.107489
-// 			],
-// 			[
-// 			  -84.511692,
-// 			  39.102682
-// 			],
-// 			[
-// 			  -84.511987,
-// 			  39.102638
-// 			]
-// 		  ],
-// 		  "type": "LineString"
-// 		},
-// 		"weight": 1332.6,
-// 		"distance": 4205,
-// 		"duration": 1126
-// 	  }
-// 	],
-// 	"code": "Ok"
-//   }
+	"cubawheeler.io/pkg/currency"
+)
 
 type OrderItem struct {
 	PickUp  Point `json:"pick_up" bson:"pick_up"`
@@ -128,7 +16,7 @@ type OrderItem struct {
 
 type CategoryPrice struct {
 	Category VehicleCategory `json:"category"`
-	Price    uint64          `json:"price"`
+	Price    currency.Amount `json:"price"`
 }
 
 type Order struct {
@@ -140,7 +28,7 @@ type Order struct {
 	Status           OrderStatus           `json:"status" bson:"status"`
 	StatusHistory    []*OrderStatusHistory `json:"status_history,omitempty" bson:"status_history,omitempty"`
 	Rate             int                   `json:"rate" bson:"rate"`
-	Price            uint64                `json:"price" bson:"price"`
+	Price            currency.Amount       `json:"price" bson:"price"`
 	Coupon           string                `json:"coupon,omitempty" bson:"coupon,omitempty"`
 	StartAt          int64                 `json:"start_at" bson:"start_at"`
 	EndAt            int64                 `json:"end_at" bson:"end_at"`
@@ -153,6 +41,7 @@ type Order struct {
 	SelectedCategory CategoryPrice         `json:"selected_category,omitempty" bson:"selected_category,omitempty"`
 	CategoryPrice    []*CategoryPrice      `json:"categories_prices,omitempty" bson:"categories_prices,omitempty"`
 	RouteString      string                `json:"route_string,omitempty" bson:"route_string,omitempty"`
+	ChargeMethod     ChargeMethod          `json:"charge_method,omitempty" bson:"charge_method,omitempty"`
 }
 
 type Item struct {
@@ -211,8 +100,7 @@ type OrderService interface {
 	Update(context.Context, *DirectionRequest) (*Order, error)
 	FindByID(context.Context, string) (*Order, error)
 	FindAll(context.Context, *OrderFilter) (*OrderList, error)
-
-	AcceptOrder(context.Context, string) (*Order, error)
+	ConfirmOrder(context.Context, ConfirmOrder) error
 	CancelOrder(context.Context, string) (*Order, error)
 	CompleteOrder(context.Context, string) (*Order, error)
 	StartOrder(context.Context, string) (*Order, error)
@@ -294,4 +182,11 @@ type CreateOrderResponse struct {
 	Order *Order          `json:"order"`
 	Cost  []*CostPerBrand `json:"cost"`
 	Price int             `json:"price"`
+}
+
+type ConfirmOrder struct {
+	OrderID  string          `json:"order_id"`
+	Category VehicleCategory `json:"category"`
+	Method   ChargeMethod    `json:"method"`
+	Currency string          `json:"currency"`
 }

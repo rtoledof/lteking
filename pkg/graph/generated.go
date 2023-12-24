@@ -43,6 +43,7 @@ type ResolverRoot interface {
 	Ads() AdsResolver
 	CategoryPrice() CategoryPriceResolver
 	Charge() ChargeResolver
+	Coupon() CouponResolver
 	DirectionResponse() DirectionResponseResolver
 	Legs() LegsResolver
 	Message() MessageResolver
@@ -60,6 +61,7 @@ type ResolverRoot interface {
 	VoiceInstructions() VoiceInstructionsResolver
 	AddPlace() AddPlaceResolver
 	ChargeRequest() ChargeRequestResolver
+	ConfirmOrder() ConfirmOrderResolver
 	DirectionRequest() DirectionRequestResolver
 	RateRequest() RateRequestResolver
 	UpdatePlace() UpdatePlaceResolver
@@ -239,7 +241,7 @@ type ComplexityRoot struct {
 		AddRate                      func(childComplexity int, input cubawheeler.RateRequest) int
 		CancelOrder                  func(childComplexity int, order string) int
 		ChangePin                    func(childComplexity int, old *string, pin string) int
-		ConfirmOrder                 func(childComplexity int, order string, cost string) int
+		ConfirmOrder                 func(childComplexity int, confirm cubawheeler.ConfirmOrder) int
 		CreateApplication            func(childComplexity int, input cubawheeler.ApplicationRequest) int
 		CreateOrder                  func(childComplexity int, input *cubawheeler.DirectionRequest) int
 		FavoritePlaces               func(childComplexity int) int
@@ -329,6 +331,7 @@ type ComplexityRoot struct {
 		Name              func(childComplexity int) int
 		Phone             func(childComplexity int) int
 		Photo             func(childComplexity int) int
+		PreferedCurrency  func(childComplexity int) int
 		Status            func(childComplexity int) int
 		TechnicInspection func(childComplexity int) int
 		User              func(childComplexity int) int
@@ -477,6 +480,9 @@ type ChargeResolver interface {
 
 	Method(ctx context.Context, obj *cubawheeler.Charge) (*string, error)
 }
+type CouponResolver interface {
+	Amount(ctx context.Context, obj *cubawheeler.Coupon) (*model.Amount, error)
+}
 type DirectionResponseResolver interface {
 	Distance(ctx context.Context, obj *cubawheeler.DirectionResponse) (int, error)
 	Duration(ctx context.Context, obj *cubawheeler.DirectionResponse) (int, error)
@@ -498,7 +504,7 @@ type MutationResolver interface {
 	AddDevice(ctx context.Context, decive string) (*cubawheeler.Response, error)
 	CreateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error)
 	UpdateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error)
-	ConfirmOrder(ctx context.Context, order string, cost string) (*cubawheeler.Response, error)
+	ConfirmOrder(ctx context.Context, confirm cubawheeler.ConfirmOrder) (*cubawheeler.Response, error)
 	CancelOrder(ctx context.Context, order string) (*cubawheeler.Response, error)
 	AcceptOrder(ctx context.Context, order string) (*cubawheeler.Response, error)
 	StartOrder(ctx context.Context, order string) (*cubawheeler.Response, error)
@@ -583,6 +589,9 @@ type ChargeRequestResolver interface {
 	Dispute(ctx context.Context, obj *cubawheeler.ChargeRequest, data *bool) error
 
 	Method(ctx context.Context, obj *cubawheeler.ChargeRequest, data *string) error
+}
+type ConfirmOrderResolver interface {
+	Order(ctx context.Context, obj *cubawheeler.ConfirmOrder, data string) error
 }
 type DirectionRequestResolver interface {
 	Points(ctx context.Context, obj *cubawheeler.DirectionRequest, data []*cubawheeler.PointInput) error
@@ -1396,7 +1405,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ConfirmOrder(childComplexity, args["order"].(string), args["cost"].(string)), true
+		return e.complexity.Mutation.ConfirmOrder(childComplexity, args["confirm"].(cubawheeler.ConfirmOrder)), true
 
 	case "Mutation.createApplication":
 		if e.complexity.Mutation.CreateApplication == nil {
@@ -1891,6 +1900,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Profile.Photo(childComplexity), true
+
+	case "Profile.prefered_currency":
+		if e.complexity.Profile.PreferedCurrency == nil {
+			break
+		}
+
+		return e.complexity.Profile.PreferedCurrency(childComplexity), true
 
 	case "Profile.status":
 		if e.complexity.Profile.Status == nil {
@@ -2614,6 +2630,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputApplicationFilter,
 		ec.unmarshalInputApplicationRequest,
 		ec.unmarshalInputChargeRequest,
+		ec.unmarshalInputConfirmOrder,
 		ec.unmarshalInputDirectionRequest,
 		ec.unmarshalInputItem,
 		ec.unmarshalInputLoginRequest,
@@ -2858,24 +2875,15 @@ func (ec *executionContext) field_Mutation_changePin_args(ctx context.Context, r
 func (ec *executionContext) field_Mutation_confirmOrder_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["order"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	var arg0 cubawheeler.ConfirmOrder
+	if tmp, ok := rawArgs["confirm"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirm"))
+		arg0, err = ec.unmarshalNConfirmOrder2cubawheelerᚗioᚋpkgᚋcubawheelerᚐConfirmOrder(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["order"] = arg0
-	var arg1 string
-	if tmp, ok := rawArgs["cost"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("cost"))
-		arg1, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["cost"] = arg1
+	args["confirm"] = arg0
 	return args, nil
 }
 
@@ -5959,28 +5967,37 @@ func (ec *executionContext) _Coupon_amount(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Amount, nil
+		return ec.resolvers.Coupon().Amount(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(*model.Amount)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalNAmount2ᚖcubawheelerᚗioᚋpkgᚋgraphᚋmodelᚐAmount(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Coupon_amount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Coupon",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			switch field.Name {
+			case "amount":
+				return ec.fieldContext_Amount_amount(ctx, field)
+			case "currency":
+				return ec.fieldContext_Amount_currency(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Amount", field.Name)
 		},
 	}
 	return fc, nil
@@ -6053,9 +6070,9 @@ func (ec *executionContext) _Coupon_valid_from(ctx context.Context, field graphq
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Coupon_valid_from(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6094,9 +6111,9 @@ func (ec *executionContext) _Coupon_valid_until(ctx context.Context, field graph
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Coupon_valid_until(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -8197,7 +8214,7 @@ func (ec *executionContext) _Mutation_confirmOrder(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ConfirmOrder(rctx, fc.Args["order"].(string), fc.Args["cost"].(string))
+		return ec.resolvers.Mutation().ConfirmOrder(rctx, fc.Args["confirm"].(cubawheeler.ConfirmOrder))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -11690,6 +11707,47 @@ func (ec *executionContext) fieldContext_Profile_status(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Profile_prefered_currency(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Profile) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Profile_prefered_currency(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PreferedCurrency, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Profile_prefered_currency(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Profile",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_users(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_users(ctx, field)
 	if err != nil {
@@ -12104,6 +12162,8 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 				return ec.fieldContext_Profile_user(ctx, field)
 			case "status":
 				return ec.fieldContext_Profile_status(ctx, field)
+			case "prefered_currency":
+				return ec.fieldContext_Profile_prefered_currency(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Profile", field.Name)
 		},
@@ -15016,6 +15076,8 @@ func (ec *executionContext) fieldContext_User_profile(ctx context.Context, field
 				return ec.fieldContext_Profile_user(ctx, field)
 			case "status":
 				return ec.fieldContext_Profile_status(ctx, field)
+			case "prefered_currency":
+				return ec.fieldContext_Profile_prefered_currency(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Profile", field.Name)
 		},
@@ -18257,7 +18319,7 @@ func (ec *executionContext) unmarshalInputChargeRequest(ctx context.Context, obj
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"limit", "token", "ids", "amount", "currency", "description", "order", "dispute", "receipt_email", "status", "paid", "method", "reference", "rider", "driver"}
+	fieldsInOrder := [...]string{"limit", "token", "ids", "description", "order", "dispute", "receipt_email", "status", "paid", "method", "reference", "rider", "driver"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -18291,24 +18353,6 @@ func (ec *executionContext) unmarshalInputChargeRequest(ctx context.Context, obj
 				return it, err
 			}
 			it.Ids = data
-		case "amount":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("amount"))
-			data, err := ec.unmarshalOInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Amount = data
-		case "currency":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("currency"))
-			data, err := ec.unmarshalOString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Currency = data
 		case "description":
 			var err error
 
@@ -18409,6 +18453,64 @@ func (ec *executionContext) unmarshalInputChargeRequest(ctx context.Context, obj
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputConfirmOrder(ctx context.Context, obj interface{}) (cubawheeler.ConfirmOrder, error) {
+	var it cubawheeler.ConfirmOrder
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"order", "category", "method", "currency"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "order":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.ConfirmOrder().Order(ctx, &it, data); err != nil {
+				return it, err
+			}
+		case "category":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("category"))
+			data, err := ec.unmarshalNVehicleCategory2cubawheelerᚗioᚋpkgᚋcubawheelerᚐVehicleCategory(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Category = data
+		case "method":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("method"))
+			data, err := ec.unmarshalNChargeMethod2cubawheelerᚗioᚋpkgᚋcubawheelerᚐChargeMethod(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Method = data
+		case "currency":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("currency"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Currency = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, obj interface{}) (cubawheeler.DirectionRequest, error) {
 	var it cubawheeler.DirectionRequest
 	asMap := map[string]interface{}{}
@@ -18416,7 +18518,7 @@ func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "points", "coupon", "riders", "baggages"}
+	fieldsInOrder := [...]string{"id", "points", "coupon", "riders", "baggages", "currency"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -18470,6 +18572,15 @@ func (ec *executionContext) unmarshalInputDirectionRequest(ctx context.Context, 
 				return it, err
 			}
 			it.Baggages = data
+		case "currency":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("currency"))
+			data, err := ec.unmarshalOString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Currency = data
 		}
 	}
 
@@ -20011,21 +20122,55 @@ func (ec *executionContext) _Coupon(ctx context.Context, sel ast.SelectionSet, o
 		case "id":
 			out.Values[i] = ec._Coupon_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "code":
 			out.Values[i] = ec._Coupon_code(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "percent":
 			out.Values[i] = ec._Coupon_percent(ctx, field, obj)
 		case "amount":
-			out.Values[i] = ec._Coupon_amount(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Coupon_amount(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "status":
 			out.Values[i] = ec._Coupon_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "valid_from":
 			out.Values[i] = ec._Coupon_valid_from(ctx, field, obj)
@@ -21660,6 +21805,8 @@ func (ec *executionContext) _Profile(ctx context.Context, sel ast.SelectionSet, 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "status":
 			out.Values[i] = ec._Profile_status(ctx, field, obj)
+		case "prefered_currency":
+			out.Values[i] = ec._Profile_prefered_currency(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -23505,6 +23652,16 @@ func (ec *executionContext) marshalNChargeList2ᚖcubawheelerᚗioᚋpkgᚋcubaw
 	return ec._ChargeList(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNChargeMethod2cubawheelerᚗioᚋpkgᚋcubawheelerᚐChargeMethod(ctx context.Context, v interface{}) (cubawheeler.ChargeMethod, error) {
+	var res cubawheeler.ChargeMethod
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNChargeMethod2cubawheelerᚗioᚋpkgᚋcubawheelerᚐChargeMethod(ctx context.Context, sel ast.SelectionSet, v cubawheeler.ChargeMethod) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNChargeRequest2cubawheelerᚗioᚋpkgᚋcubawheelerᚐChargeRequest(ctx context.Context, v interface{}) (cubawheeler.ChargeRequest, error) {
 	res, err := ec.unmarshalInputChargeRequest(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -23532,6 +23689,11 @@ func (ec *executionContext) marshalNClient2ᚖcubawheelerᚗioᚋpkgᚋcubawheel
 		return graphql.Null
 	}
 	return ec._Client(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNConfirmOrder2cubawheelerᚗioᚋpkgᚋcubawheelerᚐConfirmOrder(ctx context.Context, v interface{}) (cubawheeler.ConfirmOrder, error) {
+	res, err := ec.unmarshalInputConfirmOrder(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNCouponStatus2cubawheelerᚗioᚋpkgᚋcubawheelerᚐCouponStatus(ctx context.Context, v interface{}) (cubawheeler.CouponStatus, error) {

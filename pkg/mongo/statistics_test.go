@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/currency"
 )
 
 func TestOrderStatisticsAddOrder(t *testing.T) {
@@ -34,18 +35,27 @@ func TestOrderStatisticsAddOrder(t *testing.T) {
 				User: "test",
 				Orders: map[string]*cubawheeler.Statistics{
 					"2006-01-02": {
-						Total:  1,
-						Amount: 100,
+						Total: 1,
+						Amount: currency.Amount{
+							Amount:   100,
+							Currency: currency.MustParse("CUP"),
+						},
 						Orders: []string{"1"},
 					},
 					"2006-01": {
-						Total:  1,
-						Amount: 100,
+						Total: 1,
+						Amount: currency.Amount{
+							Amount:   100,
+							Currency: currency.MustParse("CUP"),
+						},
 						Orders: []string{"1"},
 					},
 					"2006": {
-						Total:  1,
-						Amount: 100,
+						Total: 1,
+						Amount: currency.Amount{
+							Amount:   100,
+							Currency: currency.MustParse("CUP"),
+						},
 						Orders: []string{"1"},
 					},
 				},
@@ -81,23 +91,35 @@ func TestOrderStatisticsFindAllStatistics(t *testing.T) {
 			User: "test",
 			Orders: map[string]*cubawheeler.Statistics{
 				"2006-01-02": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 				"2006-01-01": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 				"2006-01": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 				"2006": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 			},
@@ -157,23 +179,35 @@ func TestOrderStatisticsFindStatistictsByUser(t *testing.T) {
 			User: "test",
 			Orders: map[string]*cubawheeler.Statistics{
 				"2006-01-02": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 				"2006-01-01": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 				"2006-01": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 				"2006": {
-					Total:  1,
-					Amount: 100,
+					Total: 1,
+					Amount: currency.Amount{
+						Amount:   100,
+						Currency: currency.MustParse("CUP"),
+					},
 					Orders: []string{"1"},
 				},
 			},

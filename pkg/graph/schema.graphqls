@@ -149,6 +149,7 @@ type Vehicle {
   dni: String
   user: User!
   status: ProfileStatus
+  prefered_currency: String
 }
 
 enum Role {
@@ -211,7 +212,7 @@ type Coupon {
   id: ID!
   code: String!
   percent: Float
-  amount: Int
+  amount: Amount!
   status: CouponStatus!
   valid_from: Int
   valid_until: Int
@@ -467,8 +468,6 @@ input ChargeRequest {
   limit: Int!
   token: String
   ids: [String]
-  amount: Int
-  currency: String
   description: String
   order: String
   dispute: Boolean
@@ -636,12 +635,20 @@ input DirectionRequest {
   coupon: String
   riders: Int
   baggages: Boolean
+  currency: String
 }
 
 type CostPerBrand {
   id: ID!
   brand: Brand!
   price: Int!
+}
+
+input ConfirmOrder {
+  order: String!
+  category: VehicleCategory!
+  method: ChargeMethod!
+  currency: String!
 }
 
 type Mutation {
@@ -654,7 +661,7 @@ type Mutation {
 
   createOrder(input: DirectionRequest): Order!
   updateOrder(input: DirectionRequest): Order!
-  confirmOrder(order: String!, cost: ID!): Response!
+  confirmOrder(confirm: ConfirmOrder!): Response!
   cancelOrder(order: String!): Response!
   acceptOrder(order: String!): Response!
   startOrder(order: String!): Response!
