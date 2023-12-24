@@ -529,7 +529,7 @@ type OrderResolver interface {
 	Coupon(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.Coupon, error)
 
 	Review(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.Review, error)
-	Items(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.OrderItem, error)
+
 	Cost(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.CategoryPrice, error)
 	SelectedCost(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.CategoryPrice, error)
 }
@@ -10028,7 +10028,7 @@ func (ec *executionContext) _Order_items(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Order().Items(rctx, obj)
+		return obj.Items, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10040,17 +10040,17 @@ func (ec *executionContext) _Order_items(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*cubawheeler.OrderItem)
+	res := resTmp.(cubawheeler.OrderItem)
 	fc.Result = res
-	return ec.marshalNOrderItem2ᚕᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐOrderItemᚄ(ctx, field.Selections, res)
+	return ec.marshalNOrderItem2cubawheelerᚗioᚋpkgᚋcubawheelerᚐOrderItem(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Order_items(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Order",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "pick_up":
@@ -21256,41 +21256,10 @@ func (ec *executionContext) _Order(ctx context.Context, sel ast.SelectionSet, ob
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "items":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Order_items(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._Order_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
 			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "cost":
 			field := field
 
@@ -24074,58 +24043,8 @@ func (ec *executionContext) marshalNOrder2ᚖcubawheelerᚗioᚋpkgᚋcubawheele
 	return ec._Order(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNOrderItem2ᚕᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐOrderItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*cubawheeler.OrderItem) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNOrderItem2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐOrderItem(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNOrderItem2ᚖcubawheelerᚗioᚋpkgᚋcubawheelerᚐOrderItem(ctx context.Context, sel ast.SelectionSet, v *cubawheeler.OrderItem) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._OrderItem(ctx, sel, v)
+func (ec *executionContext) marshalNOrderItem2cubawheelerᚗioᚋpkgᚋcubawheelerᚐOrderItem(ctx context.Context, sel ast.SelectionSet, v cubawheeler.OrderItem) graphql.Marshaler {
+	return ec._OrderItem(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNOrderList2cubawheelerᚗioᚋpkgᚋcubawheelerᚐOrderList(ctx context.Context, sel ast.SelectionSet, v cubawheeler.OrderList) graphql.Marshaler {

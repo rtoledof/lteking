@@ -13,8 +13,8 @@ var _ OrderResolver = &orderResolver{}
 type orderResolver struct{ *Resolver }
 
 // Items implements OrderResolver.
-func (*orderResolver) Items(ctx context.Context, obj *cubawheeler.Order) ([]*cubawheeler.OrderItem, error) {
-	panic("unimplemented")
+func (*orderResolver) Items(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.OrderItem, error) {
+	return &obj.Items, nil
 }
 
 // Price implements OrderResolver.

@@ -24,7 +24,7 @@ type CategoryPrice struct {
 
 type Order struct {
 	ID               string                `json:"id" bson:"_id"`
-	Items            DirectionRequest      `json:"items" bson:"items"`
+	Items            OrderItem             `json:"items" bson:"items"`
 	History          []*Point              `json:"history,omitempty" bson:"history,omitempty"`
 	Driver           string                `json:"driver,omitempty" bson:"driver,omitempty"`
 	Rider            string                `json:"rider" bson:"rider"`
@@ -55,18 +55,13 @@ type Item struct {
 	Route   []*PointInput `json:"route"`
 }
 
-func AssambleOrderItem(items []*DirectionRequest) []*OrderItem {
-	var resp []*OrderItem
-	for _, v := range items {
-		i := OrderItem{
-			Points:   v.Points,
-			Riders:   1,
-			Baggages: false,
-			Currency: v.Currency,
-		}
-		resp = append(resp, &i)
+func AssambleOrderItem(items *DirectionRequest) OrderItem {
+	return OrderItem{
+		Points:   items.Points,
+		Riders:   items.Riders,
+		Baggages: items.Baggages,
+		Currency: items.Currency,
 	}
-	return resp
 }
 
 type PointInput struct {

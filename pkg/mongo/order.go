@@ -373,7 +373,7 @@ func assambleOrder(o *cubawheeler.Order, req *cubawheeler.DirectionRequest) *cub
 	if req.Riders == 0 {
 		req.Riders = 1
 	}
-	o.Items = *req
+	o.Items = cubawheeler.AssambleOrderItem(req)
 	o.Distance = 0
 	o.Duration = 0
 	return o
@@ -411,7 +411,7 @@ func (s *OrderService) prepareOrder(ctx context.Context, order *cubawheeler.Orde
 	mapbox := mapbox.NewClient(os.Getenv("MAPBOX_TOKEN"))
 	assambleOrder(order, req)
 
-	order.Items = *req
+	order.Items = cubawheeler.AssambleOrderItem(req)
 
 	routes, strBody, err := mapbox.Directions.GetRoute(ctx, *req)
 	if err != nil {

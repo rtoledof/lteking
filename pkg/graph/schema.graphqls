@@ -332,7 +332,7 @@ type Order {
   start_at: Int!
   end_at: Int!
   review: [Review]
-  items: [OrderItem!]!
+  items: OrderItem!
   cost: [CategoryPrice!]
   selected_cost: CategoryPrice
   route: DirectionResponse
