@@ -45,6 +45,7 @@ type Order struct {
 	CategoryPrice    []*CategoryPrice      `json:"categories_prices,omitempty" bson:"categories_prices,omitempty"`
 	RouteString      string                `json:"route_string,omitempty" bson:"route_string,omitempty"`
 	ChargeMethod     ChargeMethod          `json:"charge_method,omitempty" bson:"charge_method,omitempty"`
+	ChargeID         string                `json:"charge_id,omitempty" bson:"charge_id,omitempty"`
 }
 
 type Item struct {

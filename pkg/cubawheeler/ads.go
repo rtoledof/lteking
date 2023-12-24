@@ -22,6 +22,7 @@ type Ads struct {
 }
 
 type AdsRequest struct {
+	ID          string
 	Limit       int
 	Token       string
 	Ids         []string

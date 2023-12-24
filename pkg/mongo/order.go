@@ -87,7 +87,15 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 		return err
 	}
 
-	// charger, err := s.charge.Charge(ctx, o.Price)
+	charger, err := s.charge.Charge(ctx, o.Price)
+	if err != nil {
+		return err
+	}
+	o.ChargeID = charger.ID
+
+	if err := updateOrder(ctx, s.db, o.ID, o); err != nil {
+		return err
+	}
 
 	// TODO: send the order to the channel to be processed
 	return nil
