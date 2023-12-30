@@ -124,13 +124,15 @@ func (e ChargeStatus) MarshalGQL(w io.Writer) {
 type ChargeMethod string
 
 const (
-	ChargeMethodCash     ChargeMethod = "CASH"
-	ChargeMethodCard     ChargeMethod = "CARD"
-	ChargeMethodBank     ChargeMethod = "BANK"
-	ChargeMethodPaypal   ChargeMethod = "Paypal"
-	ChargeMethodBitcoin  ChargeMethod = "Bitcoin"
-	ChargeMethodEthereum ChargeMethod = "Ethereum"
-	ChargeMethodBalance  ChargeMethod = "Balance"
+	ChargeMethodCash           ChargeMethod = "CASH"
+	ChargeMethodCard           ChargeMethod = "CARD"
+	ChargeMethodBank           ChargeMethod = "BANK"
+	ChargeMethodPaypal         ChargeMethod = "Paypal"
+	ChargeMethodBitcoin        ChargeMethod = "Bitcoin"
+	ChargeMethodEthereum       ChargeMethod = "Ethereum"
+	ChargeMethodBalance        ChargeMethod = "Balance"
+	ChargeMethodCUPTransaction ChargeMethod = "CUP_TRANSACTION"
+	ChargeMethodMLCTransaction ChargeMethod = "MLC_TRANSACTION"
 )
 
 var AllChargeMethod = []ChargeMethod{
@@ -141,11 +143,21 @@ var AllChargeMethod = []ChargeMethod{
 	ChargeMethodBitcoin,
 	ChargeMethodEthereum,
 	ChargeMethodBalance,
+	ChargeMethodCUPTransaction,
+	ChargeMethodMLCTransaction,
 }
 
 func (e ChargeMethod) IsValid() bool {
 	switch e {
-	case ChargeMethodCash, ChargeMethodCard, ChargeMethodBank, ChargeMethodPaypal, ChargeMethodBitcoin, ChargeMethodEthereum, ChargeMethodBalance:
+	case ChargeMethodCash,
+		ChargeMethodCard,
+		ChargeMethodBank,
+		ChargeMethodPaypal,
+		ChargeMethodBitcoin,
+		ChargeMethodEthereum,
+		ChargeMethodBalance,
+		ChargeMethodCUPTransaction,
+		ChargeMethodMLCTransaction:
 		return true
 	}
 	return false

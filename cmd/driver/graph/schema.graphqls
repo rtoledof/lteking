@@ -1,0 +1,250 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+# Enums
+enum Gender {
+  FEMALE
+  MALE
+  NOT_DEFINED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  OFF
+  ON_REVIEW
+  SUSPENDED
+}
+
+enum Interval {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum VehicleCategory {
+  X
+  XL
+  CONFORT
+  GREEN
+  PETS
+  PACKAGE
+  PRIORITY
+}
+
+enum Facilities {
+  AIR_CONDITIONER
+  PETS_ALLOWED
+  SMOKE_ALLOWED
+}
+
+enum VehicleType {
+  AUTO
+  MOTO
+  BIKE
+}
+
+enum VehicleStatus {
+  NEW
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ProfileStatus {
+  INCOMPLETED
+  ON_REVIEW
+  COMPLETED
+}
+
+enum Role {
+  RIDER
+}
+
+# End Enums 
+
+scalar Upload
+
+type Brand {
+  id: ID!
+  name: String!
+}
+
+type Model {
+  id: ID!
+  name: String!
+  brand: Brand!
+}
+
+type Plan {
+  id: ID!
+  name: String!
+  recurrintg: Boolean!
+  orders: Int!
+  price: Int!
+  interval: Interval!
+  code: String!
+}
+
+
+type Vehicle {
+  id: ID!
+  plate: String
+  category: VehicleCategory!
+  brand: Brand!
+  year: Int!
+  model: Model!
+  seats: Int!
+  status: VehicleStatus!
+  color: [String!]
+  type: VehicleType!
+  photos: [String]
+  facilities: [Facilities]
+  technic_inspection: String
+ }
+
+ type Profile {
+  id: ID!
+  name: String
+  last_name: String
+  dob: String
+  phone: String!
+  photo: String!
+  gender: Gender
+  licence: String
+  circulation: String
+  dni: String
+  user: User!
+  status: ProfileStatus
+  prefered_currency: String
+}
+
+type Device {
+  token: String!
+  active: Boolean!
+}
+
+ type User {
+  id: ID!
+  email: String!
+  password: String
+  pin: String!
+  otp: String!
+  rate: Float
+  available: Boolean
+  status: UserStatus
+  active_vehicle: Vehicle
+  code: String!
+  referer: ID!
+  role: Role!
+  profile: Profile!
+  plan: Plan
+  vehicles: [Vehicle]
+  orders: [Order]
+  devices: [Device!]
+}
+
+type Payment {
+  id: ID!
+  order: Order!
+  amount: Int!
+  currency: String!
+  status: String!
+  created_at: String!
+  updated_at: String!
+}
+
+type Point {
+  lat: Float!
+  lng: Float!
+}
+
+type Item {
+  points: [Point!]!
+  riders: Int
+  baggages: Boolean
+  currency: String
+}
+
+type Amount {
+  amount: Int!
+  currency: String!
+}
+
+type CategoryPrice {
+  category: VehicleCategory!
+  price: Amount!
+}
+
+type Order {
+  id: ID!
+  rate: Int!
+  price: Amount!
+  rider: ID!
+  driver: ID
+  status: String!
+  status_history: [String]
+  history: [Point]
+  coupon: String
+  start_at: Int!
+  end_at: Int!
+  item: Item!
+  cost: [CategoryPrice!]
+  selected_cost: CategoryPrice
+  route_string: String
+}
+
+type Response {
+  message: String!
+  code: Int!
+  success: Boolean!
+}
+
+
+type Query {
+  me: User!
+
+  balance: Int!
+
+  vehicles: [Vehicle!]!
+  vehicle(id: ID!): Vehicle!
+  
+  plan(id: ID!): Plan!
+
+  orders: [Order!]!
+  order(id: ID!): Order!
+
+  payments: [Payment!]!
+  payment(id: ID!): Payment!
+}
+
+input AddVehicle {
+  plate: String!
+  category: VehicleCategory
+  brand: String!
+  year: Int!
+  model: String!
+  seats: Int!
+  status: VehicleStatus
+  color: [String!]
+  type: VehicleType
+  photos: [Upload]
+  facilities: [Facilities]
+  operative_license: Upload
+  technic_inspection: Upload
+}
+
+type Mutation {
+  setStatus(active: Boolean): Response!
+
+  acceptOrder(id: ID!): Order!
+  cancelOrder(id: ID!): Order!
+  findOrder(id: ID!): Order!
+  finishOrder(id: ID!): Order!
+
+  addVehicle(input: AddVehicle): Vehicle!
+  updateVehicle(id: ID!, input: AddVehicle): Vehicle!
+  deleteVehicle(id: ID!): Vehicle!
+  listVehicles: [Vehicle!]!
+}

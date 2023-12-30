@@ -1,0 +1,23 @@
+graphqlAPI:
+  containers:
+    image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler-registry/cubawheeler:latest
+  envVars:
+    SERVER_HOST": "0.0.0.0"
+    SERVER_PORT": "3000"
+    
+    SMTP_SERVER": "smtp.gmail.com"
+    SMTP_PORT": "25"
+    SMTP_USER": "rtfernandez2015@gmail.com"
+    SMTP_PASS": "jtpm urqn ljer xgla"
+    
+    AMQP_CONNECTION": "amqps://z8TS2w.nyBXtw:7QTI5Uq-wOaCLoazlWNigoh9LEbGIaNdIx4nRb2ZWKM@us-east-1-a-queue.ably.io:5671/shared"
+    AMQP_QUEUE": "z8TS2w:location_update"
+    AMQP_CUSTOMER": ""
+    
+    ABLY_API_KEY": "z8TS2w.nyBXtw:7QTI5Uq-wOaCLoazlWNigoh9LEbGIaNdIx4nRb2ZWKM"
+    
+    MAPBOX_TOKEN": "pk.eyJ1IjoiY3ViYXdoZWVsZXJhcHAiLCJhIjoiY2xxZWZhMm9qMDAyODJrcDR1cTJnNnI4NCJ9.-ZtyoyBqzqL-aQIf6mk3Ew"
+
+  ingress:
+    ingressClassName: kong
+    host: null
