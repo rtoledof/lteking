@@ -30,7 +30,7 @@ type User struct {
 	ActiveVehicle       string         `json:"active_vehicle,omitempty" bson:"active_vehicle"`
 	Code                string         `json:"referal_code" bson:"referal_code"`
 	Referer             string         `json:"-" bson:"referer"`
-	Role                Role           `json:"-" bson:"role"`
+	Role                Role           `json:"role" bson:"role"`
 	Plan                string         `json:"plan,omitempty" bson:"plan"`
 	Locations           []*Location    `json:"locations,omitempty" bson:"locations"`
 	LastLocations       []*Location    `json:"last_locations,omitempty" bson:"last_locations,omitempty"`
@@ -92,7 +92,7 @@ func (u *User) GenToken() (*Token, error) {
 	}
 	return &Token{
 		AccessToken:          accessToken,
-		AccessTokenExpiresAt: time.Hour * 24 * 7,
+		AccessTokenExpiresIn: time.Hour * 24 * 7,
 		AccessTokenCreatedAt: time.Now(),
 	}, nil
 }
@@ -115,6 +115,7 @@ type UserService interface {
 	AddDevice(context.Context, string) error
 	GetUserDevices(context.Context, []string) ([]*User, error)
 	SetAvailability(ctx context.Context, user string, available bool) error
+	Update(context.Context, *User) error
 }
 
 type OtpService interface {

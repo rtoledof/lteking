@@ -4,17 +4,24 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-oauth2/oauth2/v4"
 	"go.mongodb.org/mongo-driver/bson"
 
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
 var _ cubawheeler.ApplicationService = &ApplicationService{}
+var _ oauth2.ClientStore = &ApplicationService{}
 
 const ApplicationCollection Collections = "applications"
 
 type ApplicationService struct {
 	db *DB
+}
+
+// GetByID implements oauth2.ClientStore.
+func (s *ApplicationService) GetByID(ctx context.Context, id string) (oauth2.ClientInfo, error) {
+	return findApplicationByID(ctx, s.db, id)
 }
 
 func NewApplicationService(db *DB) *ApplicationService {
@@ -178,4 +185,15 @@ func updateApplications(ctx context.Context, app string, db *DB, f bson.D) error
 		return fmt.Errorf("unable to update the application: %s, %v: %w", app, err, cubawheeler.ErrInternal)
 	}
 	return nil
+}
+
+func findApplicationByID(ctx context.Context, db *DB, id string) (*cubawheeler.Application, error) {
+	app, _, err := findApplications(ctx, db, cubawheeler.ApplicationFilter{Ids: []*string{&id}, Limit: 1})
+	if err != nil {
+		return nil, err
+	}
+	if len(app) == 0 {
+		return nil, cubawheeler.ErrNotFound
+	}
+	return app[0], nil
 }

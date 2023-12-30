@@ -11,15 +11,18 @@ import (
 	"os"
 	"time"
 
+	graphH "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/ably/ably-go/ably"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
+	"github.com/go-chi/oauth"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
 
+	driverGQ "cubawheeler.io/cmd/driver/graph"
 	abl "cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/graph"
@@ -195,8 +198,11 @@ func (a *App) loader() {
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Timeout(60 * time.Second))
-	router.Use(AuthMiddleware(userSrv))
+	router.Use(oauth.Authorize(os.Getenv("JWT_SECRET_KEY"), nil))
+	router.Use(AuthMiddleware)
 	router.Use(ClientMiddleware(appSrv))
+
+	router.Mount("/debug", middleware.Profiler())
 
 	router.Post("/pusher/auth", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -258,9 +264,18 @@ func (a *App) loader() {
 			a.config.Amqp.Connection,
 			a.config.Ably.ApiKey,
 			a.pmConfig,
+			a.config.ServiceDiscovery.OrderService,
+			a.config.ServiceDiscovery.AuthService,
 		)
-		r.Handle("/", playground.Handler("GraphQL playground", "/query"))
-		r.Handle("/query", grapgqlSrv)
+		r.Handle("/rider/", playground.Handler("Rider GraphQL playground", "/rider/query"))
+		r.Handle("/rider/query", grapgqlSrv)
+	})
+
+	router.Group(func(r chi.Router) {
+		srv := graphH.NewDefaultServer(driverGQ.NewExecutableSchema(driverGQ.Config{Resolvers: &driverGQ.Resolver{}}))
+
+		r.Handle("/driver/", playground.Handler("Driver GraphQL playground", "/driver/query"))
+		r.Handle("/driver/query", srv)
 	})
 
 	a.router = router

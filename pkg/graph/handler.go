@@ -1,6 +1,13 @@
 package graph
 
 import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 
 	"cubawheeler.io/pkg/ably"
@@ -19,20 +26,24 @@ func NewHandler(
 	connectionString string,
 	abyKey string,
 	pmConfig cubawheeler.PaymentmethodConfig,
+	orderServiceURL string,
+	authServiceURL string,
 ) *handler.Server {
 	resolver := &Resolver{
-		user:       user,
-		ads:        mongo.NewAdsService(db),
-		charge:     mongo.NewChargeService(db),
-		coupon:     mongo.NewCouponService(db),
-		profile:    mongo.NewProfileService(db),
-		processor:  processor.NewCharge(pmConfig),
-		vehicle:    mongo.NewVehicleService(db),
-		location:   mongo.NewLocationService(db),
-		plan:       mongo.NewPlanService(db),
-		message:    mongo.NewMessageService(db),
-		otp:        redis.NewOtpService(client),
-		ablyClient: ably.NewClient(connectionString, exit, abyKey),
+		user:         user,
+		ads:          mongo.NewAdsService(db),
+		charge:       mongo.NewChargeService(db),
+		coupon:       mongo.NewCouponService(db),
+		profile:      mongo.NewProfileService(db),
+		processor:    processor.NewCharge(pmConfig),
+		vehicle:      mongo.NewVehicleService(db),
+		location:     mongo.NewLocationService(db),
+		plan:         mongo.NewPlanService(db),
+		message:      mongo.NewMessageService(db),
+		otp:          redis.NewOtpService(client),
+		ablyClient:   ably.NewClient(connectionString, exit, abyKey),
+		OrderService: orderServiceURL,
+		AuthService:  authServiceURL,
 	}
 	resolver.order = mongo.NewOrderService(db, resolver.processor)
 	resolver.realTimeLocation = realtime.NewRealTimeService(
@@ -41,4 +52,31 @@ func NewHandler(
 		resolver.user,
 	)
 	return handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: resolver}))
+}
+
+func makeRequest(ctx context.Context, method string, url string, body url.Values) (*http.Response, error) {
+	jwtToken := cubawheeler.JWTFromContext(ctx)
+	var reader io.Reader
+	if body != nil {
+		reader = strings.NewReader(body.Encode())
+	}
+
+	req, err := http.NewRequest(method, url, reader)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jwtToken))
+	if body != nil {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, cubawheeler.ErrAccessDenied
+		}
+	}
+	return resp, nil
 }

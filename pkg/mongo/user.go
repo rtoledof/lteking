@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/derrors"
@@ -32,11 +33,20 @@ func NewUserService(
 	done chan struct{},
 ) *UserService {
 
-	_, err := db.client.Database(database).Collection(UsersCollection.String()).Indexes().CreateOne(
-		context.Background(),
-		mongo.IndexModel{
+	indexes := []mongo.IndexModel{
+		{
 			Keys: bson.D{{Key: "email", Value: 1}},
-		})
+			Options: &options.IndexOptions{
+				Unique: &[]bool{true}[0],
+			},
+		},
+	}
+	db.client.Database(database).Collection(UsersCollection.String()).Indexes().DropAll(context.Background())
+
+	_, err := db.Collection(UsersCollection).Indexes().CreateMany(
+		context.Background(),
+		indexes,
+	)
 	if err != nil {
 		panic("unable to create user email index")
 	}
@@ -99,6 +109,7 @@ func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (e
 	if err != nil {
 		return fmt.Errorf("unable to start a new session: %w", err)
 	}
+	defer tx.EndSession(ctx)
 	if err := tx.StartTransaction(); err != nil {
 		return fmt.Errorf("unable to start a new transaction: %v: %w", err, cubawheeler.ErrInternal)
 	}
@@ -106,10 +117,6 @@ func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (e
 	if err != nil {
 		tx.AbortTransaction(ctx)
 		return fmt.Errorf("unable to store the user: %w", err)
-	}
-	if _, err := createProfile(ctx, s.db, &cubawheeler.UpdateProfile{}, user); err != nil {
-		tx.AbortTransaction(ctx)
-		return err
 	}
 	w := cubawheeler.NewWallet()
 	w.Owner = user.ID
@@ -238,12 +245,12 @@ func (s *UserService) FavoriteVehicles(ctx context.Context) (_ []*cubawheeler.Ve
 }
 
 func (s *UserService) Me(ctx context.Context) (*cubawheeler.Profile, error) {
-	usr := cubawheeler.UserFromContext(ctx)
-	if usr == nil {
-		return nil, errors.New("invalid token provided")
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("nil user in context: %w", cubawheeler.ErrAccessDenied)
 	}
 
-	return &usr.Profile, nil
+	return &user.Profile, nil
 }
 
 func (s *UserService) Orders(ctx context.Context, filter *cubawheeler.OrderFilter) (*cubawheeler.OrderList, error) {
@@ -252,8 +259,7 @@ func (s *UserService) Orders(ctx context.Context, filter *cubawheeler.OrderFilte
 		return nil, cubawheeler.ErrNotFound
 	}
 
-	ordersCollection := s.db.client.Database(database).Collection(OrderCollection.String())
-	orders, token, err := findOrders(ctx, ordersCollection, filter)
+	orders, token, err := findOrders(ctx, s.db, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -335,6 +341,10 @@ func (s *UserService) SetAvailability(ctx context.Context, user string, availabl
 	}
 	usr.Available = available
 	return updateUser(ctx, s.db, usr)
+}
+
+func (s *UserService) Update(ctx context.Context, user *cubawheeler.User) error {
+	return updateUser(ctx, s.db, user)
 }
 
 func findUserByEmail(ctx context.Context, db *DB, email string) (*cubawheeler.User, error) {

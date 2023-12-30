@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/currency"
@@ -15,15 +14,15 @@ import (
 
 var _ cubawheeler.ChargeService = &ChargeService{}
 
+var ChargesCollection Collections = "charges"
+
 type ChargeService struct {
-	db         *DB
-	collection *mongo.Collection
+	db *DB
 }
 
 func NewChargeService(db *DB) *ChargeService {
 	return &ChargeService{
-		db:         db,
-		collection: db.client.Database(database).Collection("charges"),
+		db: db,
 	}
 }
 
@@ -59,7 +58,8 @@ func (s *ChargeService) Create(ctx context.Context, request *cubawheeler.ChargeR
 		ExternalReference: *request.Reference,
 	}
 	// TODO: calculate the fees and apply it to the charge
-	_, err = s.collection.InsertOne(ctx, charge)
+	collection := s.db.Collection(ChargesCollection)
+	_, err = collection.InsertOne(ctx, charge)
 	if err != nil {
 		return nil, fmt.Errorf("unable to store the charge: %w", err)
 	}
@@ -74,7 +74,7 @@ func (s *ChargeService) Update(ctx context.Context, request *cubawheeler.ChargeR
 
 func (s *ChargeService) FindByID(ctx context.Context, id string) (_ *cubawheeler.Charge, err error) {
 	defer derrors.Wrap(&err, "mongo.ChargeService.FindByID")
-	charges, _, err := findAllCharges(ctx, s.collection, cubawheeler.ChargeRequest{
+	charges, _, err := findAllCharges(ctx, s.db, cubawheeler.ChargeRequest{
 		Ids:   []string{id},
 		Limit: 1,
 	})
@@ -96,16 +96,17 @@ func (s *ChargeService) FindAll(ctx context.Context, request cubawheeler.ChargeR
 	case cubawheeler.RoleDriver:
 		request.Driver = &usr.ID
 	}
-	charges, token, err := findAllCharges(ctx, s.collection, request)
+	charges, token, err := findAllCharges(ctx, s.db, request)
 	if err != nil {
 		return nil, err
 	}
 	return &cubawheeler.ChargeList{Data: charges, Token: token}, nil
 }
 
-func findAllCharges(ctx context.Context, collection *mongo.Collection, filter cubawheeler.ChargeRequest) ([]*cubawheeler.Charge, string, error) {
+func findAllCharges(ctx context.Context, db *DB, filter cubawheeler.ChargeRequest) ([]*cubawheeler.Charge, string, error) {
 	var charges []*cubawheeler.Charge
 	var token string
+	collection := db.Collection(ChargesCollection)
 	f := bson.D{}
 	if len(filter.Ids) > 0 {
 		f = append(f, bson.E{Key: "_id", Value: bson.A{"$in", filter.Ids}})

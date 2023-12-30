@@ -188,6 +188,7 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.ChargeMethod
   ConfirmOrder: 
     model: cubawheeler.io/pkg/cubawheeler.ConfirmOrder
-
+  GrantType: 
+    model: cubawheeler.io/pkg/cubawheeler.GrantType
 
     

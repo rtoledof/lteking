@@ -32,7 +32,7 @@ func (*orderResolver) Cost(ctx context.Context, obj *cubawheeler.Order) ([]*cuba
 
 // SelectedCost implements OrderResolver.
 func (*orderResolver) SelectedCost(ctx context.Context, obj *cubawheeler.Order) (*cubawheeler.CategoryPrice, error) {
-	return &obj.SelectedCategory, nil
+	return obj.SelectedCategory, nil
 }
 
 // / Rider is the resolver for the rider field.

@@ -9,7 +9,8 @@ import (
 
 type Vehicle struct {
 	ID         string          `json:"id" bson:"_id"`
-	Plate      *string         `json:"plate,omitempty" bson:"plate"`
+	Plate      string          `json:"plate,omitempty" bson:"plate"`
+	Name       string          `json:"name,omitempty" bson:"name,omitmepty"`
 	Category   VehicleCategory `json:"category" bson:"category"`
 	Brand      Brand           `json:"brand" bson:"brand"`
 	Year       int             `json:"year" bson:"year"`

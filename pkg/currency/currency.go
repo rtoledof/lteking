@@ -118,6 +118,22 @@ func (c *Currency) UnmarshalJSON(b []byte) error {
 	return c.Parse(str)
 }
 
+func (c Currency) MarshalText() ([]byte, error) {
+	return []byte(c.String()), nil
+}
+
+func (c *Currency) UnmarshalText(b []byte) error {
+	return c.Parse(string(b))
+}
+
+func (c Currency) MarshalBSON() (interface{}, error) {
+	return c.String(), nil
+}
+
+func (c *Currency) UnmarshalBSON(src interface{}) error {
+	return c.Parse(fmt.Sprintf("%s", src))
+}
+
 func (c *Currency) String() string {
 	if c.unit != "" {
 		return c.unit

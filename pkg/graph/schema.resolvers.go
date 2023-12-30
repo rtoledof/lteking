@@ -39,9 +39,6 @@ func (r *Resolver) OrderItem() OrderItemResolver { return &orderItemResolver{r} 
 // Plan returns PlanResolver implementation.
 func (r *Resolver) Plan() PlanResolver { return &planResolver{r} }
 
-// Point returns PointResolver implementation.
-func (r *Resolver) Point() PointResolver { return &pointResolver{r} }
-
 // Profile returns ProfileResolver implementation.
 func (r *Resolver) Profile() ProfileResolver { return &profileResolver{r} }
 
@@ -79,6 +76,9 @@ func (r *Resolver) ConfirmOrder() ConfirmOrderResolver { return &confirmOrderRes
 
 // DirectionRequest returns DirectionRequestResolver implementation.
 func (r *Resolver) DirectionRequest() DirectionRequestResolver { return &directionRequestResolver{r} }
+
+// LoginRequest returns LoginRequestResolver implementation.
+func (r *Resolver) LoginRequest() LoginRequestResolver { return &loginRequestResolver{r} }
 
 // RateRequest returns RateRequestResolver implementation.
 func (r *Resolver) RateRequest() RateRequestResolver { return &rateRequestResolver{r} }

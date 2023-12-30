@@ -34,4 +34,7 @@ type Resolver struct {
 	realTimeLocation *realtime.RealTimeService
 	ablyClient       *ably.Client
 	processor        *processor.Charge
+
+	OrderService string
+	AuthService  string
 }

@@ -18,7 +18,7 @@ func TestOrderStatisticsAddOrder(t *testing.T) {
 			name: "add order",
 			order: Order{
 				ID: "1",
-				Price: currency.Amount{
+				Price: &currency.Amount{
 					Amount:   100,
 					Currency: currency.MustParse("CUP"),
 				},

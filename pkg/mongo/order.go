@@ -43,12 +43,9 @@ func NewOrderService(db *DB, charge *processor.Charge) *OrderService {
 
 func (s *OrderService) Create(ctx context.Context, req *cubawheeler.DirectionRequest) (_ *cubawheeler.Order, err error) {
 	defer derrors.Wrap(&err, "mongo.OrderService.Create")
-	usr := cubawheeler.UserFromContext(ctx)
-	if usr == nil {
-		return nil, errors.New("invalid token provided")
-	}
-	if usr.Role != cubawheeler.RoleRider {
-		return nil, fmt.Errorf("invalid user to create the order: %w", cubawheeler.ErrAccessDenied)
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, fmt.Errorf("nil user in context: %w", cubawheeler.ErrAccessDenied)
 	}
 
 	order, err := s.prepareOrder(ctx, nil, req)
@@ -74,11 +71,14 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 	if err != nil {
 		return err
 	}
+	if o.Rider != usr.ID {
+		return cubawheeler.ErrAccessDenied
+	}
 	o.Status = cubawheeler.OrderStatusConfirmed
 	for _, c := range o.CategoryPrice {
 		if c.Category == req.Category {
-			o.Price = c.Price
-			o.SelectedCategory = *c
+			o.Price = &c.Price
+			o.SelectedCategory = c
 			break
 		}
 	}
@@ -87,7 +87,7 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 		return err
 	}
 
-	charger, err := s.charge.Charge(ctx, o.Price)
+	charger, err := s.charge.Charge(ctx, *o.Price)
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (s *OrderService) FindByID(ctx context.Context, id string) (*cubawheeler.Or
 }
 
 func (s *OrderService) FindAll(ctx context.Context, filter *cubawheeler.OrderFilter) (*cubawheeler.OrderList, error) {
-	trips, token, err := findOrders(ctx, s.collection, filter)
+	trips, token, err := findOrders(ctx, s.db, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (s *OrderService) CancelOrder(ctx context.Context, id string) (*cubawheeler
 	return order, nil
 }
 
-func (s *OrderService) CompleteOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
+func (s *OrderService) FinishOrder(ctx context.Context, id string) (*cubawheeler.Order, error) {
 	s.orderLock(id)
 	defer s.orderUnlock(id)
 	user := cubawheeler.UserFromContext(ctx)
@@ -287,7 +287,8 @@ func (s *OrderService) StartOrder(ctx context.Context, id string) (*cubawheeler.
 	return order, nil
 }
 
-func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubawheeler.OrderFilter) ([]*cubawheeler.Order, string, error) {
+func findOrders(ctx context.Context, db *DB, filter *cubawheeler.OrderFilter) ([]*cubawheeler.Order, string, error) {
+	collection := db.Collection(OrderCollection)
 	user := cubawheeler.UserFromContext(ctx)
 	if user == nil {
 		return nil, "", errors.New("invalid token provided")
@@ -310,6 +311,9 @@ func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubaw
 	if filter.Token != nil {
 		f = append(f, bson.E{Key: "_id", Value: primitive.E{Key: "$gt", Value: filter.Token}})
 	}
+	if len(filter.IDs) > 0 {
+		f = append(f, bson.E{Key: "_id", Value: bson.D{{Key: "$in", Value: filter.IDs}}})
+	}
 
 	cur, err := collection.Find(ctx, f)
 	if err != nil {
@@ -322,7 +326,7 @@ func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubaw
 			return nil, "", err
 		}
 		trips = append(trips, &trip)
-		if len(trips) == filter.Limit+1 {
+		if len(trips) == filter.Limit+1 && filter.Limit != 0 {
 			token = trips[filter.Limit].ID
 			trips = trips[:filter.Limit]
 			break
@@ -337,12 +341,22 @@ func findOrders(ctx context.Context, collection *mongo.Collection, filter *cubaw
 }
 
 func findOrderById(ctx context.Context, db *DB, id string) (*cubawheeler.Order, error) {
-	collection := db.client.Database(database).Collection(OrderCollection.String())
-	trips, _, err := findOrders(ctx, collection, &cubawheeler.OrderFilter{
-		Ids:   []*string{&id},
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, fmt.Errorf("nil user in context: %w", cubawheeler.ErrAccessDenied)
+	}
+	filter := &cubawheeler.OrderFilter{
+		IDs:   []string{id},
 		Limit: 1,
-	})
-	if err != nil && len(trips) == 0 {
+	}
+	if usr.Role == cubawheeler.RoleRider {
+		filter.Rider = &usr.ID
+	}
+	if usr.Role == cubawheeler.RoleDriver {
+		filter.Driver = &usr.ID
+	}
+	trips, _, err := findOrders(ctx, db, filter)
+	if err != nil || len(trips) == 0 {
 		return nil, cubawheeler.ErrNotFound
 	}
 	return trips[0], nil
@@ -400,13 +414,15 @@ func (s *OrderService) prepareOrder(ctx context.Context, order *cubawheeler.Orde
 	if usr == nil {
 		return nil, cubawheeler.ErrAccessDenied
 	}
+	order.Rider = usr.ID
 	if req.Currency != "" {
 		order.Price.Currency, err = currency.Parse(req.Currency)
 		if err != nil {
 			return nil, fmt.Errorf("invalid currency: %v: %w", err, cubawheeler.ErrInvalidCurrency)
 		}
 	}
-	if order.Price.Currency == currency.XXX {
+	if order.Price == nil || order.Price.Currency == currency.XXX {
+		order.Price = &currency.Amount{}
 		order.Price.Currency = currency.MustParse(currency.CUP)
 		if usr.Profile.PreferedCurrency != "" {
 			order.Price.Currency, err = currency.Parse(usr.Profile.PreferedCurrency)

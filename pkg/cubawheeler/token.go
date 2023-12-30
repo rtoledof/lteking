@@ -10,8 +10,8 @@ var _ oauth2.TokenInfo = &Token{}
 
 type Token struct {
 	AccessToken           string                     `json:"access_token" bson:"access_token"`
-	AccessTokenCreatedAt  time.Time                  `json:"access_token_created_at" bson:"access_token_created_at"`
-	AccessTokenExpiresAt  time.Duration              `json:"expires_at"  bson:"access_token_expires_at"`
+	AccessTokenCreatedAt  time.Time                  `json:"access_token_created_at,omitempty" bson:"access_token_created_at"`
+	AccessTokenExpiresIn  time.Duration              `json:"expires_in,omitempty"  bson:"access_token_expires_in"`
 	ClientID              string                     `json:"client_id,omitempty" bson:"client_id,omitempty"`
 	Code                  string                     `json:"code,omitempty" bson:"code,omitempty"`
 	CodeCreateAt          time.Time                  `json:"code_create_at,omitempty" bson:"code_create_at,omitempty"`
@@ -38,7 +38,7 @@ func (t *Token) GetAccessCreateAt() time.Time {
 
 // GetAccessExpiresIn implements oauth2.TokenInfo.
 func (t *Token) GetAccessExpiresIn() time.Duration {
-	return t.AccessTokenExpiresAt
+	return t.AccessTokenExpiresIn
 }
 
 // GetClientID implements oauth2.TokenInfo.
@@ -118,7 +118,7 @@ func (t *Token) SetAccessCreateAt(created time.Time) {
 
 // SetAccessExpiresIn implements oauth2.TokenInfo.
 func (t *Token) SetAccessExpiresIn(expiry time.Duration) {
-	t.AccessTokenExpiresAt = expiry
+	t.AccessTokenExpiresIn = expiry
 }
 
 // SetClientID implements oauth2.TokenInfo.

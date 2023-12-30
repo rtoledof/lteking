@@ -65,7 +65,7 @@ func (s *VehicleService) Update(ctx context.Context, input cubawheeler.UpdateVeh
 	params := bson.D{}
 
 	if len(input.Plate) > 0 {
-		vehicle.Plate = &input.Plate
+		vehicle.Plate = input.Plate
 		params = append(params, bson.E{Key: "plate", Value: vehicle.Plate})
 	}
 	if input.Category.IsValid() {

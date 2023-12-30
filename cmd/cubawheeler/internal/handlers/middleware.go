@@ -1,14 +1,11 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/json"
+	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	_ "time"
-
-	"github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 
 	"cubawheeler.io/pkg/cubawheeler"
 )
@@ -33,32 +30,37 @@ func handler(f fn) http.HandlerFunc {
 	}
 }
 
-// AuthMiddleware decodes the share session cookie and packs the session into context
-func AuthMiddleware(srv cubawheeler.UserService) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-			token, err := parseToken(r)
-			if err != nil {
-				next.ServeHTTP(w, r)
+// / AuthMiddleware decodes the share session cookie and packs the session into context
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims := cubawheeler.GetClaimsFromContext(r.Context())
+		if claims == nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		ctx := r.Context()
+		if len(claims) > 0 {
+			userData, ok := claims["user"]
+			if !ok {
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-
-			claim, ok := token.Claims.(jwt.MapClaims)
-			if !ok || !token.Valid || claim == nil || claim["email"] == nil {
-				next.ServeHTTP(w, r)
+			var user cubawheeler.User
+			if err := json.Unmarshal([]byte(userData), &user); err != nil {
+				slog.Error(err.Error())
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
+			ctx = cubawheeler.NewContextWithUser(ctx, &user)
+		}
 
-			user, err := srv.FindByEmail(r.Context(), claim["email"].(string))
-			if err != nil {
-				next.ServeHTTP(w, r)
-				return
-			}
+		token := requestToken(r)
+		if token != "" {
+			ctx = cubawheeler.NewContextWithJWT(ctx, token)
+		}
 
-			next.ServeHTTP(w, r.WithContext(cubawheeler.NewContextWithUser(r.Context(), user)))
-		})
-	}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // ClientMiddleware decodes the share session cookie and packs the session into context
@@ -87,33 +89,15 @@ func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) htt
 	}
 }
 
-var authHeaderExtractor = &request.PostExtractionFilter{
-	Extractor: request.HeaderExtractor{"Authorization"},
-	Filter:    stripBearerPrefixFromToken,
-}
-
-var authExtractor = &request.MultiExtractor{
-	authHeaderExtractor,
-	request.ArgumentExtractor{"access_token"},
-}
-
-func parseToken(r *http.Request) (*jwt.Token, error) {
-	jwtToken, err := request.ParseFromRequest(r, authHeaderExtractor, func(token *jwt.Token) (interface{}, error) {
-		secret := []byte(os.Getenv("JWT_SECRET"))
-		return secret, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("inavalid token provided: %w", err)
-	}
-	return jwtToken, nil
-}
-
-var replacer = strings.NewReplacer("sk_", "", "pk_", "", "test_", "")
-
-func stripBearerPrefixFromToken(token string) (string, error) {
+func requestToken(r *http.Request) string {
 	const prefix = "Bearer "
-	if strings.HasPrefix(token, prefix) {
-		token = strings.TrimPrefix(token, prefix)
+
+	token, _, ok := r.BasicAuth()
+	if !ok {
+		h := r.Header.Get("Authorization")
+		if strings.HasPrefix(h, prefix) {
+			token = strings.TrimPrefix(h, prefix)
+		}
 	}
-	return token, nil
+	return token
 }

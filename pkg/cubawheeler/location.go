@@ -13,6 +13,14 @@ type Point struct {
 	Lng float64 `json:"lon" bson:"lon"`
 }
 
+func (p *Point) String() string {
+	return fmt.Sprintf("%f,%f", p.Lng, p.Lat)
+}
+
+func (p *Point) Valid() bool {
+	return p.Lat >= -90 && p.Lat <= 90 && p.Lng >= -180 && p.Lng <= 180
+}
+
 type Address struct {
 	Street1 string `json:"street_1" bson:"street_1"`
 	Street2 string `json:"street2,omitempty"`

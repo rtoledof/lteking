@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/http"
 )
 
 var (
@@ -15,6 +16,8 @@ var (
 	ErrNilUserInContext  = errors.New("nil user in context")
 	ErrInsufficientFunds = errors.New("insufficient funds")
 	ErrInvalidCurrency   = errors.New("invalid currency")
+	ErrUnauthorized      = errors.New("unauthorized")
+	ErrBadRequest        = errors.New("bad request")
 
 	ErrInvalid    = errors.New("invalid argument")           // validation failed
 	ErrPermission = errors.New("permission denied")          // permission error action cannot be perform.
@@ -30,11 +33,21 @@ type Error struct {
 	// Param or field with error.
 	Param string
 
+	StatusCode int
+
 	// Underline error.
 	Err error
 
 	// Extra data added to the response
 	Metadata
+}
+
+func NewError(err error, statusCode int, message string) *Error {
+	return &Error{
+		Err:        err,
+		StatusCode: statusCode,
+		Message:    message,
+	}
 }
 
 func (e *Error) Unwrap() error {
@@ -61,4 +74,12 @@ func (e *Error) Is(target error) bool {
 	}
 	return (e.Message == t.Message || t.Message == "") &&
 		(e.Param == t.Param || t.Param == "")
+}
+
+func NewInvalidParameter(param string, value any) *Error {
+	return NewError(ErrInvalid, http.StatusBadRequest, fmt.Sprintf("invalid parameter %s: %v", param, value))
+}
+
+func NewMissingParameter(param string) *Error {
+	return NewError(ErrInvalid, http.StatusBadRequest, fmt.Sprintf("missing parameter %s", param))
 }

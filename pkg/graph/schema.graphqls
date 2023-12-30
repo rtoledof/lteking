@@ -220,7 +220,7 @@ type Coupon {
 
 type Point {
   lat: Float!
-  long: Float!
+  lng: Float!
 }
 
 type OrderItem {
@@ -458,7 +458,7 @@ input UserFilter {
 input OrderFilter {
   limit: Int
   token: String
-  ids: [String]
+  iDs: [String!]
   rider: ID
   driver: ID
   status: String
@@ -536,7 +536,6 @@ type Query {
 
   orders(filter: OrderFilter): OrderList!
   order(id: String!): Order!
-
   charges(filter: ChargeRequest!): ChargeList!
   charge(id: String): Charge
 
@@ -569,9 +568,19 @@ input UpdateOrder {
   status: OrderStatus
 }
 
+enum GrantType {
+  Password
+  ClientCredentials
+  AuthorizationCode
+  RefreshToken
+}
+
 input LoginRequest {
-  email: String!
-  otp: String!
+  email: String
+  otp: String
+  grant_type: String!
+  client_id: String
+  client_secret: String
 }
 
 input PointInput {

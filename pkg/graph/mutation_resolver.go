@@ -1,8 +1,15 @@
 package graph
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"cubawheeler.io/pkg/cubawheeler"
 )
@@ -28,12 +35,62 @@ func (r *mutationResolver) Redeem(ctx context.Context, input string) (*cubawheel
 
 // CreateOrder implements MutationResolver.
 func (r *mutationResolver) CreateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error) {
-	return r.order.Create(ctx, input)
+	value := url.Values{
+		"coupon":   {input.Coupon},
+		"riders":   {strconv.Itoa(input.Riders)},
+		"baggages": {strconv.FormatBool(input.Baggages)},
+		"currency": {input.Currency},
+	}
+	for _, v := range input.Points {
+		value.Add("points", fmt.Sprintf("%f,%f", v.Lat, v.Lng))
+	}
+
+	resp, err := makeRequest(ctx, http.MethodPost, r.OrderService, value)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+
+	var order cubawheeler.Order
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	if err := json.Unmarshal(data, &order); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+
+	return &order, nil
 }
 
 // UpdateOrder implements MutationResolver.
 func (r *mutationResolver) UpdateOrder(ctx context.Context, input *cubawheeler.DirectionRequest) (*cubawheeler.Order, error) {
-	return r.order.Update(ctx, input)
+	value := url.Values{
+		"coupon":   {input.Coupon},
+		"riders":   {strconv.Itoa(input.Riders)},
+		"baggages": {strconv.FormatBool(input.Baggages)},
+		"currency": {input.Currency},
+	}
+	for _, v := range input.Points {
+		value.Add("points", fmt.Sprintf("%f,%f", v.Lat, v.Lng))
+	}
+
+	resp, err := makeRequest(ctx, http.MethodPut, fmt.Sprintf("%s/%s", r.OrderService, input.ID), value)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+
+	var order cubawheeler.Order
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	if err := json.Unmarshal(data, &order); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+
+	return &order, nil
 }
 
 // CancelOrder implements MutationResolver.
@@ -42,12 +99,13 @@ func (r *mutationResolver) CancelOrder(ctx context.Context, order string) (*cuba
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	_, err := r.order.CancelOrder(ctx, order)
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/%s/cancel", r.OrderService, order), nil)
 	if err != nil {
 		response.Success = false
 		response.Code = http.StatusBadRequest
 		response.Message = err.Error()
 	}
+	defer resp.Body.Close()
 	return &response, nil
 }
 
@@ -57,16 +115,18 @@ func (r *mutationResolver) StartOrder(ctx context.Context, order string) (*cubaw
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	if _, err := r.order.StartOrder(ctx, order); err != nil {
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/%s/start", r.OrderService, order), nil)
+	if err != nil {
 		response.Success = false
 		response.Code = http.StatusBadRequest
 		response.Message = err.Error()
 	}
+	defer resp.Body.Close()
 	return &response, nil
 }
 
 func (r *mutationResolver) AcceptOrder(ctx context.Context, order string) (*cubawheeler.Response, error) {
-	panic("not implemented")
+	panic("implement me")
 }
 
 func (r *mutationResolver) ConfirmOrder(ctx context.Context, req cubawheeler.ConfirmOrder) (*cubawheeler.Response, error) {
@@ -74,46 +134,95 @@ func (r *mutationResolver) ConfirmOrder(ctx context.Context, req cubawheeler.Con
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	if err := r.order.ConfirmOrder(ctx, req); err != nil {
+	value := url.Values{
+		"category": {string(req.Category)},
+		"method":   {string(req.Method)},
+		"currency": {req.Currency},
+	}
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/%s/confirm", r.OrderService, req.OrderID), value)
+	if err != nil {
 		response.Success = false
 		response.Code = http.StatusBadRequest
 		response.Message = err.Error()
 	}
+	defer resp.Body.Close()
 	return &response, nil
 }
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.Token, error) {
-	if err := r.otp.Otp(ctx, input.Otp, input.Email); err != nil {
-		return nil, err
+	value := url.Values{
+		"grant_type": {input.GrantType.String()},
 	}
-	user, err := r.user.Login(ctx, input)
-	if err != nil {
-		return nil, err
+
+	var token cubawheeler.Token
+
+	switch input.GrantType {
+	case cubawheeler.GrantTypePassword:
+		value.Add("username", input.Email)
+		value.Add("password", input.Otp)
+		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/login", r.AuthService), bytes.NewBufferString(value.Encode()))
+		if err != nil {
+			return nil, fmt.Errorf("error creating request: %v: %w", err, cubawheeler.ErrInternal)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+		}
+		defer resp.Body.Close()
+		if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
+			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+		}
+	case cubawheeler.GrantTypeRefresh:
+		value.Add("refresh_token", input.RefreshToken)
+	case cubawheeler.GrantTypeClient:
+		value.Add("client_id", input.Client)
+		value.Add("client_secret", input.Secret)
+		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/login", r.AuthService), bytes.NewBufferString(value.Encode()))
+		if err != nil {
+			return nil, fmt.Errorf("error creating request: %v: %w", err, cubawheeler.ErrInternal)
+		}
+
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			slog.Info("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrAccessDenied)
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
+			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+		}
 	}
-	token, err := user.GenToken()
-	if err != nil {
-		return nil, err
-	}
-	// TODO: add tokens to redis cache to avoid inecesaries queries if the user is login
-	return token, nil
+
+	return &token, nil
 }
 
 // Otp is the resolver for the otp field.
 func (r *mutationResolver) Otp(ctx context.Context, email string) (*cubawheeler.Response, error) {
-	// TODO: generate a new otp and send the email
 	var rsp = cubawheeler.Response{
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	otp, err := r.otp.Create(ctx, email)
-	if err != nil {
-		rsp.Success = false
-		rsp.Code = http.StatusBadRequest
-		rsp.Message = err.Error()
-	} else {
-		rsp.Message = otp
+	value := url.Values{
+		"email": {email},
 	}
+
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/otp", r.AuthService), value)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+
+	var code string
+	if err := json.NewDecoder(resp.Body).Decode(&code); err != nil {
+		slog.Info("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	rsp.Message = code
 	return &rsp, nil
 }
 
@@ -123,15 +232,17 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, profile cubawheele
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	if err := r.user.UpdateProfile(ctx, &cubawheeler.UpdateProfile{
-		Name:     profile.Name,
-		LastName: profile.LastName,
-		Dob:      profile.Dob,
-		Phone:    profile.Phone,
-		Photo:    profile.Photo,
-		Gender:   profile.Gender,
-		Dni:      profile.Dni,
-	}); err != nil {
+	value := url.Values{
+		"name":      {*profile.Name},
+		"last_name": {*profile.LastName},
+		"dob":       {*profile.Dob},
+		"phone":     {*profile.Phone},
+		"photo":     {*profile.Photo},
+		"gender":    {string(*profile.Gender)},
+		"dni":       {*profile.Dni},
+	}
+	_, err := makeRequest(ctx, http.MethodPut, fmt.Sprintf("%s/profile", r.AuthService), value)
+	if err != nil {
 		rsp.Success = false
 		rsp.Message = err.Error()
 		rsp.Code = http.StatusBadRequest
@@ -139,11 +250,6 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, profile cubawheele
 	}
 	return &rsp, nil
 }
-
-// UpdateOrder is the resolver for the updateTrip field.
-// func (r *mutationResolver) UpdateOrder(ctx context.Context, update *cubawheeler.UpdateOrder) (*cubawheeler.Order, error) {
-// 	return r.order.Update(ctx, update)
-// }
 
 // AddFavoritePlace is the resolver for the addFavoritePlace field.
 func (r *mutationResolver) AddFavoritePlace(ctx context.Context, input cubawheeler.AddPlace) (*cubawheeler.Location, error) {

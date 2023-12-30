@@ -51,7 +51,6 @@ type ResolverRoot interface {
 	Order() OrderResolver
 	OrderItem() OrderItemResolver
 	Plan() PlanResolver
-	Point() PointResolver
 	Profile() ProfileResolver
 	Query() QueryResolver
 	Route() RouteResolver
@@ -64,6 +63,7 @@ type ResolverRoot interface {
 	ChargeRequest() ChargeRequestResolver
 	ConfirmOrder() ConfirmOrderResolver
 	DirectionRequest() DirectionRequestResolver
+	LoginRequest() LoginRequestResolver
 	RateRequest() RateRequestResolver
 	UpdatePlace() UpdatePlaceResolver
 	UpdateProfile() UpdateProfileResolver
@@ -310,8 +310,8 @@ type ComplexityRoot struct {
 	}
 
 	Point struct {
-		Lat  func(childComplexity int) int
-		Long func(childComplexity int) int
+		Lat func(childComplexity int) int
+		Lng func(childComplexity int) int
 	}
 
 	Primary struct {
@@ -540,9 +540,6 @@ type OrderItemResolver interface {
 type PlanResolver interface {
 	Orders(ctx context.Context, obj *cubawheeler.Plan) (int, error)
 }
-type PointResolver interface {
-	Long(ctx context.Context, obj *cubawheeler.Point) (float64, error)
-}
 type ProfileResolver interface {
 	User(ctx context.Context, obj *cubawheeler.Profile) (*cubawheeler.User, error)
 }
@@ -600,6 +597,11 @@ type ConfirmOrderResolver interface {
 }
 type DirectionRequestResolver interface {
 	Points(ctx context.Context, obj *cubawheeler.DirectionRequest, data []*cubawheeler.PointInput) error
+}
+type LoginRequestResolver interface {
+	GrantType(ctx context.Context, obj *cubawheeler.LoginRequest, data string) error
+	ClientID(ctx context.Context, obj *cubawheeler.LoginRequest, data *string) error
+	ClientSecret(ctx context.Context, obj *cubawheeler.LoginRequest, data *string) error
 }
 type RateRequestResolver interface {
 	HighDemand(ctx context.Context, obj *cubawheeler.RateRequest, data *bool) error
@@ -1801,12 +1803,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Point.Lat(childComplexity), true
 
-	case "Point.long":
-		if e.complexity.Point.Long == nil {
+	case "Point.lng":
+		if e.complexity.Point.Lng == nil {
 			break
 		}
 
-		return e.complexity.Point.Long(childComplexity), true
+		return e.complexity.Point.Lng(childComplexity), true
 
 	case "Primary.components":
 		if e.complexity.Primary.Components == nil {
@@ -9807,8 +9809,8 @@ func (ec *executionContext) fieldContext_Order_history(ctx context.Context, fiel
 			switch field.Name {
 			case "lat":
 				return ec.fieldContext_Point_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Point_long(ctx, field)
+			case "lng":
+				return ec.fieldContext_Point_lng(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Point", field.Name)
 		},
@@ -10290,8 +10292,8 @@ func (ec *executionContext) fieldContext_OrderItem_pick_up(ctx context.Context, 
 			switch field.Name {
 			case "lat":
 				return ec.fieldContext_Point_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Point_long(ctx, field)
+			case "lng":
+				return ec.fieldContext_Point_lng(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Point", field.Name)
 		},
@@ -10337,8 +10339,8 @@ func (ec *executionContext) fieldContext_OrderItem_drop_off(ctx context.Context,
 			switch field.Name {
 			case "lat":
 				return ec.fieldContext_Point_lat(ctx, field)
-			case "long":
-				return ec.fieldContext_Point_long(ctx, field)
+			case "lng":
+				return ec.fieldContext_Point_lng(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Point", field.Name)
 		},
@@ -10910,8 +10912,8 @@ func (ec *executionContext) fieldContext_Point_lat(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Point_long(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Point) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Point_long(ctx, field)
+func (ec *executionContext) _Point_lng(ctx context.Context, field graphql.CollectedField, obj *cubawheeler.Point) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Point_lng(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -10924,7 +10926,7 @@ func (ec *executionContext) _Point_long(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Point().Long(rctx, obj)
+		return obj.Lng, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10941,12 +10943,12 @@ func (ec *executionContext) _Point_long(ctx context.Context, field graphql.Colle
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Point_long(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Point_lng(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Point",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Float does not have child fields")
 		},
@@ -15712,9 +15714,9 @@ func (ec *executionContext) _Vehicle_plate(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Vehicle_plate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -18643,7 +18645,7 @@ func (ec *executionContext) unmarshalInputLoginRequest(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"email", "otp"}
+	fieldsInOrder := [...]string{"email", "otp", "grant_type", "client_id", "client_secret"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -18654,7 +18656,7 @@ func (ec *executionContext) unmarshalInputLoginRequest(ctx context.Context, obj 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -18663,11 +18665,44 @@ func (ec *executionContext) unmarshalInputLoginRequest(ctx context.Context, obj 
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("otp"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.Otp = data
+		case "grant_type":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("grant_type"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.LoginRequest().GrantType(ctx, &it, data); err != nil {
+				return it, err
+			}
+		case "client_id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("client_id"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.LoginRequest().ClientID(ctx, &it, data); err != nil {
+				return it, err
+			}
+		case "client_secret":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("client_secret"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.LoginRequest().ClientSecret(ctx, &it, data); err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -18681,7 +18716,7 @@ func (ec *executionContext) unmarshalInputOrderFilter(ctx context.Context, obj i
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"limit", "token", "ids", "rider", "driver", "status"}
+	fieldsInOrder := [...]string{"limit", "token", "iDs", "rider", "driver", "status"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -18706,15 +18741,15 @@ func (ec *executionContext) unmarshalInputOrderFilter(ctx context.Context, obj i
 				return it, err
 			}
 			it.Token = data
-		case "ids":
+		case "iDs":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ids"))
-			data, err := ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("iDs"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Ids = data
+			it.IDs = data
 		case "rider":
 			var err error
 
@@ -21655,44 +21690,13 @@ func (ec *executionContext) _Point(ctx context.Context, sel ast.SelectionSet, ob
 		case "lat":
 			out.Values[i] = ec._Point_lat(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+				out.Invalids++
 			}
-		case "long":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Point_long(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
+		case "lng":
+			out.Values[i] = ec._Point_lng(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -25929,7 +25933,7 @@ func (ec *executionContext) marshalOString2ᚕstring(ctx context.Context, sel as
 	return ret
 }
 
-func (ec *executionContext) unmarshalOString2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -25938,10 +25942,10 @@ func (ec *executionContext) unmarshalOString2ᚕᚖstring(ctx context.Context, v
 		vSlice = graphql.CoerceList(v)
 	}
 	var err error
-	res := make([]*string, len(vSlice))
+	res := make([]string, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalOString2ᚖstring(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -25949,13 +25953,19 @@ func (ec *executionContext) unmarshalOString2ᚕᚖstring(ctx context.Context, v
 	return res, nil
 }
 
-func (ec *executionContext) marshalOString2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalOString2ᚖstring(ctx, sel, v[i])
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
 	}
 
 	return ret

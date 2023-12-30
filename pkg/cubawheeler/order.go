@@ -19,7 +19,7 @@ type OrderItem struct {
 
 type CategoryPrice struct {
 	Category VehicleCategory `json:"category"`
-	Price    currency.Amount `json:"price"`
+	Price    currency.Amount `json:"price,omitempty"`
 }
 
 type Order struct {
@@ -31,7 +31,7 @@ type Order struct {
 	Status           OrderStatus           `json:"status" bson:"status"`
 	StatusHistory    []*OrderStatusHistory `json:"status_history,omitempty" bson:"status_history,omitempty"`
 	Rate             int                   `json:"rate" bson:"rate"`
-	Price            currency.Amount       `json:"price" bson:"price"`
+	Price            *currency.Amount      `json:"price,omitempty" bson:"price,omitempty"`
 	Coupon           string                `json:"coupon,omitempty" bson:"coupon,omitempty"`
 	StartAt          int64                 `json:"start_at" bson:"start_at"`
 	EndAt            int64                 `json:"end_at" bson:"end_at"`
@@ -41,7 +41,7 @@ type Order struct {
 	Route            *DirectionResponse    `json:"route,omitempty" bson:"route,omitempty"`
 	Distance         float64               `json:"distance,omitempty" bson:"distance,omitempty"`
 	Duration         float64               `json:"duration,omitempty" bson:"duration,omitempty"`
-	SelectedCategory CategoryPrice         `json:"selected_category,omitempty" bson:"selected_category,omitempty"`
+	SelectedCategory *CategoryPrice        `json:"selected_category,omitempty" bson:"selected_category,omitempty"`
 	CategoryPrice    []*CategoryPrice      `json:"categories_prices,omitempty" bson:"categories_prices,omitempty"`
 	RouteString      string                `json:"route_string,omitempty" bson:"route_string,omitempty"`
 	ChargeMethod     ChargeMethod          `json:"charge_method,omitempty" bson:"charge_method,omitempty"`
@@ -82,23 +82,26 @@ type OrderList struct {
 }
 
 type OrderFilter struct {
-	Limit  int       `json:"limit,omitempty"`
-	Token  *string   `json:"token,omitempty"`
-	Ids    []*string `json:"ids,omitempty"`
-	Rider  *string   `json:"rider,omitempty"`
-	Driver *string   `json:"driver,omitempty"`
-	Status *string   `json:"status,omitempty"`
+	Limit  int      `json:"limit,omitempty"`
+	Token  *string  `json:"token,omitempty"`
+	IDs    []string `json:"ids,omitempty"`
+	Rider  *string  `json:"rider,omitempty"`
+	Driver *string  `json:"driver,omitempty"`
+	Status *string  `json:"status,omitempty"`
 }
 
 type OrderService interface {
 	Create(context.Context, *DirectionRequest) (*Order, error)
 	Update(context.Context, *DirectionRequest) (*Order, error)
-	FindByID(context.Context, string) (*Order, error)
 	FindAll(context.Context, *OrderFilter) (*OrderList, error)
+	FindByID(context.Context, string) (*Order, error)
+
 	ConfirmOrder(context.Context, ConfirmOrder) error
-	CancelOrder(context.Context, string) (*Order, error)
-	CompleteOrder(context.Context, string) (*Order, error)
+
+	AcceptOrder(context.Context, string) (*Order, error)
 	StartOrder(context.Context, string) (*Order, error)
+	CancelOrder(context.Context, string) (*Order, error)
+	FinishOrder(context.Context, string) (*Order, error)
 }
 
 type AddPlace struct {

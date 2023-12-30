@@ -23,13 +23,19 @@ type Ably struct {
 	ApiSubscriperKey string
 }
 
+type ServiceDiscovery struct {
+	OrderService string
+	AuthService  string
+}
+
 type Config struct {
-	Host  string
-	Port  int64
-	Path  string
-	Redis string
-	Mongo string
-	Amqp  Amqp
+	Host    string
+	Port    int64
+	Path    string
+	Redis   string
+	RedisDB string
+	Mongo   string
+	Amqp    Amqp
 
 	SMTPServer   string
 	SMTPPort     int64
@@ -46,6 +52,8 @@ type Config struct {
 	BeansSecret   string
 
 	Ably Ably
+
+	ServiceDiscovery ServiceDiscovery
 }
 
 func LoadConfig() Config {
@@ -61,6 +69,9 @@ func LoadConfig() Config {
 
 	if redisAddr, exist := os.LookupEnv("REDIS_ADDR"); exist {
 		cfg.Redis = redisAddr
+	}
+	if redisDB, exist := os.LookupEnv("REDIS_DB"); exist {
+		cfg.RedisDB = redisDB
 	}
 	if serverHost, exist := os.LookupEnv("SERVER_HOST"); exist {
 		cfg.Host = serverHost
@@ -147,6 +158,13 @@ func LoadConfig() Config {
 
 	if subscriberApiKey, exist := os.LookupEnv("ABLY_SUBSCRIBER_API_KEY"); exist {
 		cfg.Ably.ApiSubscriperKey = subscriberApiKey
+	}
+
+	if orderService, exist := os.LookupEnv("ORDER_SEVICE_URL"); exist {
+		cfg.ServiceDiscovery.OrderService = orderService
+	}
+	if authService, exist := os.LookupEnv("AUTH_SEVICE_URL"); exist {
+		cfg.ServiceDiscovery.AuthService = authService
 	}
 	return cfg
 }
