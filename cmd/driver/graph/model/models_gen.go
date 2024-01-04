@@ -53,6 +53,12 @@ type Item struct {
 	Currency *string  `json:"currency,omitempty"`
 }
 
+type LoginRequest struct {
+	Email        *string `json:"email,omitempty"`
+	Otp          *string `json:"otp,omitempty"`
+	RefreshToken *string `json:"refresh_token,omitempty"`
+}
+
 type Model struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
@@ -122,6 +128,13 @@ type Response struct {
 	Message string `json:"message"`
 	Code    int    `json:"code"`
 	Success bool   `json:"success"`
+}
+
+type Token struct {
+	AccessToken     string `json:"access_token"`
+	RefreshToken    string `json:"refresh_token"`
+	ExpiryAt        int    `json:"expiry_at"`
+	RefreshExpireIn int    `json:"refresh_expire_in"`
 }
 
 type User struct {

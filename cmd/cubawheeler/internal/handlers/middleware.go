@@ -5,8 +5,10 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 	_ "time"
 
+	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
@@ -35,7 +37,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims := cubawheeler.GetClaimsFromContext(r.Context())
 		if claims == nil {
-			w.WriteHeader(http.StatusUnauthorized)
+			next.ServeHTTP(w, r)
 			return
 		}
 		ctx := r.Context()
@@ -63,28 +65,50 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// / AuthMiddleware decodes the share session cookie and packs the session into context
+func TokenMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		token := requestToken(r)
+		if token != "" {
+			ctx = cubawheeler.NewContextWithJWT(ctx, token)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // ClientMiddleware decodes the share session cookie and packs the session into context
 func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			user, pass, ok := r.BasicAuth()
-			if !ok {
+			claims := cubawheeler.GetClaimsFromContext(r.Context())
+			if claims == nil {
 				next.ServeHTTP(w, r)
 				return
+			}
+			ctx := r.Context()
+			if len(claims) > 0 {
+				clientData, ok := claims["client"]
+				if !ok {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				var client cubawheeler.Application
+				if err := json.Unmarshal([]byte(clientData), &client); err != nil {
+					slog.Error(err.Error())
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				ctx = cubawheeler.NewContextWithClient(ctx, &client)
 			}
 
-			app, err := srv.FindByClient(r.Context(), user)
-			if err != nil {
-				next.ServeHTTP(w, r)
-				return
-			}
-			if app.Secret != pass {
-				next.ServeHTTP(w, r)
-				return
+			token := requestToken(r)
+			if token != "" {
+				ctx = cubawheeler.NewContextWithJWT(ctx, token)
 			}
 
-			next.ServeHTTP(w, r.WithContext(cubawheeler.NewContextWithClient(r.Context(), app)))
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
@@ -100,4 +124,62 @@ func requestToken(r *http.Request) string {
 		}
 	}
 	return token
+}
+
+type statusResponseWriter struct {
+	http.ResponseWriter
+	statusCode    int
+	headerWritten bool
+}
+
+func (rw *statusResponseWriter) WriteHeader(status int) {
+	rw.ResponseWriter.WriteHeader(status)
+	if !rw.headerWritten {
+		rw.statusCode = status
+		rw.headerWritten = true
+	}
+}
+
+func (rw *statusResponseWriter) Write(b []byte) (int, error) {
+	if !rw.headerWritten {
+		rw.WriteHeader(http.StatusOK)
+	}
+	return rw.ResponseWriter.Write(b)
+}
+
+func newStatusResponseWriter(w http.ResponseWriter) *statusResponseWriter {
+	return &statusResponseWriter{w, http.StatusOK, false}
+}
+
+func CanonicalLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		const requestKey = "request_id"
+		const headerRequestID = "X-Request-ID"
+		requestID := r.Header.Get(headerRequestID)
+		logger := slog.Default()
+		if len(requestID) > 0 {
+			logger = logger.With(requestKey, requestID)
+		}
+		l, reset := cannon.NewLogger(logger)
+		defer reset()
+		logger = l.Logger()
+		r = r.WithContext(cannon.NewContextWithLogger(r.Context(), logger))
+		start := time.Now()
+		rw := newStatusResponseWriter(w)
+		logger.Info("Request started",
+			slog.Group("http",
+				slog.String("method", r.Method),
+				slog.String("client_ip", r.RemoteAddr),
+				slog.String("path", r.URL.Path),
+				slog.String("user_agent", r.Header.Get("User-Agent")),
+			),
+		)
+		next.ServeHTTP(rw, r)
+		l.Emit(
+			slog.Group("http",
+				slog.Int("status", rw.statusCode),
+			),
+			slog.String("duration", time.Since(start).String()),
+		)
+	})
 }

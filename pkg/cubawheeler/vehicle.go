@@ -8,22 +8,35 @@ import (
 )
 
 type Vehicle struct {
-	ID         string          `json:"id" bson:"_id"`
-	Plate      string          `json:"plate,omitempty" bson:"plate"`
-	Name       string          `json:"name,omitempty" bson:"name,omitmepty"`
-	Category   VehicleCategory `json:"category" bson:"category"`
-	Brand      Brand           `json:"brand" bson:"brand"`
-	Year       int             `json:"year" bson:"year"`
-	CarModel   string          `json:"model" bson:"car_model"`
-	Seats      int             `json:"seats" bson:"seats"`
-	Color      string          `json:"color" bson:"color"`
-	Status     VehicleStatus   `json:"status" bson:"status"`
-	Type       VehicleType     `json:"type" bson:"type"`
-	Photos     []string        `json:"photos,omitempty" bson:"photos"`
-	Facilities []Facilities    `json:"facilities,omitempty" bson:"facilities"`
-	User       string          `json:"-" bson:"user"`
-	CreatedAt  int64           `json:"-" bson:"created_at"`
-	UpdatedAt  int64           `json:"-" bson:"updated_at"`
+	ID          string          `json:"id" bson:"_id"`
+	Plate       string          `json:"plate,omitempty" bson:"plate"`
+	Name        string          `json:"name,omitempty" bson:"name,omitmepty"`
+	Category    VehicleCategory `json:"category" bson:"category"`
+	Brand       Brand           `json:"brand" bson:"brand"`
+	Year        int             `json:"year" bson:"year"`
+	CarModel    string          `json:"model" bson:"car_model"`
+	Seats       int             `json:"seats" bson:"seats"`
+	Color       string          `json:"color" bson:"color"`
+	Status      VehicleStatus   `json:"status" bson:"status"`
+	Type        VehicleType     `json:"type" bson:"type"`
+	Photos      []string        `json:"photos,omitempty" bson:"photos"`
+	Facilities  []Facilities    `json:"facilities,omitempty" bson:"facilities"`
+	User        string          `json:"-" bson:"user"`
+	CreatedAt   int64           `json:"-" bson:"created_at"`
+	UpdatedAt   int64           `json:"-" bson:"updated_at"`
+	Circulation string          `json:"circulation,omitempty" bson:"circulation,omitempty"`
+}
+
+func (v Vehicle) IsValid() bool {
+	return v.Plate != "" &&
+		v.Category.IsValid() &&
+		v.Brand.IsValid() &&
+		v.Year > 0 &&
+		v.CarModel != "" &&
+		v.Seats > 0 &&
+		v.Color != "" &&
+		v.Status.IsValid() &&
+		v.Type.IsValid()
 }
 
 type VehicleFilter struct {

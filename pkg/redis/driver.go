@@ -7,10 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/realtime"
 )
-
-var _ realtime.FinderUpdater = &RealTimeService{}
 
 var key = "drivers"
 
@@ -23,7 +20,6 @@ func NewRealTimeService(redis *Redis) *RealTimeService {
 }
 
 func (s *RealTimeService) FindNearByDrivers(ctx context.Context, location cubawheeler.GeoLocation) ([]*cubawheeler.Location, error) {
-	//TODO implement me
 	res, _ := s.redis.client.GeoRadius(ctx, key, location.Long, location.Lat, &redis.GeoRadiusQuery{
 		Radius:      5,
 		Unit:        "km",

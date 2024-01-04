@@ -31,6 +31,8 @@ type Config struct {
 	Mongo string
 	Amqp  Amqp
 
+	JWTPrivateKey string
+
 	SMTPServer   string
 	SMTPPort     int64
 	SMTPUSer     string

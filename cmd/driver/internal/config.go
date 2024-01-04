@@ -28,12 +28,15 @@ type ServiceDiscovery struct {
 }
 
 type Config struct {
-	Host  string
-	Port  int64
-	Path  string
-	Redis string
-	Mongo string
-	Amqp  Amqp
+	Host    string
+	Port    int64
+	Path    string
+	Redis   string
+	Mongo   string
+	MongoDB string
+	Amqp    Amqp
+
+	JWTPrivateKey string
 
 	SMTPServer   string
 	SMTPPort     int64
@@ -83,6 +86,10 @@ func LoadConfig() Config {
 
 	if mongoServer := os.Getenv("MONGO_URL"); len(mongoServer) > 0 {
 		cfg.Mongo = mongoServer
+	}
+
+	if database := os.Getenv("MONGO_DB_NAME"); len(database) > 0 {
+		cfg.MongoDB = database
 	}
 
 	if server, exist := os.LookupEnv("SMTP_SERVER"); exist {
@@ -157,6 +164,13 @@ func LoadConfig() Config {
 
 	if orderService, exist := os.LookupEnv("ORDER_SEVICE_URL"); exist {
 		cfg.ServiceDiscovery.OrderService = orderService
+	}
+
+	if privateKey, exist := os.LookupEnv("JWT_SECRET_KEY"); exist {
+		cfg.JWTPrivateKey = privateKey
+	}
+	if cfg.JWTPrivateKey == "" {
+		panic("JWT_SECRET_KEY is not set")
 	}
 
 	return cfg

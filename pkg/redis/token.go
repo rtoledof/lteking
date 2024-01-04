@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -62,6 +63,16 @@ func (s *TokenVerifier) AddClaims(tokenType oauth.TokenType, credential string, 
 			return nil, fmt.Errorf("error marshaling user: %v: %w", err, cubawheeler.ErrInternal)
 		}
 		claim["user"] = string(data)
+	case oauth.ClientToken:
+		app, err := s.application.FindByID(context.Background(), credential)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(app)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling application: %v: %w", err, cubawheeler.ErrInternal)
+		}
+		claim["client"] = string(data)
 	}
 
 	return claim, nil
@@ -90,9 +101,14 @@ func (s *TokenVerifier) StoreTokenID(tokenType oauth.TokenType, credential strin
 // ValidateClient implements oauth.CredentialsVerifier.
 func (s *TokenVerifier) ValidateClient(clientID string, clientSecret string, scope string, r *http.Request) (err error) {
 	defer derrors.Wrap(&err, "redis.TokenVerifier.ValidateClient")
-	app, err := s.application.FindByID(context.Background(), clientID)
+	app, err := s.application.FindByClient(context.Background(), clientID)
 	if err != nil {
-		return err
+		if err == cubawheeler.ErrNotFound {
+			app, err = s.application.FindByID(context.Background(), clientID)
+		}
+		if err != nil {
+			return err
+		}
 	}
 	if app.Secret != clientSecret {
 		return cubawheeler.ErrAccessDenied
@@ -130,12 +146,15 @@ func (s *TokenVerifier) ValidateUser(username string, password string, scope str
 func storeToken(ctx context.Context, redis *Redis, token Token) error {
 	data, err := json.Marshal(token)
 	if err != nil {
+		slog.Info(fmt.Sprintf("error marshaling token: %v", err))
 		return fmt.Errorf("error marshaling token: %w", err)
 	}
 	if err := redis.client.Set(ctx, token.AccessToken, data, token.AccessTokenExpiresIn).Err(); err != nil {
+		slog.Info(fmt.Sprintf("error storing token: %v", err))
 		return err
 	}
 	if err := redis.client.Set(ctx, token.RefreshToken, data, token.RefreshTokenExpiresIn).Err(); err != nil {
+		slog.Info(fmt.Sprintf("error storing token: %v", err))
 		return err
 	}
 	return nil

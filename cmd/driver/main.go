@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	handlers "cubawheeler.io/cmd/driver/internal"
+	"cubawheeler.io/cmd/internal"
 )
 
 func init() {
@@ -17,6 +19,19 @@ func init() {
 }
 
 func main() {
+
+	lev := slog.LevelInfo
+	if os.Getenv("debug") == "debug" {
+		lev = slog.LevelDebug
+	}
+	appName := os.Getenv("app_name")
+	if appName == "" {
+		appName = "cubawheeler-driver"
+	}
+
+	logger := internal.NewAppLogger(appName, lev)
+	slog.SetDefault(logger)
+
 	app := handlers.New(handlers.LoadConfig())
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)

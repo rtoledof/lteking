@@ -44,6 +44,15 @@ type User struct {
 	jwt.StandardClaims
 }
 
+func (u *User) HasVehicle(id string) bool {
+	for _, v := range u.Vehicles {
+		if v.ID == id || v.Plate == id {
+			return true
+		}
+	}
+	return false
+}
+
 type UserList struct {
 	Token string  `json:"token"`
 	Data  []*User `json:"data"`
@@ -113,7 +122,7 @@ type UserService interface {
 	UpdatePlace(context.Context, *UpdatePlace) (*Location, error)
 	UpdateProfile(context.Context, *UpdateProfile) error
 	AddDevice(context.Context, string) error
-	GetUserDevices(context.Context, []string) ([]*User, error)
+	GetUserDevices(context.Context, []string) ([]string, error)
 	SetAvailability(ctx context.Context, user string, available bool) error
 	Update(context.Context, *User) error
 }

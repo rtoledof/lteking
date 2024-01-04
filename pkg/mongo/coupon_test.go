@@ -163,7 +163,7 @@ func TestCouponServiceRedeem(t *testing.T) {
 	db := NewTestDB()
 	user := &cubawheeler.User{ID: cubawheeler.NewID().String()}
 	ctx := cubawheeler.NewContextWithUser(context.Background(), user)
-	us := NewUserService(db, nil, nil, nil)
+	us := NewUserService(db, nil)
 	us.CreateUser(ctx, user)
 	defer func() {
 		db.Collection(CouponCollection).Drop(ctx)

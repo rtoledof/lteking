@@ -45,11 +45,13 @@ func NewHandler(
 		OrderService: orderServiceURL,
 		AuthService:  authServiceURL,
 	}
-	resolver.order = mongo.NewOrderService(db, resolver.processor)
+	resolver.order = mongo.NewOrderService(db, resolver.processor, client)
 	resolver.realTimeLocation = realtime.NewRealTimeService(
 		redis.NewRealTimeService(client),
 		resolver.ablyClient.Notifier,
 		resolver.user,
+		client,
+		resolver.order,
 	)
 	return handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: resolver}))
 }

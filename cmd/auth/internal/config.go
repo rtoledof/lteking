@@ -30,7 +30,10 @@ type Config struct {
 	Redis   string
 	RedisDB int
 	Mongo   string
+	MongoDB string
 	Amqp    Amqp
+
+	JWTPrivateKey string
 
 	SMTPServer   string
 	SMTPPort     int64
@@ -87,57 +90,61 @@ func LoadConfig() Config {
 		cfg.Mongo = mongoServer
 	}
 
-	if server, exist := os.LookupEnv("SMTP_SERVER"); exist {
+	if database := os.Getenv("MONGO_DB_NAME"); len(database) > 0 {
+		cfg.MongoDB = database
+	}
+
+	if server := os.Getenv("SMTP_SERVER"); len(server) > 0 {
 		cfg.SMTPServer = server
 	}
 
-	if strPort, exist := os.LookupEnv("SMTP_PORT"); exist {
+	if strPort := os.Getenv("SMTP_PORT"); len(strPort) > 0 {
 		port, err := strconv.ParseInt(strPort, 10, 8)
 		if err == nil {
 			cfg.SMTPPort = port
 		}
 	}
 
-	if user, exist := os.LookupEnv("SMTP_USER"); exist {
+	if user := os.Getenv("SMTP_USER"); len(user) > 0 {
 		cfg.SMTPUSer = user
 	}
 
-	if pass, exist := os.LookupEnv("SMTP_PASS"); exist {
+	if pass := os.Getenv("SMTP_PASS"); len(pass) > 0 {
 		cfg.SMTPPassword = pass
 	}
 
-	if appId, exist := os.LookupEnv("PUSHER_APP_ID"); exist {
+	if appId := os.Getenv("PUSHER_APP_ID"); len(appId) > 0 {
 		cfg.PusherAppId = appId
 	}
 
-	if key, exist := os.LookupEnv("PUSHER_Key"); exist {
+	if key := os.Getenv("PUSHER_Key"); len(key) > 0 {
 		cfg.PusherKey = key
 	}
 
-	if secret, exist := os.LookupEnv("PUSHER_SECRET"); exist {
+	if secret := os.Getenv("PUSHER_SECRET"); len(secret) > 0 {
 		cfg.PusherSecret = secret
 	}
 
-	if cluster, exist := os.LookupEnv("PUSHER_CLUSTER"); exist {
+	if cluster := os.Getenv("PUSHER_CLUSTER"); len(cluster) > 0 {
 		cfg.PusherCluster = cluster
 	}
 
-	if s, exist := os.LookupEnv("PUSHER_SECURE"); exist {
+	if s := os.Getenv("PUSHER_SECURE"); len(s) > 0 {
 		secure, err := strconv.ParseBool(s)
 		if err == nil {
 			cfg.PusherSecure = secure
 		}
 	}
 
-	if instance, exist := os.LookupEnv("BEANS_INSTANCE"); exist {
+	if instance := os.Getenv("BEANS_INSTANCE"); len(instance) > 0 {
 		cfg.BeansInterest = instance
 	}
 
-	if secret, exist := os.LookupEnv("BEANS_SECRET"); exist {
+	if secret := os.Getenv("BEANS_SECRET"); len(secret) > 0 {
 		cfg.BeansSecret = secret
 	}
 
-	if amqp, exist := os.LookupEnv("AMQP_CONNECTION"); exist {
+	if amqp := os.Getenv("AMQP_CONNECTION"); len(amqp) > 0 {
 		cfg.Amqp.Connection = amqp
 	}
 
@@ -155,6 +162,13 @@ func LoadConfig() Config {
 
 	if subscriberApiKey, exist := os.LookupEnv("ABLY_SUBSCRIBER_API_KEY"); exist {
 		cfg.Ably.ApiSubscriperKey = subscriberApiKey
+	}
+
+	if privateKey, exist := os.LookupEnv("JWT_SECRET_KEY"); exist {
+		cfg.JWTPrivateKey = privateKey
+	}
+	if cfg.JWTPrivateKey == "" {
+		panic("JWT_SECRET_KEY is not set")
 	}
 	return cfg
 }

@@ -11,14 +11,19 @@ import (
 	"cubawheeler.io/cmd/driver/graph/model"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/currency"
+	"cubawheeler.io/pkg/redis"
 )
 
 type OrderHandler struct {
 	Service cubawheeler.OrderService
+	Redis   *redis.Redis
 }
 
-func NewOrderHandler(service cubawheeler.OrderService) *OrderHandler {
-	return &OrderHandler{Service: service}
+func NewOrderHandler(service cubawheeler.OrderService, redis *redis.Redis) *OrderHandler {
+	return &OrderHandler{
+		Service: service,
+		Redis:   redis,
+	}
 }
 
 func (o *OrderHandler) Create(w http.ResponseWriter, r *http.Request) error {

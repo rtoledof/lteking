@@ -1,11 +1,8 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"os"
@@ -18,7 +15,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/go-chi/oauth"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
 
@@ -28,7 +24,6 @@ import (
 	"cubawheeler.io/pkg/graph"
 	"cubawheeler.io/pkg/mailer"
 	"cubawheeler.io/pkg/mongo"
-	"cubawheeler.io/pkg/pusher"
 	rdb "cubawheeler.io/pkg/redis"
 	"cubawheeler.io/pkg/seed"
 )
@@ -41,19 +36,17 @@ func init() {
 }
 
 type App struct {
-	router       http.Handler
-	rdb          *rdb.Redis
-	mongo        *mongo.DB
-	pmConfig     cubawheeler.PaymentmethodConfig
-	config       Config
-	pusher       *pusher.Pusher
-	notification *pusher.PushNotification
-	seed         seed.Seeder
-	dialer       *gomail.Dialer
-	done         chan struct{}
-	orderChan    chan *cubawheeler.Order
-	realTime     cubawheeler.RealTimeService
-	rest         *ably.REST
+	router    http.Handler
+	rdb       *rdb.Redis
+	mongo     *mongo.DB
+	pmConfig  cubawheeler.PaymentmethodConfig
+	config    Config
+	seed      seed.Seeder
+	dialer    *gomail.Dialer
+	done      chan struct{}
+	orderChan chan *cubawheeler.Order
+	realTime  cubawheeler.RealTimeService
+	rest      *ably.REST
 }
 
 func New(cfg Config) *App {
@@ -70,23 +63,16 @@ func New(cfg Config) *App {
 			cfg.SMTPUSer,
 			cfg.SMTPPassword,
 		),
-		pusher: pusher.NewPusher(
-			cfg.PusherAppId,
-			cfg.PusherKey,
-			cfg.PusherSecret,
-			cfg.PusherCluster,
-			cfg.PusherSecure,
-		),
-		notification: pusher.NewPushNotification(cfg.BeansInterest, cfg.BeansSecret),
-		done:         make(chan struct{}),
-		orderChan:    make(chan *cubawheeler.Order, 10000),
+
+		done:      make(chan struct{}),
+		orderChan: make(chan *cubawheeler.Order, 10000),
 	}
 
 	app.loader()
 	if s := os.Getenv("SEED"); len(s) > 0 {
-		app.seed = seed.NewSeed(app.mongo)
-		if err := app.seed.Up(); err != nil {
-			fmt.Println("unable to upload seeds")
+		seed.RegisterSeeder("rate", func() seed.Seeder { return seed.NewRate(app.mongo) })
+		if err := seed.Up(); err != nil {
+			fmt.Printf("unable to upload seeds: %s\n", err.Error())
 		}
 	}
 
@@ -174,14 +160,11 @@ func (a *App) loader() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	pushNotification := pusher.NewPushNotification(a.config.BeansInterest, a.config.BeansSecret)
 	userSrv := mongo.NewUserService(
 		a.mongo,
-		rdb.NewBeansToken(a.rdb, pushNotification),
-		pushNotification,
 		a.done,
 	)
-	appSrv := mongo.NewApplicationService(a.mongo)
+	// appSrv := mongo.NewApplicationService(a.mongo)
 	client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
 
 	go client.Consumer.Consume(
@@ -197,64 +180,13 @@ func (a *App) loader() {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
+	router.Use(CanonicalLog)
 	router.Use(middleware.Timeout(60 * time.Second))
-	router.Use(oauth.Authorize(os.Getenv("JWT_SECRET_KEY"), nil))
-	router.Use(AuthMiddleware)
-	router.Use(ClientMiddleware(appSrv))
+	router.Use(TokenMiddleware)
 
 	router.Mount("/debug", middleware.Profiler())
 
-	router.Post("/pusher/auth", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		params, _ := ioutil.ReadAll(r.Body)
-		user := cubawheeler.UserFromContext(r.Context())
-		if user == nil {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-		auth, err := a.pusher.Authenticate(params, user, bytes.Contains(params, []byte("presence")))
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			slog.Info("an error ocurred authenticating the user in a channel: %v", err)
-			return
-		}
-		fmt.Printf("Request: %s\n", params)
-		fmt.Printf("Response: %s\n", auth)
-		w.WriteHeader(http.StatusOK)
-		w.Write(auth)
-	})
-
-	router.Get("/pusher/beans-auth", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		usr := cubawheeler.UserFromContext(r.Context())
-		if usr == nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		beansToken, err := pushNotification.GenerateToken(usr.ID)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(beansToken)
-	})
-
-	router.Post("/pusher/user/{id}", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		user := chi.URLParam(r, "id")
-		err := pushNotification.PublishToUser([]string{user}, pusher.Notification{
-			Title:    "Test",
-			Body:     "Test message",
-			Metadata: map[string]string{"aditional": "no se puede"},
-		})
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	})
-
+	slog.Info(fmt.Sprintf("Riders service discovery: %v", a.config.ServiceDiscovery))
 	router.Group(func(r chi.Router) {
 		grapgqlSrv := graph.NewHandler(
 			a.rdb,

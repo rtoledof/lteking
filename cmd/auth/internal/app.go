@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-chi/oauth"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
@@ -22,20 +22,12 @@ import (
 	"cubawheeler.io/pkg/seed"
 )
 
-var tokenAuth *jwtauth.JWTAuth
-var privateKey string
-
-func init() {
-	tokenAuth = jwtauth.New("HS256", []byte(os.Getenv("JWT_PRIVATE_KEY")), nil)
-}
-
 type App struct {
 	router      http.Handler
 	rdb         *rdb.Redis
 	redisClient *redis.Client
 	mongo       *mongo.DB
 	config      Config
-	seed        seed.Seeder
 	dialer      *gomail.Dialer
 	done        chan struct{}
 }
@@ -43,7 +35,10 @@ type App struct {
 func New(cfg Config) *App {
 	opt, _ := redis.ParseURL(cfg.Redis)
 	client := redis.NewClient(opt)
-	client.Options().DB = cfg.RedisDB
+	if cfg.RedisDB > 0 {
+		client.Options().DB = cfg.RedisDB
+	}
+
 	redisDB := rdb.NewRedis(client)
 	app := &App{
 		rdb:         redisDB,
@@ -61,9 +56,9 @@ func New(cfg Config) *App {
 
 	app.loader()
 	if s := os.Getenv("SEED"); len(s) > 0 {
-		app.seed = seed.NewSeed(app.mongo)
-		if err := app.seed.Up(); err != nil {
-			fmt.Println("unable to upload seeds")
+		seed.RegisterSeeder("application", func() seed.Seeder { return seed.NewApplication(app.mongo) })
+		if err := seed.Up(); err != nil {
+			slog.Info(err.Error())
 		}
 	}
 
@@ -151,103 +146,102 @@ func (a *App) loader() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	userSrv := mongo.NewUserService(a.mongo, nil, nil, a.done)
+	userSrv := mongo.NewUserService(a.mongo, a.done)
 	appSrv := mongo.NewApplicationService(a.mongo)
-	// tokenStore := oauth.NewTokenStore(a.redisClient)
-	// client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
-
-	// manager := manage.NewDefaultManager()
-	// manager.MustTokenStorage(token, nil)
-
-	// clientStore := mongo.NewApplicationService(a.mongo)
-	// manager.MapClientStorage(clientStore)
-
-	// srv := server.NewDefaultServer(manager)
-	// srv.SetAllowGetAccessRequest(true)
-	// srv.SetClientInfoHandler(server.ClientFormHandler)
-
-	// srv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
-	// 	fmt.Println("Internal Error:", err.Error())
-	// 	return
-	// })
 
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
+	router.Use(CanonicalLog)
 	router.Use(middleware.Timeout(60 * time.Second))
-	router.Use(AuthMiddleware(userSrv))
-	router.Use(ClientMiddleware(appSrv))
 
 	tokenVerifier := rdb.NewTokenVerifier(a.rdb, userSrv, appSrv)
 
 	s := oauth.NewBearerServer(
-		os.Getenv("JWT_PRIVATE_KEY"),
+		a.config.JWTPrivateKey,
 		time.Hour*24*30,
 		tokenVerifier,
 		nil,
 	)
 
 	{
-		h := &handlers.LoginHandler{
-			User:        userSrv,
-			OTP:         rdb.NewOtpService(a.rdb),
-			Application: appSrv,
-		}
+		h := handlers.NewAuthorizeHandler(appSrv)
 
-		router.Post("/login", func(w http.ResponseWriter, r *http.Request) {
-			err := h.Login(w, r)
+		router.Post("/authorize", func(w http.ResponseWriter, r *http.Request) {
+			err := h.Authorize(w, r)
 			if err != nil {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			switch r.FormValue("grant_type") {
-			case "password":
-				s.UserCredentials(w, r)
-			case "client_credentials":
-				s.ClientCredentials(w, r)
-			}
+			s.ClientCredentials(w, r)
 		})
 	}
 
-	{
-		h := &handlers.OtpHandler{
-			OTP:  rdb.NewOtpService(a.rdb),
-			User: userSrv,
+	router.Group(func(r chi.Router) {
+
+		r.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
+		r.Use(AuthMiddleware)
+		r.Use(ClientMiddleware(appSrv))
+
+		{
+			h := &handlers.OtpHandler{
+				OTP:  rdb.NewOtpService(a.rdb),
+				User: userSrv,
+			}
+
+			router.Post("/otp", handler(h.Otp))
 		}
 
-		router.Post("/otp", handler(h.Otp))
-	}
+		{
+			h := &handlers.LoginHandler{
+				User:        userSrv,
+				OTP:         rdb.NewOtpService(a.rdb),
+				Application: appSrv,
+			}
 
-	{
-		h := handlers.NewStatusHandler(userSrv)
+			r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
+				err := h.Login(w, r)
+				if err != nil {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				s.UserCredentials(w, r)
+			})
+		}
 
-		router.Post("/status", handler(h.Availability))
-	}
+		{
+			h := handlers.NewStatusHandler(userSrv)
 
-	{
-		h := handlers.NewCarHandler(userSrv)
+			r.Post("/status", handler(h.Availability))
+		}
 
-		router.Post("/car", handler(h.Car))
-	}
+		{
+			h := handlers.NewCarHandler(userSrv)
 
-	{
-		h := handlers.NewProfileHandler(userSrv)
+			r.Post("/car", handler(h.SetActiveVehicle))
+		}
 
-		router.Put("/profile", handler(h.Update))
-		router.Get("/me", handler(h.Get))
-	}
+		{
+			h := handlers.NewProfileHandler(userSrv)
 
-	{
-		h := handlers.NewVehicleHandler(userSrv)
+			r.Put("/profile", handler(h.Update))
+			r.Get("/me", handler(h.Get))
+			r.Post("/profile/devices", handler(h.AddDevice))
+		}
 
-		router.Route("/v1/vehicles", func(r chi.Router) {
-			r.Post("/", handler(h.Add))
-			r.Put("/{id}", handler(h.Update))
-			r.Delete("/{id}", handler(h.Remove))
-			r.Get("/", handler(h.List))
-			r.Post("/{id}", handler(h.SetActiveVehicle))
-		})
-	}
+		{
+			h := handlers.NewVehicleHandler(userSrv)
+
+			r.Route("/v1/vehicles", func(r chi.Router) {
+				r.Post("/", handler(h.Add))
+				r.Put("/{id}", handler(h.Update))
+				r.Delete("/{id}", handler(h.Remove))
+				r.Get("/", handler(h.List))
+				r.Post("/{id}", handler(h.SetActiveVehicle))
+			})
+		}
+
+	})
 
 	a.router = router
 }

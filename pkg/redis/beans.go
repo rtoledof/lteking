@@ -7,18 +7,15 @@ import (
 	"time"
 
 	"cubawheeler.io/pkg/cubawheeler"
-	"cubawheeler.io/pkg/pusher"
 )
 
 type BeansToken struct {
 	redis *Redis
-	beans *pusher.PushNotification
 }
 
-func NewBeansToken(client *Redis, notification *pusher.PushNotification) *BeansToken {
+func NewBeansToken(client *Redis) *BeansToken {
 	return &BeansToken{
 		redis: client,
-		beans: notification,
 	}
 }
 

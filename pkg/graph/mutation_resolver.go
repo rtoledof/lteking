@@ -152,53 +152,55 @@ func (r *mutationResolver) ConfirmOrder(ctx context.Context, req cubawheeler.Con
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.Token, error) {
 	value := url.Values{
-		"grant_type": {input.GrantType.String()},
+		"grant_type": {"password"},
+		"username":   {input.Email},
+		"password":   {input.Otp},
 	}
 
 	var token cubawheeler.Token
 
-	switch input.GrantType {
-	case cubawheeler.GrantTypePassword:
-		value.Add("username", input.Email)
-		value.Add("password", input.Otp)
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/login", r.AuthService), bytes.NewBufferString(value.Encode()))
-		if err != nil {
-			return nil, fmt.Errorf("error creating request: %v: %w", err, cubawheeler.ErrInternal)
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
-		}
-		defer resp.Body.Close()
-		if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
-			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
-		}
-	case cubawheeler.GrantTypeRefresh:
-		value.Add("refresh_token", input.RefreshToken)
-	case cubawheeler.GrantTypeClient:
-		value.Add("client_id", input.Client)
-		value.Add("client_secret", input.Secret)
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/login", r.AuthService), bytes.NewBufferString(value.Encode()))
-		if err != nil {
-			return nil, fmt.Errorf("error creating request: %v: %w", err, cubawheeler.ErrInternal)
-		}
-
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			slog.Info("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
-			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrAccessDenied)
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
-			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
-		}
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/login", r.AuthService), value)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
 	}
 
+	return &token, nil
+}
+
+func (r *mutationResolver) Authorize(ctx context.Context, clilent, secret string) (*cubawheeler.Token, error) {
+	value := url.Values{
+		"grant_type":    {"client_credentials"},
+		"client_id":     {clilent},
+		"client_secret": {secret},
+	}
+	var token cubawheeler.Token
+	authURL := fmt.Sprintf("%s/authorize", r.AuthService)
+	slog.Info(fmt.Sprintf("authURL: %s", authURL))
+
+	req, err := http.NewRequest(http.MethodPost, authURL, bytes.NewBufferString(value.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		slog.Info("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrAccessDenied)
+	}
+	responseData, _ := io.ReadAll(resp.Body)
+	slog.Info(fmt.Sprintf("responseData: %s", responseData))
+	if err := json.NewDecoder(bytes.NewBuffer(responseData)).Decode(&token); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
 	return &token, nil
 }
 
@@ -331,7 +333,11 @@ func (r *mutationResolver) AddDevice(ctx context.Context, device string) (*cubaw
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	if err := r.user.AddDevice(ctx, device); err != nil {
+	value := url.Values{
+		"device_id": {device},
+	}
+	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/profile/device", r.AuthService), value)
+	if err != nil {
 		rsp.Message = err.Error()
 		rsp.Code = http.StatusBadRequest
 		rsp.Success = false

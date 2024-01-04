@@ -12,7 +12,6 @@ import (
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/derrors"
-	"cubawheeler.io/pkg/pusher"
 	"cubawheeler.io/pkg/redis"
 )
 
@@ -23,13 +22,10 @@ const UsersCollection Collections = "users"
 type UserService struct {
 	db         *DB
 	beansToken *redis.BeansToken
-	beans      *pusher.PushNotification
 }
 
 func NewUserService(
 	db *DB,
-	beansToken *redis.BeansToken,
-	beans *pusher.PushNotification,
 	done chan struct{},
 ) *UserService {
 
@@ -52,9 +48,7 @@ func NewUserService(
 	}
 
 	s := &UserService{
-		db:         db,
-		beansToken: beansToken,
-		beans:      beans,
+		db: db,
 	}
 
 	return s
@@ -104,6 +98,10 @@ func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest)
 
 func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.CreateUser")
+
+	if user.Referer != "" {
+		user.Referer = cubawheeler.NewID().String()[:8]
+	}
 
 	tx, err := s.db.client.StartSession()
 	if err != nil {
@@ -328,9 +326,16 @@ func (s *UserService) AddDevice(ctx context.Context, device string) (err error) 
 	return updateUser(ctx, s.db, usr)
 }
 
-func (s *UserService) GetUserDevices(ctx context.Context, users []string) (_ []*cubawheeler.User, err error) {
+func (s *UserService) GetUserDevices(ctx context.Context, users []string) (_ []string, err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.GetUserDevices")
-	panic("implement me")
+	usr := cubawheeler.UserFromContext(ctx)
+	if usr == nil {
+		return nil, cubawheeler.ErrNilUserInContext
+	}
+	if usr.Role != cubawheeler.RoleAdmin {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	return getDevices(ctx, s.db, users)
 }
 
 func (s *UserService) SetAvailability(ctx context.Context, user string, available bool) (err error) {
@@ -441,4 +446,28 @@ func updateUser(ctx context.Context, db *DB, user *cubawheeler.User) error {
 		return fmt.Errorf("unable to update the user: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
+}
+
+func getDevices(ctx context.Context, db *DB, users []string) ([]string, error) {
+	collection := db.Collection(UsersCollection)
+	var devices []string
+
+	f := bson.D{
+		{Key: "_id", Value: bson.A{"$in", users}},
+		{Key: "devices.active", Value: true},
+	}
+	projection := bson.D{{Key: "devices.token", Value: 1}}
+	cur, err := collection.Find(ctx, f, &options.FindOptions{Projection: projection})
+	if err != nil {
+		return nil, fmt.Errorf("unable to get devices: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	for cur.Next(ctx) {
+		var token string
+		err := cur.Decode(&token)
+		if err != nil {
+			return nil, fmt.Errorf("unable to decode user: %v: %w", err, cubawheeler.ErrInternal)
+		}
+		devices = append(devices, token)
+	}
+	return devices, nil
 }

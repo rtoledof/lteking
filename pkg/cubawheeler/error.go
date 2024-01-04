@@ -83,3 +83,7 @@ func NewInvalidParameter(param string, value any) *Error {
 func NewMissingParameter(param string) *Error {
 	return NewError(ErrInvalid, http.StatusBadRequest, fmt.Sprintf("missing parameter %s", param))
 }
+
+func NewNotFound(param string) *Error {
+	return NewError(ErrNotFound, http.StatusNotFound, fmt.Sprintf("%s not found", param))
+}

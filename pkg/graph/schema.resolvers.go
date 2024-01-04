@@ -77,9 +77,6 @@ func (r *Resolver) ConfirmOrder() ConfirmOrderResolver { return &confirmOrderRes
 // DirectionRequest returns DirectionRequestResolver implementation.
 func (r *Resolver) DirectionRequest() DirectionRequestResolver { return &directionRequestResolver{r} }
 
-// LoginRequest returns LoginRequestResolver implementation.
-func (r *Resolver) LoginRequest() LoginRequestResolver { return &loginRequestResolver{r} }
-
 // RateRequest returns RateRequestResolver implementation.
 func (r *Resolver) RateRequest() RateRequestResolver { return &rateRequestResolver{r} }
 

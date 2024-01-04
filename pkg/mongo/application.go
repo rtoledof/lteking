@@ -7,6 +7,7 @@ import (
 	"github.com/go-oauth2/oauth2/v4"
 	"go.mongodb.org/mongo-driver/bson"
 
+	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
@@ -140,7 +141,16 @@ func createApplication(ctx context.Context, db *DB, app *cubawheeler.Application
 	return nil
 }
 
-func findApplications(ctx context.Context, db *DB, filter cubawheeler.ApplicationFilter) ([]*cubawheeler.Application, string, error) {
+func findApplications(ctx context.Context, db *DB, filter cubawheeler.ApplicationFilter) (_ []*cubawheeler.Application, _ string, err error) {
+	logger := cannon.LoggerFromContext(ctx)
+	if logger != nil {
+		logger.Info("find applications")
+	}
+	defer func() {
+		if err != nil && logger != nil {
+			logger.Info(fmt.Sprintf("error finding applications: %v", err))
+		}
+	}()
 	var applications []*cubawheeler.Application
 	var token string
 	f := bson.D{}

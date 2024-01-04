@@ -201,6 +201,12 @@ type Response {
   success: Boolean!
 }
 
+type Token {
+  access_token: String!
+  refresh_token: String!
+  expiry_at: Int!
+  refresh_expire_in: Int!
+}
 
 type Query {
   me: User!
@@ -235,8 +241,19 @@ input AddVehicle {
   technic_inspection: Upload
 }
 
+input LoginRequest {
+  email: String
+  otp: String
+  refresh_token: String
+}
+
 type Mutation {
+  login(input: LoginRequest!): Token!
+  otp(email: String!): Response!
+  authorize(client_id: String!, client_secret: String!): Token!
+
   setStatus(active: Boolean): Response!
+  addDevice(decive: String!): Response!
 
   acceptOrder(id: ID!): Order!
   cancelOrder(id: ID!): Order!

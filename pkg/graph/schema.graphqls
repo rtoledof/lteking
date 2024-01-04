@@ -442,7 +442,9 @@ type Rate {
 
 type Token {
   access_token: String!
+  refresh_token: String!
   expiry_at: Int!
+  refresh_expire_in: Int!
 }
 
 input UserFilter {
@@ -578,9 +580,7 @@ enum GrantType {
 input LoginRequest {
   email: String
   otp: String
-  grant_type: String!
-  client_id: String
-  client_secret: String
+  refresh_token: String
 }
 
 input PointInput {
@@ -665,6 +665,7 @@ input ConfirmOrder {
 type Mutation {
   login(input: LoginRequest!): Token!
   otp(email: String!): Response!
+  authorize(client_id: String!, client_secret: String!): Token!
 
   updateProfile(profile: UpdateProfile!): Response!
   changePin(old: String, pin: String!): Response!

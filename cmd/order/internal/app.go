@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/ably/ably-go/ably"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -17,10 +16,8 @@ import (
 	"gopkg.in/gomail.v2"
 
 	"cubawheeler.io/cmd/order/internal/handlers"
-	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/mailer"
 	"cubawheeler.io/pkg/mongo"
-	"cubawheeler.io/pkg/pusher"
 	rdb "cubawheeler.io/pkg/redis"
 	"cubawheeler.io/pkg/seed"
 )
@@ -33,19 +30,12 @@ func init() {
 }
 
 type App struct {
-	router       http.Handler
-	rdb          *rdb.Redis
-	mongo        *mongo.DB
-	pmConfig     cubawheeler.PaymentmethodConfig
-	config       Config
-	pusher       *pusher.Pusher
-	notification *pusher.PushNotification
-	seed         seed.Seeder
-	dialer       *gomail.Dialer
-	done         chan struct{}
-	orderChan    chan *cubawheeler.Order
-	realTime     cubawheeler.RealTimeService
-	rest         *ably.REST
+	router http.Handler
+	rdb    *rdb.Redis
+	mongo  *mongo.DB
+	config Config
+	dialer *gomail.Dialer
+	done   chan struct{}
 }
 
 func New(cfg Config) *App {
@@ -62,15 +52,14 @@ func New(cfg Config) *App {
 			cfg.SMTPUSer,
 			cfg.SMTPPassword,
 		),
-		done:      make(chan struct{}),
-		orderChan: make(chan *cubawheeler.Order, 10000),
+		done: make(chan struct{}),
 	}
 
 	app.loader()
 	if s := os.Getenv("SEED"); len(s) > 0 {
-		app.seed = seed.NewSeed(app.mongo)
-		if err := app.seed.Up(); err != nil {
-			fmt.Println("unable to upload seeds")
+		seed.RegisterSeeder("rate", func() seed.Seeder { return seed.NewRate(app.mongo) })
+		if err := seed.Up(); err != nil {
+			fmt.Printf("unable to upload seeds: %s\n", err.Error())
 		}
 	}
 
@@ -158,15 +147,12 @@ func (a *App) loader() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	// userSrv := mongo.NewUserService(a.mongo, nil, nil, a.done)
-	// appSrv := mongo.NewApplicationService(a.mongo)
-	// client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
-
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Timeout(60 * time.Second))
-	router.Use(oauth.Authorize(os.Getenv("JWT_SECRET_KEY"), nil))
+	router.Use(CanonicalLog)
+	router.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
 	router.Use(AuthMiddleware)
 
 	router.Mount("/debug", middleware.Profiler())
@@ -180,7 +166,7 @@ func (a *App) loader() {
 	router.Group(func(r chi.Router) {
 		{
 			h := handlers.OrderHandler{
-				Service: mongo.NewOrderService(a.mongo, nil),
+				Service: mongo.NewOrderService(a.mongo, nil, a.rdb),
 			}
 
 			router.Route("/v1/orders", func(r chi.Router) {

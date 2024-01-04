@@ -11,13 +11,13 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/currency"
 	"cubawheeler.io/pkg/derrors"
 	"cubawheeler.io/pkg/mapbox"
 	"cubawheeler.io/pkg/processor"
+	"cubawheeler.io/pkg/redis"
 )
 
 var _ cubawheeler.OrderService = &OrderService{}
@@ -25,19 +25,19 @@ var _ cubawheeler.OrderService = &OrderService{}
 var OrderCollection Collections = "orders"
 
 type OrderService struct {
-	db         *DB
-	collection *mongo.Collection
-	orderChan  chan *cubawheeler.Order
-	charge     *processor.Charge
-	mutex      sync.Map
+	db        *DB
+	orderChan chan *cubawheeler.Order
+	charge    *processor.Charge
+	mutex     sync.Map
+	redis     *redis.Redis
 }
 
-func NewOrderService(db *DB, charge *processor.Charge) *OrderService {
+func NewOrderService(db *DB, charge *processor.Charge, redis *redis.Redis) *OrderService {
 	return &OrderService{
-		db:         db,
-		orderChan:  make(chan *cubawheeler.Order, 10000),
-		charge:     charge,
-		collection: db.client.Database(database).Collection(OrderCollection.String()),
+		db:        db,
+		orderChan: make(chan *cubawheeler.Order, 10000),
+		charge:    charge,
+		redis:     redis,
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *OrderService) Create(ctx context.Context, req *cubawheeler.DirectionReq
 		return nil, err
 	}
 
-	_, err = s.collection.InsertOne(ctx, order)
+	err = storeOrder(ctx, s.db, order)
 	if err != nil {
 		return nil, fmt.Errorf("unable to store the trip: %w", err)
 	}
@@ -63,41 +63,48 @@ func (s *OrderService) Create(ctx context.Context, req *cubawheeler.DirectionReq
 
 // ConfirmOrder implements cubawheeler.OrderService.
 func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.ConfirmOrder) error {
+	s.orderLock(req.OrderID)
+	defer s.orderUnlock(req.OrderID)
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil || usr.Role != cubawheeler.RoleRider {
 		return cubawheeler.ErrAccessDenied
 	}
-	o, err := findOrderById(ctx, s.db, req.OrderID)
+	order, err := findOrderById(ctx, s.db, req.OrderID)
 	if err != nil {
 		return err
 	}
-	if o.Rider != usr.ID {
+	if order.Rider != usr.ID {
 		return cubawheeler.ErrAccessDenied
 	}
-	o.Status = cubawheeler.OrderStatusConfirmed
-	for _, c := range o.CategoryPrice {
+	if order.Status != cubawheeler.OrderStatusNew {
+		return cubawheeler.ErrNotFound
+	}
+	order.Status = cubawheeler.OrderStatusConfirmed
+	for _, c := range order.CategoryPrice {
 		if c.Category == req.Category {
-			o.Price = &c.Price
-			o.SelectedCategory = c
+			order.Price = &c.Price
+			order.SelectedCategory = c
 			break
 		}
 	}
-	o.ChargeMethod = req.Method
-	if err := updateOrder(ctx, s.db, o.ID, o); err != nil {
+	order.ChargeMethod = req.Method
+	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return err
 	}
 
-	charger, err := s.charge.Charge(ctx, *o.Price)
+	charger, err := s.charge.Charge(ctx, *order.Price)
 	if err != nil {
 		return err
 	}
-	o.ChargeID = charger.ID
+	order.ChargeID = charger.ID
 
-	if err := updateOrder(ctx, s.db, o.ID, o); err != nil {
+	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return err
 	}
 
-	// TODO: send the order to the channel to be processed
+	if err := s.redis.Publish(ctx, "order", order.ID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -306,7 +313,7 @@ func findOrders(ctx context.Context, db *DB, filter *cubawheeler.OrderFilter) ([
 		f = append(f, bson.E{Key: "rider", Value: filter.Rider})
 	}
 	if filter.Driver != nil {
-		f = append(f, bson.E{Key: "driver", Value: filter.Driver})
+		f = append(f, bson.E{Key: "driver", Value: bson.M{"$in": []interface{}{filter.Driver, nil, ""}}})
 	}
 	if filter.Token != nil {
 		f = append(f, bson.E{Key: "_id", Value: primitive.E{Key: "$gt", Value: filter.Token}})
@@ -366,6 +373,14 @@ func updateOrder(ctx context.Context, db *DB, id string, order *cubawheeler.Orde
 	collection := db.client.Database(database).Collection(OrderCollection.String())
 	if _, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: id}}, bson.D{{Key: "$set", Value: order}}); err != nil {
 		return fmt.Errorf("unabe to update the order: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return nil
+}
+
+func storeOrder(ctx context.Context, db *DB, order *cubawheeler.Order) error {
+	collection := db.Collection(OrderCollection)
+	if _, err := collection.InsertOne(ctx, order); err != nil {
+		return fmt.Errorf("unable to store the order: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }
