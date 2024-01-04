@@ -18,6 +18,7 @@ graphqlAPI:
     
     MAPBOX_TOKEN": "pk.eyJ1IjoiY3ViYXdoZWVsZXJhcHAiLCJhIjoiY2xxZWZhMm9qMDAyODJrcDR1cTJnNnI4NCJ9.-ZtyoyBqzqL-aQIf6mk3Ew"
 
+
   ingress:
     ingressClassName: kong
     host: null

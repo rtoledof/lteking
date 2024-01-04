@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rider
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rider
+  template:
+    metadata:
+      labels:
+        app: rider
+    spec:
+      containers:
+      - name: rider
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/rider:v1.2.9
+        ports:
+        - containerPort: 80
+        env:
+        - name: JWT_SECRET_KEY
+          value: "asdasdasdasdasdasdasdasd"
+        - name: ABLY_API_KEY
+          value: "z8TS2w.nyBXtw:7QTI5Uq-wOaCLoazlWNigoh9LEbGIaNdIx4nRb2ZWKM"
+        - name: ABLY_API_SUBSCRIBER_KEY
+          value: "z8TS2w.nHdvAA:-VDt5rWDKbechfJ6PjkiWeYkAGAs5oeVGuQVJrmQv4Q"
+        - name: SMTP_SERVER
+          value: "smtp.gmail.com"
+        - name: SMTP_PORT
+          value: "587"
+        - name: SMTP_USER
+          value: "rtoledofernandez@gmail.com"
+        - name: SMTP_PASS
+          value: "chej eqte xkvn yply"
+        - name: MONGO_URL
+          value: "mongodb://mongodb:27017"
+        - name: MONGO_DB_NAME
+          value: "rider"
+        - name: APP_NAME
+          value: "Order service"
+        - name: SERVER_PORT
+          value: "80"
+        - name: ORDER_SERVICE_URL
+          value: "http://order:8003"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth:8001"
+        - name: SEED
+          value: "true"
+        - name: REDIS_ADDR
+          value: "redis://redis:6379"
+        - name: AMQP_CONNECTION
+          value: "amqps://z8TS2w.nyBXtw:7QTI5Uq-wOaCLoazlWNigoh9LEbGIaNdIx4nRb2ZWKM@us-east-1-a-queue.ably.io:5671/shared"
+        - name: AMQP_QUEUE
+          value: "z8TS2w:location_update"
+        - name: AMQP_CUSTOMER
+          value: ""

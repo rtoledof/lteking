@@ -1,4 +1,4 @@
----
+# redis-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,16 +25,3 @@ spec:
             - name: redis
               containerPort: 6379
               protocol: TCP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-spec:
-  ports:
-    - port: 6379
-      targetPort: 6379
-      name: redis
-  selector:
-    app: redis
-  type: ClusterIP

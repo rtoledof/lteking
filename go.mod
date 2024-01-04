@@ -1,6 +1,6 @@
 module cubawheeler.io
 
-go 1.21.4
+go 1.21.5
 
 require (
 	github.com/99designs/gqlgen v0.17.40
@@ -14,8 +14,6 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/joho/godotenv v1.5.1
 	github.com/oklog/ulid/v2 v2.1.0
-	github.com/pusher/push-notifications-go v0.0.0-20200210154345-764224c311b8
-	github.com/pusher/pusher-http-go/v5 v5.1.1
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/redis/go-redis/v9 v9.3.0
 	github.com/vektah/gqlparser/v2 v2.5.10
@@ -34,7 +32,6 @@ require (
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sosodev/duration v1.1.0 // indirect
 	github.com/ugorji/go/codec v1.1.9 // indirect

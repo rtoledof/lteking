@@ -1,0 +1,13 @@
+# order-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+spec:
+  selector:
+    app: auth
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 80
+  type: LoadBalancer
