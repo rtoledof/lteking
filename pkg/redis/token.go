@@ -23,6 +23,7 @@ type Token struct {
 	CreatedAt             time.Time     `json:"created_at"`
 	AccessTokenExpiresIn  time.Duration `json:"access_token_expires_in"`
 	RefreshTokenExpiresIn time.Duration `json:"refresh_token_expires_in"`
+	ExpiresAt             time.Time     `json:"expires_at"`
 	Credentials           string        `json:"credentials"`
 }
 
@@ -94,6 +95,7 @@ func (s *TokenVerifier) StoreTokenID(tokenType oauth.TokenType, credential strin
 		CreatedAt:             time.Now().UTC(),
 		AccessTokenExpiresIn:  time.Hour * 24 * 30,
 		RefreshTokenExpiresIn: time.Hour * 24 * 180,
+		ExpiresAt:             time.Now().UTC().Add(time.Hour * 24 * 30),
 		Credentials:           credential,
 	}
 	return storeToken(context.Background(), s.redis, token)

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: driver
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/driver:v1.2.8
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/driver:v1.2.9
         ports:
         - containerPort: 80
         env:

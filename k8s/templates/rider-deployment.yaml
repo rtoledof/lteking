@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: rider
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/rider:v1.2.12
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/rider:v1.2.14
         ports:
         - containerPort: 80
         env:

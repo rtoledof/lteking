@@ -443,8 +443,8 @@ type Rate {
 type Token {
   access_token: String!
   refresh_token: String!
-  expiry_at: Int!
-  refresh_expire_in: Int!
+  expires_in: Int!
+  expires_at: Int!
 }
 
 input UserFilter {
@@ -663,9 +663,9 @@ input ConfirmOrder {
 }
 
 type Mutation {
-  login(input: LoginRequest!): Token!
+  login(email: String!, otp: String!): Token!
   otp(email: String!): Response!
-  authorize(client_id: String!, client_secret: String!): Token!
+  authorize(client_id: String!, client_secret: String!, refresh_token: String): Token!
 
   updateProfile(profile: UpdateProfile!): Response!
   changePin(old: String, pin: String!): Response!
@@ -675,7 +675,6 @@ type Mutation {
   updateOrder(input: DirectionRequest): Order!
   confirmOrder(confirm: ConfirmOrder!): Response!
   cancelOrder(order: String!): Response!
-  acceptOrder(order: String!): Response!
   startOrder(order: String!): Response!
 
   addFavoritePlace(place: AddPlace!): Location

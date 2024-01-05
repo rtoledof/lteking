@@ -19,7 +19,10 @@ func NewStripe(apiKey, token string) *Stripe {
 }
 
 // Charge implements cubawheeler.PaymentMethod.
-func (p *Stripe) Charge(ctx context.Context, amount currency.Amount) (*cubawheeler.Charge, error) {
+func (p *Stripe) Charge(ctx context.Context, pm cubawheeler.ChargeMethod, amount currency.Amount) (*cubawheeler.Charge, error) {
+	if pm != cubawheeler.ChargeMethodCard {
+		return nil, cubawheeler.ErrInvalidInput
+	}
 	panic("unimplemented")
 }
 

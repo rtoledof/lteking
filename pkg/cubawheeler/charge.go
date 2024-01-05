@@ -24,10 +24,11 @@ type Charge struct {
 	Fees              []*Rate         `json:"fees,omitempty" `
 }
 
-func NewCharge(status ChargeStatus, amount currency.Amount) *Charge {
+func NewCharge(status ChargeStatus, pm ChargeMethod, amount currency.Amount) *Charge {
 	return &Charge{
 		ID:     NewID().String(),
 		Amount: amount,
+		Method: pm,
 		Status: status,
 	}
 }
@@ -74,7 +75,7 @@ type PaymentmethodConfig struct {
 }
 
 type PaymentMethod interface {
-	Charge(context.Context, currency.Amount) (*Charge, error)
+	Charge(context.Context, ChargeMethod, currency.Amount) (*Charge, error)
 	Refund(context.Context, string, currency.Amount) (*Charge, error)
 }
 

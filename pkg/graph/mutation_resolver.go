@@ -150,11 +150,11 @@ func (r *mutationResolver) ConfirmOrder(ctx context.Context, req cubawheeler.Con
 }
 
 // Login is the resolver for the login field.
-func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginRequest) (*cubawheeler.Token, error) {
+func (r *mutationResolver) Login(ctx context.Context, email, otp string) (*cubawheeler.Token, error) {
 	value := url.Values{
 		"grant_type": {"password"},
-		"username":   {input.Email},
-		"password":   {input.Otp},
+		"username":   {email},
+		"password":   {otp},
 	}
 
 	var token cubawheeler.Token
@@ -171,11 +171,11 @@ func (r *mutationResolver) Login(ctx context.Context, input cubawheeler.LoginReq
 	return &token, nil
 }
 
-func (r *mutationResolver) Authorize(ctx context.Context, clilent, secret string) (*cubawheeler.Token, error) {
+func (r *mutationResolver) Authorize(ctx context.Context, clientID string, clientSecret string, refreshToken *string) (*cubawheeler.Token, error) {
 	value := url.Values{
 		"grant_type":    {"client_credentials"},
-		"client_id":     {clilent},
-		"client_secret": {secret},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
 	}
 	var token cubawheeler.Token
 	authURL := fmt.Sprintf("%s/authorize", r.AuthService)

@@ -16,8 +16,8 @@ func NewCash() *Cash {
 }
 
 // Charge implements cubawheeler.PaymentMethod.
-func (p *Cash) Charge(_ context.Context, amount currency.Amount) (*cubawheeler.Charge, error) {
-	return cubawheeler.NewCharge(cubawheeler.ChargeStatusSucceeded, amount), nil
+func (p *Cash) Charge(_ context.Context, pm cubawheeler.ChargeMethod, amount currency.Amount) (*cubawheeler.Charge, error) {
+	return cubawheeler.NewCharge(cubawheeler.ChargeStatusSucceeded, pm, amount), nil
 }
 
 // Refund implements cubawheeler.PaymentMethod.

@@ -14,8 +14,8 @@ type MLC struct{}
 func NewMLC() *MLC { return &MLC{} }
 
 // Charge implements cubawheeler.PaymentMethod.
-func (p *MLC) Charge(_ context.Context, amount currency.Amount) (*cubawheeler.Charge, error) {
-	return cubawheeler.NewCharge(cubawheeler.ChargeStatusSucceeded, amount), nil
+func (p *MLC) Charge(_ context.Context, pm cubawheeler.ChargeMethod, amount currency.Amount) (*cubawheeler.Charge, error) {
+	return cubawheeler.NewCharge(cubawheeler.ChargeStatusSucceeded, pm, amount), nil
 }
 
 // Refund implements cubawheeler.PaymentMethod.

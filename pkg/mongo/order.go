@@ -92,7 +92,7 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 		return err
 	}
 
-	charger, err := s.charge.Charge(ctx, *order.Price)
+	charger, err := s.charge.Charge(ctx, order.ChargeMethod, *order.Price)
 	if err != nil {
 		return err
 	}

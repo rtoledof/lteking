@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
-	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
@@ -86,24 +84,6 @@ func (u *User) ComparePassword(password string) error {
 
 func (u *User) ComparePin(pin string) error {
 	return bcrypt.CompareHashAndPassword(u.Pin, []byte(pin))
-}
-
-func (u *User) GenToken() (*Token, error) {
-	expiresAt := time.Now().Add(time.Hour * 24 * 7)
-	u.ExpiresAt = expiresAt.Unix()
-	u.IssuedAt = time.Now().Unix()
-	u.Issuer = "cubawheeler"
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, u)
-
-	accessToken, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
-	if err != nil {
-		return nil, err
-	}
-	return &Token{
-		AccessToken:          accessToken,
-		AccessTokenExpiresIn: time.Hour * 24 * 7,
-		AccessTokenCreatedAt: time.Now(),
-	}, nil
 }
 
 type UserService interface {
