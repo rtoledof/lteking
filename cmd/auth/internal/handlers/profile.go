@@ -68,7 +68,7 @@ func (h *ProfileHandler) Get(w http.ResponseWriter, r *http.Request) error {
 		return cubawheeler.ErrUnauthorized
 	}
 	w.WriteHeader(http.StatusOK)
-	return json.NewEncoder(w).Encode(user.Profile)
+	return json.NewEncoder(w).Encode(user)
 }
 
 func (h *ProfileHandler) AddDevice(w http.ResponseWriter, r *http.Request) error {

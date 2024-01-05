@@ -84,13 +84,13 @@ type ComplexityRoot struct {
 		AcceptOrder   func(childComplexity int, id string) int
 		AddDevice     func(childComplexity int, decive string) int
 		AddVehicle    func(childComplexity int, input *model.AddVehicle) int
-		Authorize     func(childComplexity int, clientID string, clientSecret string) int
+		Authorize     func(childComplexity int, clientID string, clientSecret string, refreshToken *string) int
 		CancelOrder   func(childComplexity int, id string) int
 		DeleteVehicle func(childComplexity int, id string) int
 		FindOrder     func(childComplexity int, id string) int
 		FinishOrder   func(childComplexity int, id string) int
 		ListVehicles  func(childComplexity int) int
-		Login         func(childComplexity int, input model.LoginRequest) int
+		Login         func(childComplexity int, email string, otp string) int
 		Otp           func(childComplexity int, email string) int
 		SetStatus     func(childComplexity int, active *bool) int
 		UpdateVehicle func(childComplexity int, id string, input *model.AddVehicle) int
@@ -174,10 +174,9 @@ type ComplexityRoot struct {
 	}
 
 	Token struct {
-		AccessToken     func(childComplexity int) int
-		ExpiryAt        func(childComplexity int) int
-		RefreshExpireIn func(childComplexity int) int
-		RefreshToken    func(childComplexity int) int
+		AccessToken  func(childComplexity int) int
+		ExpiresIn    func(childComplexity int) int
+		RefreshToken func(childComplexity int) int
 	}
 
 	User struct {
@@ -218,9 +217,9 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	Login(ctx context.Context, input model.LoginRequest) (*model.Token, error)
+	Login(ctx context.Context, email string, otp string) (*model.Token, error)
 	Otp(ctx context.Context, email string) (*model.Response, error)
-	Authorize(ctx context.Context, clientID string, clientSecret string) (*model.Token, error)
+	Authorize(ctx context.Context, clientID string, clientSecret string, refreshToken *string) (*model.Token, error)
 	SetStatus(ctx context.Context, active *bool) (*model.Response, error)
 	AddDevice(ctx context.Context, decive string) (*model.Response, error)
 	AcceptOrder(ctx context.Context, id string) (*model.Order, error)
@@ -414,7 +413,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.Authorize(childComplexity, args["client_id"].(string), args["client_secret"].(string)), true
+		return e.complexity.Mutation.Authorize(childComplexity, args["client_id"].(string), args["client_secret"].(string), args["refresh_token"].(*string)), true
 
 	case "Mutation.cancelOrder":
 		if e.complexity.Mutation.CancelOrder == nil {
@@ -481,7 +480,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.Login(childComplexity, args["input"].(model.LoginRequest)), true
+		return e.complexity.Mutation.Login(childComplexity, args["email"].(string), args["otp"].(string)), true
 
 	case "Mutation.otp":
 		if e.complexity.Mutation.Otp == nil {
@@ -938,19 +937,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Token.AccessToken(childComplexity), true
 
-	case "Token.expiry_at":
-		if e.complexity.Token.ExpiryAt == nil {
+	case "Token.expires_in":
+		if e.complexity.Token.ExpiresIn == nil {
 			break
 		}
 
-		return e.complexity.Token.ExpiryAt(childComplexity), true
-
-	case "Token.refresh_expire_in":
-		if e.complexity.Token.RefreshExpireIn == nil {
-			break
-		}
-
-		return e.complexity.Token.RefreshExpireIn(childComplexity), true
+		return e.complexity.Token.ExpiresIn(childComplexity), true
 
 	case "Token.refresh_token":
 		if e.complexity.Token.RefreshToken == nil {
@@ -1178,7 +1170,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputAddVehicle,
-		ec.unmarshalInputLoginRequest,
 	)
 	first := true
 
@@ -1361,6 +1352,15 @@ func (ec *executionContext) field_Mutation_authorize_args(ctx context.Context, r
 		}
 	}
 	args["client_secret"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["refresh_token"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("refresh_token"))
+		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["refresh_token"] = arg2
 	return args, nil
 }
 
@@ -1427,15 +1427,24 @@ func (ec *executionContext) field_Mutation_finishOrder_args(ctx context.Context,
 func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.LoginRequest
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNLoginRequest2cubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐLoginRequest(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["email"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["email"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["otp"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("otp"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["otp"] = arg1
 	return args, nil
 }
 
@@ -2289,7 +2298,7 @@ func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().Login(rctx, fc.Args["input"].(model.LoginRequest))
+		return ec.resolvers.Mutation().Login(rctx, fc.Args["email"].(string), fc.Args["otp"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2318,10 +2327,8 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 				return ec.fieldContext_Token_access_token(ctx, field)
 			case "refresh_token":
 				return ec.fieldContext_Token_refresh_token(ctx, field)
-			case "expiry_at":
-				return ec.fieldContext_Token_expiry_at(ctx, field)
-			case "refresh_expire_in":
-				return ec.fieldContext_Token_refresh_expire_in(ctx, field)
+			case "expires_in":
+				return ec.fieldContext_Token_expires_in(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Token", field.Name)
 		},
@@ -2417,7 +2424,7 @@ func (ec *executionContext) _Mutation_authorize(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().Authorize(rctx, fc.Args["client_id"].(string), fc.Args["client_secret"].(string))
+		return ec.resolvers.Mutation().Authorize(rctx, fc.Args["client_id"].(string), fc.Args["client_secret"].(string), fc.Args["refresh_token"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2446,10 +2453,8 @@ func (ec *executionContext) fieldContext_Mutation_authorize(ctx context.Context,
 				return ec.fieldContext_Token_access_token(ctx, field)
 			case "refresh_token":
 				return ec.fieldContext_Token_refresh_token(ctx, field)
-			case "expiry_at":
-				return ec.fieldContext_Token_expiry_at(ctx, field)
-			case "refresh_expire_in":
-				return ec.fieldContext_Token_refresh_expire_in(ctx, field)
+			case "expires_in":
+				return ec.fieldContext_Token_expires_in(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Token", field.Name)
 		},
@@ -6246,8 +6251,8 @@ func (ec *executionContext) fieldContext_Token_refresh_token(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Token_expiry_at(ctx context.Context, field graphql.CollectedField, obj *model.Token) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Token_expiry_at(ctx, field)
+func (ec *executionContext) _Token_expires_in(ctx context.Context, field graphql.CollectedField, obj *model.Token) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Token_expires_in(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -6260,7 +6265,7 @@ func (ec *executionContext) _Token_expiry_at(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ExpiryAt, nil
+		return obj.ExpiresIn, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6277,51 +6282,7 @@ func (ec *executionContext) _Token_expiry_at(ctx context.Context, field graphql.
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Token_expiry_at(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Token",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Token_refresh_expire_in(ctx context.Context, field graphql.CollectedField, obj *model.Token) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Token_refresh_expire_in(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.RefreshExpireIn, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Token_refresh_expire_in(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Token_expires_in(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Token",
 		Field:      field,
@@ -9674,53 +9635,6 @@ func (ec *executionContext) unmarshalInputAddVehicle(ctx context.Context, obj in
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputLoginRequest(ctx context.Context, obj interface{}) (model.LoginRequest, error) {
-	var it model.LoginRequest
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"email", "otp", "refresh_token"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "email":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Email = data
-		case "otp":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("otp"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Otp = data
-		case "refresh_token":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("refresh_token"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.RefreshToken = data
-		}
-	}
-
-	return it, nil
-}
-
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -10792,13 +10706,8 @@ func (ec *executionContext) _Token(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "expiry_at":
-			out.Values[i] = ec._Token_expiry_at(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "refresh_expire_in":
-			out.Values[i] = ec._Token_refresh_expire_in(ctx, field, obj)
+		case "expires_in":
+			out.Values[i] = ec._Token_expires_in(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -11445,11 +11354,6 @@ func (ec *executionContext) marshalNItem2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgr
 		return graphql.Null
 	}
 	return ec._Item(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNLoginRequest2cubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐLoginRequest(ctx context.Context, v interface{}) (model.LoginRequest, error) {
-	res, err := ec.unmarshalInputLoginRequest(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNModel2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐModel(ctx context.Context, sel ast.SelectionSet, v *model.Model) graphql.Marshaler {

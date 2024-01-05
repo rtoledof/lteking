@@ -182,10 +182,11 @@ func (a *App) loader() {
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(CanonicalLog)
 	router.Use(TokenMiddleware)
+	router.Use(ClientMiddleware)
 
 	router.Group(func(r chi.Router) {
 
-		srv := graph.NewHandler(a.config.ServiceDiscovery.OrderService)
+		srv := graph.NewHandler(a.config.ServiceDiscovery.OrderService, a.config.ServiceDiscovery.AuthService)
 
 		r.Handle("/", playground.Handler("GraphQL playground", "/query"))
 		r.Handle("/query", srv)

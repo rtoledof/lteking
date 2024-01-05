@@ -13,6 +13,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 
+	"cubawheeler.io/cmd/auth/internal/handlers"
 	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 )
@@ -52,15 +53,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			}
 			ctx = cubawheeler.NewContextWithUser(ctx, &user)
 		}
-		claimClient, ok := claims["client"]
-		if ok {
-			var client cubawheeler.Application
-			if err := json.Unmarshal([]byte(claimClient), &client); err != nil {
-				next.ServeHTTP(w, r)
-				return
-			}
-			ctx = cubawheeler.NewContextWithClient(ctx, &client)
-		}
 
 		token := requestToken(r)
 		if token != "" {
@@ -81,16 +73,12 @@ func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) htt
 				return
 			}
 			ctx := r.Context()
-			if len(claims) > 0 {
-				clientData, ok := claims["client"]
-				if !ok {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
+
+			claimClient, ok := claims["client"]
+			if ok {
 				var client cubawheeler.Application
-				if err := json.Unmarshal([]byte(clientData), &client); err != nil {
-					slog.Error(err.Error())
-					w.WriteHeader(http.StatusUnauthorized)
+				if err := json.Unmarshal([]byte(claimClient), &client); err != nil {
+					next.ServeHTTP(w, r)
 					return
 				}
 				ctx = cubawheeler.NewContextWithClient(ctx, &client)
@@ -104,6 +92,18 @@ func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) htt
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// / TokenMiddleware decodes the share session cookie and packs the session into context
+func TokenMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		token := requestToken(r)
+		if token != "" {
+			ctx = handlers.NewContextWithToken(ctx, token)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func requestToken(r *http.Request) string {

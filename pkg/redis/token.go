@@ -9,9 +9,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/oauth"
+
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/derrors"
-	"github.com/go-chi/oauth"
 )
 
 var _ oauth.CredentialsVerifier = &TokenVerifier{}
@@ -140,6 +141,20 @@ func (s *TokenVerifier) ValidateUser(username string, password string, scope str
 		return cubawheeler.ErrAccessDenied
 	}
 
+	return nil
+}
+
+func (s *TokenVerifier) RemoveByAccess(ctx context.Context, token string) error {
+	t, err := getByToken(ctx, s.redis, token)
+	if err != nil {
+		return err
+	}
+	if err := s.redis.client.Del(ctx, t.AccessToken).Err(); err != nil {
+		return err
+	}
+	if err := s.redis.client.Del(ctx, t.RefreshToken).Err(); err != nil {
+		return err
+	}
 	return nil
 }
 

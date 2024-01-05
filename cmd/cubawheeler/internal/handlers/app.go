@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	graphH "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/ably/ably-go/ably"
 	"github.com/go-chi/chi/v5"
@@ -18,7 +17,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
 
-	driverGQ "cubawheeler.io/cmd/driver/graph"
 	abl "cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/graph"
@@ -199,16 +197,8 @@ func (a *App) loader() {
 			a.config.ServiceDiscovery.OrderService,
 			a.config.ServiceDiscovery.AuthService,
 		)
-		r.Handle("/rider/", playground.Handler("Rider GraphQL playground", "/rider/query"))
-		r.Handle("/rider/query", grapgqlSrv)
+		r.Handle("/", playground.Handler("Rider GraphQL playground", "/query"))
+		r.Handle("/query", grapgqlSrv)
 	})
-
-	router.Group(func(r chi.Router) {
-		srv := graphH.NewDefaultServer(driverGQ.NewExecutableSchema(driverGQ.Config{Resolvers: &driverGQ.Resolver{}}))
-
-		r.Handle("/driver/", playground.Handler("Driver GraphQL playground", "/driver/query"))
-		r.Handle("/driver/query", srv)
-	})
-
 	a.router = router
 }

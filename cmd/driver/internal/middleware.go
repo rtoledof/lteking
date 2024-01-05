@@ -83,39 +83,37 @@ func TokenMiddleware(next http.Handler) http.Handler {
 }
 
 // ClientMiddleware decodes the share session cookie and packs the session into context
-func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func ClientMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			claims := cubawheeler.GetClaimsFromContext(r.Context())
-			if claims == nil {
-				next.ServeHTTP(w, r)
+		claims := cubawheeler.GetClaimsFromContext(r.Context())
+		if claims == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		ctx := r.Context()
+		if len(claims) > 0 {
+			clientData, ok := claims["client"]
+			if !ok {
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			ctx := r.Context()
-			if len(claims) > 0 {
-				clientData, ok := claims["client"]
-				if !ok {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				var client cubawheeler.Application
-				if err := json.Unmarshal([]byte(clientData), &client); err != nil {
-					slog.Error(err.Error())
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				ctx = cubawheeler.NewContextWithClient(ctx, &client)
+			var client cubawheeler.Application
+			if err := json.Unmarshal([]byte(clientData), &client); err != nil {
+				slog.Error(err.Error())
+				w.WriteHeader(http.StatusUnauthorized)
+				return
 			}
+			ctx = cubawheeler.NewContextWithClient(ctx, &client)
+		}
 
-			token := requestToken(r)
-			if token != "" {
-				ctx = cubawheeler.NewContextWithJWT(ctx, token)
-			}
+		token := requestToken(r)
+		if token != "" {
+			ctx = cubawheeler.NewContextWithJWT(ctx, token)
+		}
 
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func requestToken(r *http.Request) string {

@@ -7,14 +7,12 @@ import (
 	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/derrors"
-	"github.com/go-oauth2/oauth2/v4"
 )
 
 type LoginHandler struct {
 	User        cubawheeler.UserService
 	OTP         cubawheeler.OtpService
 	Application cubawheeler.ApplicationService
-	Token       oauth2.TokenStore
 }
 
 func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) (err error) {

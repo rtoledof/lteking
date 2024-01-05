@@ -204,8 +204,7 @@ type Response {
 type Token {
   access_token: String!
   refresh_token: String!
-  expiry_at: Int!
-  refresh_expire_in: Int!
+  expires_in: Int!
 }
 
 type Query {
@@ -241,16 +240,10 @@ input AddVehicle {
   technic_inspection: Upload
 }
 
-input LoginRequest {
-  email: String
-  otp: String
-  refresh_token: String
-}
-
 type Mutation {
-  login(input: LoginRequest!): Token!
+  login(email: String!, otp: String!): Token!
   otp(email: String!): Response!
-  authorize(client_id: String!, client_secret: String!): Token!
+  authorize(client_id: String!, client_secret: String!, refresh_token: String): Token!
 
   setStatus(active: Boolean): Response!
   addDevice(decive: String!): Response!

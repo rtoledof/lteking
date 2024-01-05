@@ -10,8 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-oauth2/oauth2/v4"
-
 	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/mock"
@@ -23,7 +21,7 @@ func TestLoginHandlerLogin(t *testing.T) {
 		User        cubawheeler.UserService
 		OTP         cubawheeler.OtpService
 		Application cubawheeler.ApplicationService
-		Token       oauth2.TokenStore
+		Token       cubawheeler.TokenVerifier
 	}
 	type args struct {
 		w *httptest.ResponseRecorder
@@ -52,13 +50,18 @@ func TestLoginHandlerLogin(t *testing.T) {
 						return nil
 					},
 				},
+				Token: &mock.TokenVerifier{
+					RemoveByAccessFn: func(ctx context.Context, token string) error {
+						return nil
+					},
+				},
 			},
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
 					value := url.Values{
 						"username": []string{"test@email.com"},
-						"otp":      []string{"123456"},
+						"password": []string{"123456"},
 					}
 					req, _ := http.NewRequest(http.MethodPost, "/login", strings.NewReader(value.Encode()))
 					req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -106,7 +109,6 @@ func TestLoginHandlerLogin(t *testing.T) {
 				User:        tt.fields.User,
 				OTP:         tt.fields.OTP,
 				Application: tt.fields.Application,
-				Token:       tt.fields.Token,
 			}
 			req := tt.args.r().WithContext(ctx)
 			err := h.Login(tt.args.w, req)

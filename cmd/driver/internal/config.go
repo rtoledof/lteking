@@ -25,6 +25,7 @@ type Ably struct {
 
 type ServiceDiscovery struct {
 	OrderService string
+	AuthService  string
 }
 
 type Config struct {
@@ -35,8 +36,6 @@ type Config struct {
 	Mongo   string
 	MongoDB string
 	Amqp    Amqp
-
-	JWTPrivateKey string
 
 	SMTPServer   string
 	SMTPPort     int64
@@ -162,15 +161,15 @@ func LoadConfig() Config {
 		cfg.Ably.ApiSubscriperKey = subscriberApiKey
 	}
 
-	if orderService, exist := os.LookupEnv("ORDER_SEVICE_URL"); exist {
-		cfg.ServiceDiscovery.OrderService = orderService
+	cfg.ServiceDiscovery.OrderService = os.Getenv("ORDER_SERVICE_URL")
+	cfg.ServiceDiscovery.AuthService = os.Getenv("AUTH_SERVICE_URL")
+
+	if len(cfg.ServiceDiscovery.OrderService) == 0 {
+		panic("ORDER_SERVICE_URL is required")
 	}
 
-	if privateKey, exist := os.LookupEnv("JWT_SECRET_KEY"); exist {
-		cfg.JWTPrivateKey = privateKey
-	}
-	if cfg.JWTPrivateKey == "" {
-		panic("JWT_SECRET_KEY is not set")
+	if len(cfg.ServiceDiscovery.AuthService) == 0 {
+		panic("AUTH_SERVICE_URL is required")
 	}
 
 	return cfg

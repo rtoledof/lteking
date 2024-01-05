@@ -154,6 +154,7 @@ func (a *App) loader() {
 	router.Use(middleware.Logger)
 	router.Use(CanonicalLog)
 	router.Use(middleware.Timeout(60 * time.Second))
+	router.Use(TokenMiddleware)
 
 	tokenVerifier := rdb.NewTokenVerifier(a.rdb, userSrv, appSrv)
 
@@ -182,6 +183,7 @@ func (a *App) loader() {
 		r.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
 		r.Use(AuthMiddleware)
 		r.Use(ClientMiddleware(appSrv))
+		r.Use(TokenMiddleware)
 
 		{
 			h := &handlers.OtpHandler{

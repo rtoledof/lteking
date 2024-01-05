@@ -1,29 +1,27 @@
 package cubawheeler
 
 import (
+	"context"
 	"time"
 
-	"github.com/go-oauth2/oauth2/v4"
+	"github.com/go-chi/oauth"
 )
 
-var _ oauth2.TokenInfo = &Token{}
-
 type Token struct {
-	AccessToken           string                     `json:"access_token" bson:"access_token"`
-	AccessTokenCreatedAt  time.Time                  `json:"access_token_created_at,omitempty" bson:"access_token_created_at"`
-	AccessTokenExpiresIn  time.Duration              `json:"expires_in,omitempty"  bson:"access_token_expires_in"`
-	ClientID              string                     `json:"client_id,omitempty" bson:"client_id,omitempty"`
-	Code                  string                     `json:"code,omitempty" bson:"code,omitempty"`
-	CodeCreateAt          time.Time                  `json:"code_create_at,omitempty" bson:"code_create_at,omitempty"`
-	CodeExpiresIn         time.Duration              `json:"code_expires_in,omitempty" bson:"code_expires_in,omitempty"`
-	CodeChallenge         string                     `json:"code_challenge,omitempty" bson:"code_challenge,omitempty"`
-	CodeChallengeMethod   oauth2.CodeChallengeMethod `json:"code_challenge_method,omitempty" bson:"code_challenge_method,omitempty"`
-	RedirectUrl           string                     `json:"redirect_url,omitempty" bson:"redirect_url,omitempty"`
-	RefreshToken          string                     `json:"refresh_token,omitempty" bson:"refresh_token,omitempty"`
-	RefreshTokenCreateAt  time.Time                  `json:"refresh_token_create_at,omitempty" bson:"refresh_token_create_at,omitempty"`
-	RefreshTokenExpiresIn time.Duration              `json:"refresh_token_expires_in,omitempty" bson:"refresh_token_expires_in,omitempty"`
-	Scope                 string                     `json:"scope,omitempty" bson:"scope,omitempty"`
-	UserID                string                     `json:"user_id,omitempty" bson:"user_id,omitempty"`
+	AccessToken           string        `json:"access_token" bson:"access_token"`
+	AccessTokenCreatedAt  time.Time     `json:"access_token_created_at,omitempty" bson:"access_token_created_at"`
+	AccessTokenExpiresIn  time.Duration `json:"expires_in,omitempty"  bson:"access_token_expires_in"`
+	ClientID              string        `json:"client_id,omitempty" bson:"client_id,omitempty"`
+	Code                  string        `json:"code,omitempty" bson:"code,omitempty"`
+	CodeCreateAt          time.Time     `json:"code_create_at,omitempty" bson:"code_create_at,omitempty"`
+	CodeExpiresIn         time.Duration `json:"code_expires_in,omitempty" bson:"code_expires_in,omitempty"`
+	CodeChallenge         string        `json:"code_challenge,omitempty" bson:"code_challenge,omitempty"`
+	RedirectUrl           string        `json:"redirect_url,omitempty" bson:"redirect_url,omitempty"`
+	RefreshToken          string        `json:"refresh_token,omitempty" bson:"refresh_token,omitempty"`
+	RefreshTokenCreateAt  time.Time     `json:"refresh_token_create_at,omitempty" bson:"refresh_token_create_at,omitempty"`
+	RefreshTokenExpiresIn time.Duration `json:"refresh_token_expires_in,omitempty" bson:"refresh_token_expires_in,omitempty"`
+	Scope                 string        `json:"scope,omitempty" bson:"scope,omitempty"`
+	UserID                string        `json:"user_id,omitempty" bson:"user_id,omitempty"`
 }
 
 // GetAccess implements oauth2.TokenInfo.
@@ -54,11 +52,6 @@ func (t *Token) GetCode() string {
 // GetCodeChallenge implements oauth2.TokenInfo.
 func (t *Token) GetCodeChallenge() string {
 	return t.CodeChallenge
-}
-
-// GetCodeChallengeMethod implements oauth2.TokenInfo.
-func (t *Token) GetCodeChallengeMethod() oauth2.CodeChallengeMethod {
-	return t.CodeChallengeMethod
 }
 
 // GetCodeCreateAt implements oauth2.TokenInfo.
@@ -101,11 +94,6 @@ func (t *Token) GetUserID() string {
 	return t.UserID
 }
 
-// New implements oauth2.TokenInfo.
-func (t *Token) New() oauth2.TokenInfo {
-	return &Token{}
-}
-
 // SetAccess implements oauth2.TokenInfo.
 func (t *Token) SetAccess(token string) {
 	t.AccessToken = token
@@ -134,11 +122,6 @@ func (t *Token) SetCode(code string) {
 // SetCodeChallenge implements oauth2.TokenInfo.
 func (t *Token) SetCodeChallenge(challenge string) {
 	t.CodeChallenge = challenge
-}
-
-// SetCodeChallengeMethod implements oauth2.TokenInfo.
-func (t *Token) SetCodeChallengeMethod(method oauth2.CodeChallengeMethod) {
-	t.CodeChallengeMethod = method
 }
 
 // SetCodeCreateAt implements oauth2.TokenInfo.
@@ -179,4 +162,9 @@ func (t *Token) SetScope(scope string) {
 // SetUserID implements oauth2.TokenInfo.
 func (t *Token) SetUserID(userID string) {
 	t.UserID = userID
+}
+
+type TokenVerifier interface {
+	oauth.CredentialsVerifier
+	RemoveByAccess(ctx context.Context, token string) error
 }

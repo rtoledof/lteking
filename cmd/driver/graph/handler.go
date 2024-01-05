@@ -15,15 +15,20 @@ import (
 
 func NewHandler(
 	orderService string,
+	authService string,
 ) *handler.Server {
 	resolver := &Resolver{
 		orderService: orderService,
+		authService:  authService,
 	}
 	return handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: resolver}))
 }
 
 func makeRequest(ctx context.Context, method string, url string, body url.Values) (*http.Response, error) {
 	jwtToken := cubawheeler.JWTFromContext(ctx)
+	if jwtToken == "" && !strings.Contains(url, "authorize") {
+		return nil, fmt.Errorf("no token found: %w", cubawheeler.ErrAccessDenied)
+	}
 	var reader io.Reader
 	if body != nil {
 		reader = strings.NewReader(body.Encode())
