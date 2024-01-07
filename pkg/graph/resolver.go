@@ -35,6 +35,7 @@ type Resolver struct {
 	ablyClient       *ably.Client
 	processor        *processor.Charge
 
-	OrderService string
-	AuthService  string
+	OrderService  string
+	AuthService   string
+	WalletService string
 }

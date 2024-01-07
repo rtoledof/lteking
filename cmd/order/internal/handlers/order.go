@@ -103,7 +103,7 @@ func (o *OrderHandler) FindByID(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if (user.Role == cubawheeler.RoleDriver && order.Driver != user.ID) ||
+	if (user.Role == cubawheeler.RoleDriver && (order.Driver != "" && order.Driver != user.ID)) ||
 		(user.Role == cubawheeler.RoleRider && order.Rider != user.ID) {
 		return cubawheeler.NewError(nil, http.StatusForbidden, "you are not allowed to do this")
 	}

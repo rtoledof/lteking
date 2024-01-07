@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: driver
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/driver:v1.2.9
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/driver:v1.2.10
         ports:
         - containerPort: 80
         env:
@@ -44,6 +44,8 @@ spec:
           value: "http://order:8003"
         - name: AUTH_SERVICE_URL
           value: "http://auth:8001"
+        - name: WALLET_SERVICE_URL
+          value: "http://wallet:8000"
         - name: SEED
           value: "true"
         - name: REDIS_ADDR

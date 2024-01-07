@@ -6,6 +6,7 @@ import (
 	cr "crypto/rand"
 	"database/sql/driver"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -190,4 +191,11 @@ func (m *Metadata) Update(data Metadata) {
 			delete(*m, k)
 		}
 	}
+}
+
+func DecodeJSON(data interface{}, v interface{}) error {
+	if err := json.Unmarshal(data.([]byte), v); err != nil {
+		return fmt.Errorf("error decoding json: %v", err)
+	}
+	return nil
 }

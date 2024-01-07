@@ -150,5 +150,10 @@ func LoadConfig() Config {
 	if subscriberApiKey, exist := os.LookupEnv("ABLY_SUBSCRIBER_API_KEY"); exist {
 		cfg.Ably.ApiSubscriperKey = subscriberApiKey
 	}
+
+	if key, exist := os.LookupEnv("JWT_PRIVATE_KEY"); exist {
+		cfg.JWTPrivateKey = key
+	}
+
 	return cfg
 }

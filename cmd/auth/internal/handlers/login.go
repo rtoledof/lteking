@@ -17,8 +17,13 @@ type LoginHandler struct {
 
 func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) (err error) {
 	defer derrors.Wrap(&err, "LoginHandler.Login")
+	client := cubawheeler.ClientFromContext(r.Context())
 	logger := cannon.LoggerFromContext(r.Context())
 	logger.Info("login handler")
+	if client == nil {
+		logger.Info("nil client in context")
+		return fmt.Errorf("error getting client from context: %w", cubawheeler.ErrAccessDenied)
+	}
 	if err := r.ParseForm(); err != nil {
 		return fmt.Errorf("error parsing form: %v: %w", err, cubawheeler.ErrInternal)
 	}

@@ -12,7 +12,6 @@ import (
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/derrors"
-	"cubawheeler.io/pkg/redis"
 )
 
 var _ cubawheeler.UserService = &UserService{}
@@ -20,8 +19,7 @@ var _ cubawheeler.UserService = &UserService{}
 const UsersCollection Collections = "users"
 
 type UserService struct {
-	db         *DB
-	beansToken *redis.BeansToken
+	db *DB
 }
 
 func NewUserService(

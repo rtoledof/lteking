@@ -100,7 +100,7 @@ func (s *CouponService) Redeem(ctx context.Context, code string) (*cubawheeler.C
 		tx.AbortTransaction(ctx)
 		return nil, err
 	}
-	w.Deposit(coupon.Amount.Amount)
+	w.Deposit(coupon.Amount.Amount, coupon.Amount.Currency.String())
 	err = updateWallet(ctx, s.db, w)
 	if err != nil {
 		tx.AbortTransaction(ctx)

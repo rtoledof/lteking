@@ -130,11 +130,7 @@ func (r *mutationResolver) AcceptOrder(ctx context.Context, id string) (*model.O
 	if user == nil {
 		return nil, fmt.Errorf("unable to add the vehicle: %w", cubawheeler.ErrAccessDenied)
 	}
-	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/accept", r.orderService, id), nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders/%s", r.orderService, id), nil)
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/accept", r.orderService, id), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -154,11 +150,7 @@ func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*model.O
 	if user == nil {
 		return nil, fmt.Errorf("unable to add the vehicle: %w", cubawheeler.ErrAccessDenied)
 	}
-	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/cancel", r.orderService, id), nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders/%s", r.orderService, id), nil)
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/cancel", r.orderService, id), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +166,22 @@ func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*model.O
 
 // FindOrder is the resolver for the findOrder field.
 func (r *mutationResolver) FindOrder(ctx context.Context, id string) (*model.Order, error) {
-	panic(fmt.Errorf("not implemented: FindOrder - findOrder"))
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders/%s", r.orderService, id), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var order model.Order
+	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
+		return nil, err
+	}
+
+	return &order, nil
 }
 
 // FinishOrder is the resolver for the finishOrder field.
@@ -183,11 +190,7 @@ func (r *mutationResolver) FinishOrder(ctx context.Context, id string) (*model.O
 	if user == nil {
 		return nil, fmt.Errorf("unable to add the vehicle: %w", cubawheeler.ErrAccessDenied)
 	}
-	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s", r.orderService, id), nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders/%s", r.orderService, id), nil)
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/complete", r.orderService, id), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -329,6 +332,50 @@ func (r *mutationResolver) ListVehicles(ctx context.Context) ([]*model.Vehicle, 
 	return vehicles, nil
 }
 
+// Transfer is the resolver for the transfer field.
+func (r *mutationResolver) Transfer(ctx context.Context, to string, amount int, currency string, typeArg model.TransferType) (*model.Transaction, error) {
+	value := url.Values{
+		"to":       []string{to},
+		"amount":   []string{fmt.Sprintf("%d", amount)},
+		"currency": []string{currency},
+		"type":     []string{string(typeArg)},
+	}
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/wallet/transfer", r.walletService), value)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	var transaction model.Transaction
+	if err := json.NewDecoder(resp.Body).Decode(&transaction); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return &transaction, nil
+}
+
+// ConfirmTransaction is the resolver for the confirmTransaction field.
+func (r *mutationResolver) ConfirmTransaction(ctx context.Context, id string, pin string) (*model.Response, error) {
+	var response = model.Response{
+		Success: true,
+		Code:    http.StatusNoContent,
+	}
+
+	value := url.Values{
+		"pin": []string{pin},
+		"id":  []string{id},
+	}
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/wallet/transfer/confirm", r.walletService), value)
+	if err != nil {
+		response.Success = false
+		response.Message = err.Error()
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		response.Success = false
+		response.Message = fmt.Sprintf("error confirming transaction: %s", resp.Status)
+	}
+	return &response, nil
+}
+
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/me", r.authService), nil)
@@ -346,7 +393,30 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 
 // Balance is the resolver for the balance field.
 func (r *queryResolver) Balance(ctx context.Context) (int, error) {
-	panic(fmt.Errorf("not implemented: Balance - balance"))
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/wallet", r.walletService), nil)
+	if err != nil {
+		return 0, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	var balance int
+	if err := json.NewDecoder(resp.Body).Decode(&balance); err != nil {
+		return 0, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return balance, nil
+}
+
+// Transactions is the resolver for the transactions field.
+func (r *queryResolver) Transactions(ctx context.Context) ([]*model.Transaction, error) {
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/wallet/transactions", r.walletService), nil)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	var transactions []*model.Transaction
+	if err := json.NewDecoder(resp.Body).Decode(&transactions); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return transactions, nil
 }
 
 // Vehicles is the resolver for the vehicles field.
@@ -408,16 +478,6 @@ func (r *queryResolver) Order(ctx context.Context, id string) (*model.Order, err
 		return nil, err
 	}
 	return &order, nil
-}
-
-// Payments is the resolver for the payments field.
-func (r *queryResolver) Payments(ctx context.Context) ([]*model.Payment, error) {
-	panic(fmt.Errorf("not implemented: Payments - payments"))
-}
-
-// Payment is the resolver for the payment field.
-func (r *queryResolver) Payment(ctx context.Context, id string) (*model.Payment, error) {
-	panic(fmt.Errorf("not implemented: Payment - payment"))
 }
 
 // Mutation returns MutationResolver implementation.

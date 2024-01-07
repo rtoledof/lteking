@@ -11,7 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"cubawheeler.io/cmd/internal"
-	oi "cubawheeler.io/cmd/order/internal"
+	order "cubawheeler.io/cmd/order/internal"
 )
 
 func init() {
@@ -32,7 +32,7 @@ func main() {
 	logger := internal.NewAppLogger(appName, lev)
 	slog.SetDefault(logger)
 
-	app := oi.New(oi.LoadConfig())
+	app := order.New(order.LoadConfig())
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()

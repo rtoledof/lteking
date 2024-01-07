@@ -9,11 +9,54 @@ import (
 	"net/url"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/graph/model"
 )
 
 var _ QueryResolver = &queryResolver{}
 
 type queryResolver struct{ *Resolver }
+
+// Balance implements QueryResolver.
+func (r *queryResolver) Balance(ctx context.Context) (int, error) {
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/wallet", r.WalletService), nil)
+	if err != nil {
+		return 0, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+
+	var balance int
+	if err := json.NewDecoder(resp.Body).Decode(&balance); err != nil {
+		return 0, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return balance, nil
+}
+
+// Transactions implements QueryResolver.
+func (r *queryResolver) Transactions(ctx context.Context) ([]*model.Transaction, error) {
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/wallet/transactions", r.WalletService), nil)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	var transactions []*model.Transaction
+	if err := json.NewDecoder(resp.Body).Decode(&transactions); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return transactions, nil
+}
+
+// PaymentMethods implements QueryResolver.
+func (*queryResolver) PaymentMethods(ctx context.Context) ([]cubawheeler.ChargeMethod, error) {
+	return []cubawheeler.ChargeMethod{
+		cubawheeler.ChargeMethodCash,
+		cubawheeler.ChargeMethodCUPTransaction,
+		cubawheeler.ChargeMethodMLCTransaction,
+		cubawheeler.ChargeMethodBalance,
+	}, nil
+}
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, filter *cubawheeler.UserFilter) (*cubawheeler.UserList, error) {

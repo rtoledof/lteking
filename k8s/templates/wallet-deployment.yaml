@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wallet
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: wallet
+  template:
+    metadata:
+      labels:
+        app: wallet
+    spec:
+      containers:
+      - name: wallet
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/wallet:v1.1
+        ports:
+        - containerPort: 80
+        env:
+        - name: AUTH_SERVICE_URL
+          value: "http://auth"
+        - name: JWT_SECRET_KEY
+          value: "asdasdasdasdasdasdasdasd"
+        - name: ABLY_API_KEY
+          value: "z8TS2w.nyBXtw:7QTI5Uq-wOaCLoazlWNigoh9LEbGIaNdIx4nRb2ZWKM"
+        - name: ABLY_API_SUBSCRIBER_KEY
+          value: "z8TS2w.nHdvAA:-VDt5rWDKbechfJ6PjkiWeYkAGAs5oeVGuQVJrmQv4Q"
+        - name: SMTP_SERVER
+          value: "smtp.gmail.com"
+        - name: SMTP_PORT
+          value: "587"
+        - name: SMTP_USER
+          value: "rtoledofernandez@gmail.com"
+        - name: SMTP_PASS
+          value: "chej eqte xkvn yply"
+        - name: SERVER_PORT
+          value: "80"
+        - name: MONGO_URL
+          value: "mongodb://mongodb:27017"
+        - name: REDIS_ADDR
+          value: "redis://redis:6379"
+        - name: MONGO_DB_NAME
+          value: "auth"
+        - name: APP_NAME
+          value: "Wallet service"
+        - name: SEED
+          value: "true"

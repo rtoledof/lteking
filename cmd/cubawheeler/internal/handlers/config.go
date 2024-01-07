@@ -24,8 +24,9 @@ type Ably struct {
 }
 
 type ServiceDiscovery struct {
-	OrderService string
-	AuthService  string
+	OrderService  string
+	AuthService   string
+	WalletService string
 }
 
 type Config struct {
@@ -164,6 +165,7 @@ func LoadConfig() Config {
 
 	cfg.ServiceDiscovery.OrderService = os.Getenv("ORDER_SERVICE_URL")
 	cfg.ServiceDiscovery.AuthService = os.Getenv("AUTH_SERVICE_URL")
+	cfg.ServiceDiscovery.WalletService = os.Getenv("WALLET_SERVICE_URL")
 
 	if len(cfg.ServiceDiscovery.OrderService) == 0 {
 		panic("ORDER_SERVICE_URL is required")
@@ -178,6 +180,9 @@ func LoadConfig() Config {
 	}
 	if cfg.JWTPrivateKey == "" {
 		panic("JWT_SECRET_KEY is not set")
+	}
+	if len(cfg.ServiceDiscovery.WalletService) == 0 {
+		panic("WALLET_SERVICE_URL is required")
 	}
 
 	return cfg

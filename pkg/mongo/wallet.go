@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/derrors"
 )
 
 const WalletCollection Collections = "wallets"
@@ -22,30 +23,60 @@ func NewWalletService(db *DB) *WalletService {
 	index := mongo.IndexModel{
 		Keys: bson.D{{Key: "owner", Value: 1}},
 	}
-	_, err := db.client.Database(database).Collection(WalletCollection.String()).Indexes().CreateOne(context.Background(), index)
+	_, err := db.Collection(WalletCollection).Indexes().CreateOne(context.Background(), index)
 	if err != nil {
 		panic("unable to create user index")
 	}
 	return &WalletService{db: db}
 }
 
-func (s *WalletService) Create(ctx context.Context, owner string) (*cubawheeler.Wallet, error) {
+// Transactions implements cubawheeler.WalletService.
+func (s *WalletService) Transactions(ctx context.Context, owner string) (_ []cubawheeler.TransferEvent, err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.Transactions")
+	user := cubawheeler.UserFromContext(ctx)
+	if user.ID != owner {
+		return nil, fmt.Errorf("you are not allowed to do this: %w", cubawheeler.ErrForbidden)
+	}
+	w, err := findWalletByOwner(ctx, s.db, owner)
+	if err != nil {
+		return nil, err
+	}
+	return w.TransferEvent, nil
+}
+
+func (s *WalletService) Create(ctx context.Context, owner string) (_ *cubawheeler.Wallet, err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.Create")
 	w := cubawheeler.NewWallet()
 	w.Owner = owner
 	return w, storeWallet(ctx, s.db, w)
 }
 
-func (s *WalletService) FindByOwner(ctx context.Context, owner string) (*cubawheeler.Wallet, error) {
+func (s *WalletService) FindByOwner(ctx context.Context, owner string) (_ *cubawheeler.Wallet, err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.FindByOwner")
 	collection := s.db.Collection(WalletCollection)
 	var w cubawheeler.Wallet
-	err := collection.FindOne(ctx, bson.M{"owner": owner}).Decode(&w)
+	f := bson.D{
+		{Key: "$or", Value: []any{
+			bson.D{{Key: "owner", Value: owner}},
+			bson.D{{Key: "referer", Value: owner}},
+		}},
+	}
+	err = collection.FindOne(ctx, f).Decode(&w)
 	if err != nil {
 		return nil, fmt.Errorf("error finding wallet: %w", err)
 	}
 	return &w, nil
 }
 
-func (s *WalletService) Deposit(ctx context.Context, owner string, amount int64) (*cubawheeler.Wallet, error) {
+func (s *WalletService) Deposit(ctx context.Context, owner string, amount int64, currency string) (_ *cubawheeler.Wallet, err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.Deposit")
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	if user.Role != cubawheeler.RoleAdmin {
+		return nil, fmt.Errorf("you are not allowed to do this: %w", cubawheeler.ErrForbidden)
+	}
 	w, err := s.FindByOwner(ctx, owner)
 	if err != nil {
 		return nil, fmt.Errorf("error finding wallet: %v: %w", err, cubawheeler.ErrNotFound)
@@ -53,11 +84,19 @@ func (s *WalletService) Deposit(ctx context.Context, owner string, amount int64)
 	if amount <= 0 {
 		return nil, fmt.Errorf("invalid amount: %w", cubawheeler.ErrInvalidInput)
 	}
-	w.Deposit(amount)
+	w.Deposit(amount, currency)
 	return w, updateWallet(ctx, s.db, w)
 }
 
-func (s *WalletService) Withdraw(ctx context.Context, owner string, amount int64) (*cubawheeler.Wallet, error) {
+func (s *WalletService) Withdraw(ctx context.Context, owner string, amount int64, currency string) (_ *cubawheeler.Wallet, err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.Withdraw")
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	if user.Role != cubawheeler.RoleAdmin {
+		return nil, fmt.Errorf("you are not allowed to do this: %w", cubawheeler.ErrForbidden)
+	}
 	w, err := s.FindByOwner(ctx, owner)
 	if err != nil {
 		return nil, err
@@ -65,53 +104,95 @@ func (s *WalletService) Withdraw(ctx context.Context, owner string, amount int64
 	if w.Balance-amount < 0 {
 		return nil, fmt.Errorf("insufficient funds: %w", cubawheeler.ErrInsufficientFunds)
 	}
-	w.Withdraw(amount)
+	w.Withdraw(amount, currency)
+	// TODO: execute payout to the customer account in case of a driver
 	return nil, updateWallet(ctx, s.db, w)
 }
 
 // Transfer implements cubawheeler.WalletService.
-func (s *WalletService) Transfer(ctx context.Context, from, to string, amount int64) (*cubawheeler.Wallet, *cubawheeler.Wallet, error) {
-	fromW, err := s.FindByOwner(ctx, from)
+func (s *WalletService) Transfer(ctx context.Context, to string, amount int64, currency string) (_ *cubawheeler.TransferEvent, err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.Transfer")
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, cubawheeler.ErrAccessDenied
+	}
+	fromW, err := s.FindByOwner(ctx, user.ID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	toW, err := s.FindByOwner(ctx, to)
+	if !fromW.CanTransfer(amount) {
+		return nil, fmt.Errorf("insufficient funds: %w", cubawheeler.ErrInsufficientFunds)
+	}
+
+	transferEvent := cubawheeler.TransferEvent{
+		ID:        cubawheeler.NewID().String(),
+		From:      user.ID,
+		To:        to,
+		Type:      cubawheeler.TransferTypeTransfer,
+		Status:    cubawheeler.TransferStatusPending,
+		Amount:    amount,
+		Currency:  currency,
+		CreatedAt: uint(cubawheeler.Now().UTC().Unix()),
+	}
+
+	fromW.PendingTransfers = append(fromW.PendingTransfers, transferEvent)
+	return &transferEvent, updateWallet(ctx, s.db, fromW)
+}
+
+func (s *WalletService) ConfirmTransfer(ctx context.Context, id, pin string) (err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.ConfirmTransfer")
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return cubawheeler.ErrAccessDenied
+	}
+	if err := user.ComparePin(pin); err != nil {
+		return fmt.Errorf("invalid pin: %w", cubawheeler.ErrInvalidInput)
+	}
+	fromW, err := s.FindByOwner(ctx, user.ID)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	if amount <= 0 {
-		return nil, nil, fmt.Errorf("invalid amount: %w", cubawheeler.ErrInvalidInput)
+	pendingTransfer, index := fromW.FindPendingTransfer(id)
+	if pendingTransfer == nil {
+		return fmt.Errorf("transfer not found: %w", cubawheeler.ErrNotFound)
 	}
-	if fromW.Balance-amount < 0 {
-		return nil, nil, fmt.Errorf("insufficient funds: %w", cubawheeler.ErrInsufficientFunds)
+	if !fromW.CanTransfer(pendingTransfer.Amount) {
+		return fmt.Errorf("insufficient funds: %w", cubawheeler.ErrInsufficientFunds)
 	}
-	fromW.Withdraw(amount)
-	toW.Deposit(amount)
+	toW, err := s.FindByOwner(ctx, pendingTransfer.To)
+	if err != nil {
+		return err
+	}
+
+	fromW.Withdraw(pendingTransfer.Amount, pendingTransfer.Currency)
+	toW.Deposit(pendingTransfer.Amount, pendingTransfer.Currency)
+	fromW.TransferEvent = append(fromW.TransferEvent[:index], fromW.TransferEvent[index+1:]...)
+
 	tx, err := s.db.client.StartSession()
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	err = tx.StartTransaction()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error starting transaction: %v: %w", err, cubawheeler.ErrInternal)
+		return fmt.Errorf("error starting transaction: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	err = updateWallet(ctx, s.db, fromW)
 	if err != nil {
 		tx.AbortTransaction(ctx)
-		return nil, nil, err
+		return err
 	}
 	err = updateWallet(ctx, s.db, toW)
 	if err != nil {
 		tx.AbortTransaction(ctx)
-		return nil, nil, err
+		return err
 	}
-
-	return fromW, toW, tx.CommitTransaction(ctx)
+	return tx.CommitTransaction(ctx)
 }
 
 // Balance implements cubawheeler.WalletService.
-func (s *WalletService) Balance(ctx context.Context, owner string) (int64, error) {
-	w, err := s.FindByOwner(ctx, owner)
+func (s *WalletService) Balance(ctx context.Context, owner string) (_ int64, err error) {
+	defer derrors.Wrap(&err, "mongo.WalletService.Balance")
+	w, err := findWalletByOwner(ctx, s.db, owner)
 	if err != nil {
 		return 0, err
 	}
@@ -139,7 +220,13 @@ func updateWallet(context context.Context, db *DB, w *cubawheeler.Wallet) error 
 func findWalletByOwner(context context.Context, db *DB, owner string) (*cubawheeler.Wallet, error) {
 	collection := db.Collection(WalletCollection)
 	var w cubawheeler.Wallet
-	err := collection.FindOne(context, bson.M{"owner": owner}).Decode(&w)
+	f := bson.D{
+		{Key: "$or", Value: []any{
+			bson.D{{Key: "owner", Value: owner}},
+			bson.D{{Key: "referer", Value: owner}},
+		}},
+	}
+	err := collection.FindOne(context, f).Decode(&w)
 	if err != nil {
 		return nil, fmt.Errorf("error finding wallet: %w", err)
 	}

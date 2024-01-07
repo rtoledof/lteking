@@ -12,11 +12,56 @@ import (
 	"strconv"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"cubawheeler.io/pkg/graph/model"
 )
 
 var _ MutationResolver = &mutationResolver{}
 
 type mutationResolver struct{ *Resolver }
+
+// ConfirmTransaction implements MutationResolver.
+func (r *mutationResolver) ConfirmTransaction(ctx context.Context, id string, pin string) (*cubawheeler.Response, error) {
+	var response = cubawheeler.Response{
+		Success: true,
+		Code:    http.StatusNoContent,
+	}
+
+	value := url.Values{
+		"pin": []string{pin},
+		"id":  []string{id},
+	}
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/wallet/transfer/confirm", r.WalletService), value)
+	if err != nil {
+		response.Success = false
+		response.Message = err.Error()
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		response.Success = false
+		response.Message = fmt.Sprintf("error confirming transaction: %s", resp.Status)
+	}
+	return &response, nil
+}
+
+// Transfer implements MutationResolver.
+func (r *mutationResolver) Transfer(ctx context.Context, to string, amount int, currency string, typeArg model.TransferType) (*model.Transaction, error) {
+	value := url.Values{
+		"to":       []string{to},
+		"amount":   []string{fmt.Sprintf("%d", amount)},
+		"currency": []string{currency},
+		"type":     []string{string(typeArg)},
+	}
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/wallet/transfer", r.WalletService), value)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	defer resp.Body.Close()
+	var transaction model.Transaction
+	if err := json.NewDecoder(resp.Body).Decode(&transaction); err != nil {
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return &transaction, nil
+}
 
 // Redeem implements MutationResolver.
 func (r *mutationResolver) Redeem(ctx context.Context, input string) (*cubawheeler.Response, error) {
@@ -216,7 +261,7 @@ func (r *mutationResolver) Otp(ctx context.Context, email string) (*cubawheeler.
 
 	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/otp", r.AuthService), value)
 	if err != nil {
-		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+		return nil, err
 	}
 	defer resp.Body.Close()
 

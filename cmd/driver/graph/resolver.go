@@ -8,15 +8,17 @@ import "cubawheeler.io/pkg/uploader"
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	orderService string
-	authService  string
+	orderService  string
+	authService   string
+	walletService string
 
 	uploader uploader.Uploader
 }
 
-func NewResolver(orderService, authService string) *Resolver {
+func NewResolver(orderService, authService, walletService string) *Resolver {
 	return &Resolver{
-		orderService: orderService,
-		authService:  authService,
+		orderService:  orderService,
+		authService:   authService,
+		walletService: walletService,
 	}
 }

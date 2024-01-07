@@ -31,6 +31,20 @@ enum ShapeType {
   MULTILINE
 }
 
+enum TransferType {
+  DEPOSIT
+  WITHDRAW
+  TRANSACTION
+}
+
+enum TransferStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+
 type GeoLocation {
   type: ShapeType!
   coordinates: [Float!]!
@@ -533,6 +547,17 @@ enum ChargeMethod {
   MLC_TRANSACTION
 }
 
+
+type Transaction {
+  from: String
+  to: String
+  amount: Int!
+  currency: String!
+  type: String!
+  status: String!
+  created_at: String!
+}
+
 type Query {
   users(filter: UserFilter): UserList!
 
@@ -549,6 +574,11 @@ type Query {
   findApplications(input: ApplicationFilter): ApplicationList!
 
   nearByDrivers(input: PointInput): [NearByResponse!]!
+
+  paymentMethods: [ChargeMethod!]!
+
+  balance: Int!
+  transactions: [Transaction!]!
 }
 
 input UpdateProfile {
@@ -692,4 +722,7 @@ type Mutation {
   updateApplicationCredentials(application: String!): Application!
 
   redeem(input: String!): Response!
+
+  transfer(to: String! amount: Int!, currency: String!, type: TransferType!): Transaction!
+  confirmTransaction(id: ID!, pin: String!): Response!
 }

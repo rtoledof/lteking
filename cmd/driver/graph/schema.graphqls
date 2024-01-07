@@ -62,6 +62,19 @@ enum Role {
   RIDER
 }
 
+enum TransferType {
+  DEPOSIT
+  WITHDRAW
+  TRANSACTION
+}
+
+enum TransferStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
 # End Enums 
 
 scalar Upload
@@ -162,6 +175,7 @@ type Point {
 
 type Item {
   points: [Point!]!
+  coupon: String
   riders: Int
   baggages: Boolean
   currency: String
@@ -207,10 +221,21 @@ type Token {
   expires_in: Int!
 }
 
+type Transaction {
+  from: String
+  to: String
+  amount: Int!
+  currency: String!
+  type: String!
+  status: String!
+  created_at: String!
+}
+
 type Query {
   me: User!
 
   balance: Int!
+  transactions: [Transaction!]!
 
   vehicles: [Vehicle!]!
   vehicle(id: ID!): Vehicle!
@@ -219,9 +244,6 @@ type Query {
 
   orders: [Order!]!
   order(id: ID!): Order!
-
-  payments: [Payment!]!
-  payment(id: ID!): Payment!
 }
 
 input AddVehicle {
@@ -257,4 +279,7 @@ type Mutation {
   updateVehicle(id: ID!, input: AddVehicle): Vehicle!
   deleteVehicle(id: ID!): Vehicle!
   listVehicles: [Vehicle!]!
+
+  transfer(to: String! amount: Int!, currency: String!, type: TransferType!): Transaction!
+  confirmTransaction(id: ID!, pin: String!): Response!
 }

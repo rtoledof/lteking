@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
@@ -23,6 +24,11 @@ func (h *OtpHandler) Otp(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("error parsing form: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	client := cubawheeler.ClientFromContext(r.Context())
+	if client == nil {
+		logger.Info("nil client in context")
+		return cubawheeler.NewError(cubawheeler.ErrAccessDenied, http.StatusUnauthorized, "client is nil")
+	}
+
 	userType := cubawheeler.RoleRider
 	if client != nil && client.Type == cubawheeler.ApplicationTypeDriver {
 		userType = cubawheeler.RoleDriver
@@ -41,7 +47,8 @@ func (h *OtpHandler) Otp(w http.ResponseWriter, r *http.Request) error {
 				Profile: cubawheeler.Profile{
 					Status: cubawheeler.ProfileStatusIncompleted,
 				},
-				Status: cubawheeler.UserStatusOnReview,
+				Status:  cubawheeler.UserStatusOnReview,
+				Referer: strings.ToUpper(cubawheeler.NewID().String()[:8]),
 			}
 			if err := h.User.CreateUser(r.Context(), user); err != nil {
 				logger.Info(fmt.Sprintf("start otp handler: %v", err))

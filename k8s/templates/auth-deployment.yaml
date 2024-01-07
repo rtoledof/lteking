@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: auth
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/auth:v1.2.39
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/auth:v1.2.40
         ports:
         - containerPort: 80
         env:

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -25,7 +26,18 @@ func handler(f fn) http.HandlerFunc {
 		err := f(writer, r)
 		if err != nil {
 			writer.WriteHeader(http.StatusBadRequest)
-			writer.Write([]byte(err.Error()))
+			content := err.Error()
+			var internalError = &cubawheeler.Error{}
+			if errors.As(err, &internalError) {
+				writer.WriteHeader(internalError.StatusCode)
+				data, err := json.Marshal(internalError)
+				if err != nil {
+					writer.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				content = string(data)
+			}
+			writer.Write([]byte(content))
 		}
 	}
 }

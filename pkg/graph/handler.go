@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,22 +29,24 @@ func NewHandler(
 	pmConfig cubawheeler.PaymentmethodConfig,
 	orderServiceURL string,
 	authServiceURL string,
+	walletService string,
 ) *handler.Server {
 	resolver := &Resolver{
-		user:         user,
-		ads:          mongo.NewAdsService(db),
-		charge:       mongo.NewChargeService(db),
-		coupon:       mongo.NewCouponService(db),
-		profile:      mongo.NewProfileService(db),
-		processor:    processor.NewCharge(pmConfig),
-		vehicle:      mongo.NewVehicleService(db),
-		location:     mongo.NewLocationService(db),
-		plan:         mongo.NewPlanService(db),
-		message:      mongo.NewMessageService(db),
-		otp:          redis.NewOtpService(client),
-		ablyClient:   ably.NewClient(connectionString, exit, abyKey),
-		OrderService: orderServiceURL,
-		AuthService:  authServiceURL,
+		user:          user,
+		ads:           mongo.NewAdsService(db),
+		charge:        mongo.NewChargeService(db),
+		coupon:        mongo.NewCouponService(db),
+		profile:       mongo.NewProfileService(db),
+		processor:     processor.NewCharge(pmConfig),
+		vehicle:       mongo.NewVehicleService(db),
+		location:      mongo.NewLocationService(db),
+		plan:          mongo.NewPlanService(db),
+		message:       mongo.NewMessageService(db),
+		otp:           redis.NewOtpService(client),
+		ablyClient:    ably.NewClient(connectionString, exit, abyKey),
+		OrderService:  orderServiceURL,
+		AuthService:   authServiceURL,
+		WalletService: walletService,
 	}
 	resolver.order = mongo.NewOrderService(db, resolver.processor, client)
 	resolver.realTimeLocation = realtime.NewRealTimeService(
@@ -76,8 +79,12 @@ func makeRequest(ctx context.Context, method string, url string, body url.Values
 		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	if resp.StatusCode != http.StatusOK {
-		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, cubawheeler.ErrAccessDenied
+		var e cubawheeler.Error
+		if err := json.NewDecoder(resp.Body).Decode(&e); err != nil {
+			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+		}
+		if e.StatusCode != 0 {
+			return nil, &e
 		}
 	}
 	return resp, nil

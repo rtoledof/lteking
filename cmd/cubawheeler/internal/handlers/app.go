@@ -13,7 +13,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/go-chi/jwtauth/v5"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
 
@@ -25,13 +24,6 @@ import (
 	rdb "cubawheeler.io/pkg/redis"
 	"cubawheeler.io/pkg/seed"
 )
-
-var tokenAuth *jwtauth.JWTAuth
-var privateKey string
-
-func init() {
-	tokenAuth = jwtauth.New("HS256", []byte(os.Getenv("JWT_PRIVATE_KEY")), nil)
-}
 
 type App struct {
 	router    http.Handler
@@ -162,7 +154,6 @@ func (a *App) loader() {
 		a.mongo,
 		a.done,
 	)
-	// appSrv := mongo.NewApplicationService(a.mongo)
 	client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
 
 	go client.Consumer.Consume(
@@ -196,6 +187,7 @@ func (a *App) loader() {
 			a.pmConfig,
 			a.config.ServiceDiscovery.OrderService,
 			a.config.ServiceDiscovery.AuthService,
+			a.config.ServiceDiscovery.WalletService,
 		)
 		r.Handle("/", playground.Handler("Rider GraphQL playground", "/query"))
 		r.Handle("/query", grapgqlSrv)

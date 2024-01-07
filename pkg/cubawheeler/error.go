@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrNotFound          = errors.New("not found")
+	ErrForbidden         = errors.New("forbidden")
 	ErrAccessDenied      = errors.New("access denied")
 	ErrInvalidInput      = errors.New("invalid input")
 	ErrInternal          = errors.New("internal server error")
@@ -28,18 +29,18 @@ var (
 
 type Error struct {
 	// Human-readable message.
-	Message string
+	Message string `json:"message"`
 
 	// Param or field with error.
-	Param string
+	Param string `json:"param,omitempty"`
 
-	StatusCode int
+	StatusCode int `json:"status_code,omitempty"`
 
 	// Underline error.
-	Err error
+	Err error `json:"-"`
 
 	// Extra data added to the response
-	Metadata
+	Metadata Metadata `json:"metadata,omitempty"`
 }
 
 func NewError(err error, statusCode int, message string) *Error {

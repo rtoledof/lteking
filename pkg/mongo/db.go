@@ -11,9 +11,6 @@ import (
 
 func init() {
 	database = os.Getenv("MONGO_DB_NAME")
-	if database == "" {
-		database = "cubawheeler"
-	}
 }
 
 var database string

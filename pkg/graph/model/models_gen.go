@@ -2,7 +2,111 @@
 
 package model
 
+import (
+	"fmt"
+	"io"
+	"strconv"
+)
+
 type Amount struct {
 	Amount   int    `json:"amount"`
 	Currency string `json:"currency"`
+}
+
+type Transaction struct {
+	From      *string `json:"from,omitempty"`
+	To        *string `json:"to,omitempty"`
+	Amount    int     `json:"amount"`
+	Currency  string  `json:"currency"`
+	Type      string  `json:"type"`
+	Status    string  `json:"status"`
+	CreatedAt string  `json:"created_at"`
+}
+
+type TransferStatus string
+
+const (
+	TransferStatusPending   TransferStatus = "PENDING"
+	TransferStatusCompleted TransferStatus = "COMPLETED"
+	TransferStatusFailed    TransferStatus = "FAILED"
+	TransferStatusCanceled  TransferStatus = "CANCELED"
+)
+
+var AllTransferStatus = []TransferStatus{
+	TransferStatusPending,
+	TransferStatusCompleted,
+	TransferStatusFailed,
+	TransferStatusCanceled,
+}
+
+func (e TransferStatus) IsValid() bool {
+	switch e {
+	case TransferStatusPending, TransferStatusCompleted, TransferStatusFailed, TransferStatusCanceled:
+		return true
+	}
+	return false
+}
+
+func (e TransferStatus) String() string {
+	return string(e)
+}
+
+func (e *TransferStatus) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TransferStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TransferStatus", str)
+	}
+	return nil
+}
+
+func (e TransferStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type TransferType string
+
+const (
+	TransferTypeDeposit     TransferType = "DEPOSIT"
+	TransferTypeWithdraw    TransferType = "WITHDRAW"
+	TransferTypeTransaction TransferType = "TRANSACTION"
+)
+
+var AllTransferType = []TransferType{
+	TransferTypeDeposit,
+	TransferTypeWithdraw,
+	TransferTypeTransaction,
+}
+
+func (e TransferType) IsValid() bool {
+	switch e {
+	case TransferTypeDeposit, TransferTypeWithdraw, TransferTypeTransaction:
+		return true
+	}
+	return false
+}
+
+func (e TransferType) String() string {
+	return string(e)
+}
+
+func (e *TransferType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TransferType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TransferType", str)
+	}
+	return nil
+}
+
+func (e TransferType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

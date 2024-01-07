@@ -24,7 +24,7 @@ type CategoryPrice struct {
 
 type Order struct {
 	ID               string                `json:"id" bson:"_id"`
-	Items            OrderItem             `json:"items" bson:"items"`
+	Items            OrderItem             `json:"item" bson:"item"`
 	History          []*Point              `json:"history,omitempty" bson:"history,omitempty"`
 	Driver           string                `json:"driver,omitempty" bson:"driver,omitempty"`
 	Rider            string                `json:"rider" bson:"rider"`
