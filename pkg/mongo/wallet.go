@@ -164,6 +164,10 @@ func (s *WalletService) ConfirmTransfer(ctx context.Context, id, pin string) (er
 		return err
 	}
 
+	if fromW.ID == toW.ID {
+		return fmt.Errorf("invalid transfer: %w", cubawheeler.ErrInvalidInput)
+	}
+
 	fromW.Withdraw(pendingTransfer.Amount, pendingTransfer.Currency)
 	toW.Deposit(pendingTransfer.Amount, pendingTransfer.Currency)
 	fromW.TransferEvent = append(fromW.TransferEvent[:index], fromW.TransferEvent[index+1:]...)
