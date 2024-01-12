@@ -136,8 +136,6 @@ func (a *App) loader() {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(CanonicalLog)
-	router.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
-	router.Use(AuthMiddleware)
 
 	router.Mount("/debug", middleware.Profiler())
 
@@ -145,10 +143,16 @@ func (a *App) loader() {
 		{
 			h := handlers.NewWalletHandler(mongo.NewWalletService(a.mongo))
 
+			r.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
+			r.Use(TokenMiddleware)
+			r.Use(AuthMiddleware)
+			r.Use(ClientMiddleware)
+
 			r.Route("/v1/wallet", func(r chi.Router) {
 				r.Get("/", handler(h.Balance))
+				r.Post("/", handler(h.Create))
 				r.Get("/transactions", handler(h.Transactions))
-				r.Post("/", handler(h.Transfer))
+				r.Post("/transfer", handler(h.Transfer))
 			})
 		}
 	})

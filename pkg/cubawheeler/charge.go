@@ -125,15 +125,15 @@ func (e ChargeStatus) MarshalGQL(w io.Writer) {
 type ChargeMethod string
 
 const (
-	ChargeMethodCash           ChargeMethod = "CASH"
-	ChargeMethodCard           ChargeMethod = "CARD"
-	ChargeMethodBank           ChargeMethod = "BANK"
+	ChargeMethodCash           ChargeMethod = "Cash"
+	ChargeMethodCard           ChargeMethod = "Card"
+	ChargeMethodBank           ChargeMethod = "Bank"
 	ChargeMethodPaypal         ChargeMethod = "Paypal"
 	ChargeMethodBitcoin        ChargeMethod = "Bitcoin"
 	ChargeMethodEthereum       ChargeMethod = "Ethereum"
 	ChargeMethodBalance        ChargeMethod = "Balance"
-	ChargeMethodCUPTransaction ChargeMethod = "CUP_TRANSACTION"
-	ChargeMethodMLCTransaction ChargeMethod = "MLC_TRANSACTION"
+	ChargeMethodCUPTransaction ChargeMethod = "CupTransaction"
+	ChargeMethodMLCTransaction ChargeMethod = "MlcTransaction"
 )
 
 var AllChargeMethod = []ChargeMethod{

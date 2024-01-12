@@ -9,7 +9,7 @@ import (
 var _ cubawheeler.WalletService = &WalletService{}
 
 type WalletService struct {
-	BalanceFn         func(context.Context, string) (int64, error)
+	BalanceFn         func(context.Context, string) (cubawheeler.Balance, error)
 	ConfirmTransferFn func(context.Context, string, string) error
 	CreateFn          func(context.Context, string) (*cubawheeler.Wallet, error)
 	DepositFn         func(context.Context, string, int64, string) (*cubawheeler.Wallet, error)
@@ -20,7 +20,7 @@ type WalletService struct {
 }
 
 // Balance implements cubawheeler.WalletService.
-func (s *WalletService) Balance(ctx context.Context, owner string) (int64, error) {
+func (s *WalletService) Balance(ctx context.Context, owner string) (cubawheeler.Balance, error) {
 	return s.BalanceFn(ctx, owner)
 }
 

@@ -151,8 +151,11 @@ func LoadConfig() Config {
 		cfg.Ably.ApiSubscriperKey = subscriberApiKey
 	}
 
-	if key, exist := os.LookupEnv("JWT_PRIVATE_KEY"); exist {
+	if key, exist := os.LookupEnv("JWT_SECRET_KEY"); exist {
 		cfg.JWTPrivateKey = key
+	}
+	if cfg.JWTPrivateKey == "" {
+		panic("JWT_SECRET_KEY is not set")
 	}
 
 	return cfg

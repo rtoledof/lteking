@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-
-	"cubawheeler.io/pkg/currency"
 )
 
 type OrderItem struct {
@@ -19,7 +17,8 @@ type OrderItem struct {
 
 type CategoryPrice struct {
 	Category VehicleCategory `json:"category"`
-	Price    currency.Amount `json:"price,omitempty"`
+	Price    int             `json:"price,omitempty"`
+	Currency string          `json:"currency,omitempty"`
 }
 
 type Order struct {
@@ -31,7 +30,8 @@ type Order struct {
 	Status           OrderStatus           `json:"status" bson:"status"`
 	StatusHistory    []*OrderStatusHistory `json:"status_history,omitempty" bson:"status_history,omitempty"`
 	Rate             int                   `json:"rate" bson:"rate"`
-	Price            *currency.Amount      `json:"price,omitempty" bson:"price,omitempty"`
+	Price            int                   `json:"price,omitempty" bson:"price,omitempty"`
+	Currency         string                `json:"currency,omitempty" bson:"currency,omitempty"`
 	Coupon           string                `json:"coupon,omitempty" bson:"coupon,omitempty"`
 	StartAt          int64                 `json:"start_at" bson:"start_at"`
 	EndAt            int64                 `json:"end_at" bson:"end_at"`

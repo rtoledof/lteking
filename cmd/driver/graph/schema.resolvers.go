@@ -13,6 +13,7 @@ import (
 	"net/url"
 
 	"cubawheeler.io/cmd/driver/graph/model"
+	"cubawheeler.io/pkg/client/auth"
 	"cubawheeler.io/pkg/cubawheeler"
 )
 
@@ -84,6 +85,51 @@ func (r *mutationResolver) Authorize(ctx context.Context, clientID string, clien
 	return &token, nil
 }
 
+// UpdateProfile is the resolver for the updateProfile field.
+func (r *mutationResolver) UpdateProfile(ctx context.Context, profile model.UpdateProfile) (*model.Response, error) {
+	token := cubawheeler.JWTFromContext(ctx)
+	if token == "" {
+		return nil, fmt.Errorf("unable to update the profile: %w", cubawheeler.ErrAccessDenied)
+	}
+	transport := auth.AuthTransport{
+		Token: token,
+	}
+	client, err := auth.NewClient(transport.Client(), r.authService)
+	if err != nil {
+		return nil, fmt.Errorf("error creating client: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	var rsp = model.Response{
+		Success: true,
+		Code:    http.StatusOK,
+		Message: "profile updated",
+	}
+	req := auth.UpdateProfile{}
+	if profile.Name != nil {
+		req.Name = *profile.Name
+	}
+	if profile.LastName != nil {
+		req.LastName = *profile.LastName
+	}
+	if profile.Phone != nil {
+		req.Phone = *profile.Phone
+	}
+	if profile.Dob != nil {
+		req.Dob = *profile.Dob
+	}
+	if profile.Gender != nil {
+		req.Gender = profile.Gender.String()
+	}
+	if profile.Photo != nil {
+		req.Photo = *profile.Photo
+	}
+	if err := client.UpdateProfile(ctx, req); err != nil {
+		rsp.Success = false
+		rsp.Code = http.StatusInternalServerError
+		rsp.Message = err.Error()
+	}
+	return &rsp, nil
+}
+
 // SetStatus is the resolver for the setStatus field.
 func (r *mutationResolver) SetStatus(ctx context.Context, active *bool) (*model.Response, error) {
 	user := cubawheeler.UserFromContext(ctx)
@@ -111,15 +157,20 @@ func (r *mutationResolver) AddDevice(ctx context.Context, decive string) (*model
 		Success: true,
 		Code:    http.StatusNoContent,
 	}
-	value := url.Values{
-		"device_id": []string{decive},
-	}
-	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/profile/device", r.authService), value)
-	if err != nil {
-		response.Success = false
-		response.Message = err.Error()
-		response.Code = http.StatusInternalServerError
-		return nil, err
+	{
+		token := cubawheeler.JWTFromContext(ctx)
+		transport := auth.AuthTransport{
+			Token: token,
+		}
+		client, err := auth.NewClient(transport.Client(), r.authService)
+		if err != nil {
+			return nil, fmt.Errorf("error creating client: %v: %w", err, cubawheeler.ErrInternal)
+		}
+		if err := client.AddDevice(ctx, decive); err != nil {
+			response.Success = false
+			response.Message = err.Error()
+			response.Code = http.StatusInternalServerError
+		}
 	}
 	return &response, nil
 }
@@ -377,18 +428,24 @@ func (r *mutationResolver) ConfirmTransaction(ctx context.Context, id string, pi
 }
 
 // Me is the resolver for the me field.
-func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/me", r.authService), nil)
-	if err != nil {
-		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+func (r *queryResolver) Me(ctx context.Context) (*model.ProfileOutput, error) {
+	token := cubawheeler.JWTFromContext(ctx)
+	if token == "" {
+		return nil, fmt.Errorf("unable to update the profile: %w", cubawheeler.ErrAccessDenied)
 	}
-	defer resp.Body.Close()
-	var user cubawheeler.User
-	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	transport := auth.AuthTransport{
+		Token: token,
+	}
+	client, err := auth.NewClient(transport.Client(), r.authService)
+	if err != nil {
+		return nil, fmt.Errorf("error creating client: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	user, err := client.GetProfile(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting profile: %v: %w", err, cubawheeler.ErrInternal)
 	}
 
-	return assambleUser(&user), nil
+	return assambleUser(user), nil
 }
 
 // Balance is the resolver for the balance field.

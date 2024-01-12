@@ -17,20 +17,20 @@ type Device struct {
 
 type User struct {
 	ID                  string         `json:"id" faker:"-" bson:"_id"`
-	Name                string         `json:"name" faker:"name" bson:"name"`
-	Password            []byte         `json:"-" bson:"password"`
+	Name                string         `json:"name,omitempty" faker:"name" bson:"name"`
+	Password            []byte         `json:"-" bson:"password,omitempty"`
 	Email               string         `json:"email" faker:"email" bson:"email"`
-	Pin                 []byte         `json:"pin" faker:"number" bson:"pin"`
+	Pin                 []byte         `json:"-" faker:"number" bson:"pin,omitempty"`
 	Otp                 string         `json:"-" bson:"otp,omitempty"`
-	Rate                float64        `json:"rate" bson:"rate"`
-	Available           bool           `json:"-" bson:"available"`
+	Rate                float64        `json:"rate,omitempty" bson:"rate,omitempty"`
+	Available           bool           `json:"-" bson:"available,omitempty"`
 	Status              UserStatus     `json:"status" bson:"status"`
 	ActiveVehicle       string         `json:"active_vehicle,omitempty" bson:"active_vehicle"`
-	Code                string         `json:"referal_code" bson:"referal_code"`
-	Referer             string         `json:"-" bson:"referer"`
+	Referer             string         `json:"refer" bson:"referer,omitempty"`
+	Referal             string         `json:"referal,omitempty" bson:"referal,omitempty"`
 	Role                Role           `json:"role" bson:"role"`
 	Plan                string         `json:"plan,omitempty" bson:"plan"`
-	Locations           []*Location    `json:"locations,omitempty" bson:"locations"`
+	Locations           []*Location    `json:"locations,omitempty" bson:"locations,omitempty"`
 	LastLocations       []*Location    `json:"last_locations,omitempty" bson:"last_locations,omitempty"`
 	Vehicles            []*Vehicle     `json:"vehicles,omitempty" bson:"vehicles"`
 	FavoriteVehicles    []*Vehicle     `json:"favorite_vehicles,omitempty" bson:"favorite_vehicles,omitempty"`

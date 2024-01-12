@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler"
 
 	"cubawheeler.io/pkg/ably"
+	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/mongo"
 	"cubawheeler.io/pkg/processor"
@@ -60,6 +62,8 @@ func NewHandler(
 }
 
 func makeRequest(ctx context.Context, method string, url string, body url.Values) (*http.Response, error) {
+	logger := cannon.LoggerFromContext(ctx)
+	logger.Info("Making request to %s", url)
 	jwtToken := cubawheeler.JWTFromContext(ctx)
 	var reader io.Reader
 	if body != nil {
@@ -78,14 +82,22 @@ func makeRequest(ctx context.Context, method string, url string, body url.Values
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
 	}
-	if resp.StatusCode != http.StatusOK {
-		var e cubawheeler.Error
-		if err := json.NewDecoder(resp.Body).Decode(&e); err != nil {
-			return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error reading response body: %v: %w", err, cubawheeler.ErrInternal)
 		}
-		if e.StatusCode != 0 {
-			return nil, &e
+		logger.Info("Error making request to %s: rsp: %s", url, body)
+		if bytes.Contains(body, []byte("error")) {
+			var e cubawheeler.Error
+			if err := json.NewDecoder(resp.Body).Decode(&e); err != nil {
+				return nil, cubawheeler.NewError(err, http.StatusInternalServerError, "error decoding response body")
+			}
+			if e.StatusCode != 0 {
+				return nil, &e
+			}
 		}
 	}
+	logger.Info("Successful request to %s: status code: %d", url, resp.StatusCode)
 	return resp, nil
 }

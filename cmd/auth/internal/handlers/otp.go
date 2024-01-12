@@ -12,8 +12,9 @@ import (
 )
 
 type OtpHandler struct {
-	OTP  cubawheeler.OtpService
-	User cubawheeler.UserService
+	OTP       cubawheeler.OtpService
+	User      cubawheeler.UserService
+	WalletApi string
 }
 
 func (h *OtpHandler) Otp(w http.ResponseWriter, r *http.Request) error {
@@ -54,6 +55,7 @@ func (h *OtpHandler) Otp(w http.ResponseWriter, r *http.Request) error {
 				logger.Info(fmt.Sprintf("start otp handler: %v", err))
 				return fmt.Errorf("error creating user: %v: %w", err, cubawheeler.ErrInternal)
 			}
+
 		} else {
 			logger.Info(fmt.Sprintf("start otp handler: %v", err))
 			w.WriteHeader(http.StatusNotFound)

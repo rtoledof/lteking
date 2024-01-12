@@ -28,7 +28,7 @@ func (h *ProfileHandler) Update(w http.ResponseWriter, r *http.Request) error {
 		return cubawheeler.NewError(err, http.StatusBadRequest, "invalid form")
 	}
 	if str := r.FormValue("name"); str != "" {
-		user.Name = str
+		user.Profile.Name = str
 	}
 	if str := r.FormValue("phone"); str != "" {
 		user.Profile.Phone = str
@@ -67,8 +67,13 @@ func (h *ProfileHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	if user == nil {
 		return cubawheeler.ErrUnauthorized
 	}
+	usr, err := h.User.FindByEmail(r.Context(), user.Email)
+	if err != nil {
+		return err
+	}
+
 	w.WriteHeader(http.StatusOK)
-	return json.NewEncoder(w).Encode(user)
+	return json.NewEncoder(w).Encode(usr)
 }
 
 func (h *ProfileHandler) AddDevice(w http.ResponseWriter, r *http.Request) error {
@@ -79,7 +84,7 @@ func (h *ProfileHandler) AddDevice(w http.ResponseWriter, r *http.Request) error
 	if err := r.ParseForm(); err != nil {
 		return cubawheeler.NewError(err, http.StatusBadRequest, "invalid form")
 	}
-	if str := r.FormValue("device_id"); str != "" {
+	if str := r.FormValue("device"); str != "" {
 		if err := h.User.AddDevice(r.Context(), str); err != nil {
 			return err
 		}

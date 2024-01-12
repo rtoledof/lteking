@@ -8,7 +8,7 @@ import (
 type Wallet struct {
 	ID               string          `json:"id" bson:"_id"`
 	Owner            string          `json:"owner" bson:"owner"`
-	Balance          int64           `json:"balance" bson:"balance"`
+	Balance          Balance         `json:"balance" bson:"balance"`
 	Currency         string          `json:"currency" bson:"currency"`
 	CreatedAt        uint            `json:"-" bson:"created_at"`
 	UpdatedAt        uint            `json:"updated_at" bson:"updated_at"`
@@ -17,12 +17,12 @@ type Wallet struct {
 	PendingTransfers []TransferEvent `json:"-" bson:"pending_transfers"`
 }
 
-func (w *Wallet) CanWithdraw(amount int64) bool {
-	return w.Balance-amount >= 0
+func (w *Wallet) CanWithdraw(amount int64, currency string) bool {
+	return w.Balance.Amount[currency]-amount >= 0
 }
 
-func (w *Wallet) CanTransfer(amount int64) bool {
-	return w.Balance-amount >= 0
+func (w *Wallet) CanTransfer(amount int64, currency string) bool {
+	return w.Balance.Amount[currency]-amount >= 0
 }
 
 func (w *Wallet) FindPendingTransfer(id string) (*TransferEvent, int) {
@@ -35,7 +35,7 @@ func (w *Wallet) FindPendingTransfer(id string) (*TransferEvent, int) {
 }
 
 func (w *Wallet) Deposit(amount int64, currency string) {
-	w.Balance += amount
+	w.Balance.Amount[currency] += amount
 	w.UpdatedAt = uint(time.Now().Unix())
 	w.Events = append(w.Events, DepositEvent{
 		Amount:    amount,
@@ -51,7 +51,7 @@ func (w *Wallet) Deposit(amount int64, currency string) {
 }
 
 func (w *Wallet) Withdraw(amount int64, currency string) {
-	w.Balance -= amount
+	w.Balance.Amount[currency] -= amount
 	w.UpdatedAt = uint(time.Now().Unix())
 	w.Events = append(w.Events, WithdrawEvent{
 		Amount:    amount,
@@ -69,7 +69,7 @@ func (w *Wallet) Withdraw(amount int64, currency string) {
 func NewWallet() *Wallet {
 	return &Wallet{
 		ID:        NewID().String(),
-		Balance:   0,
+		Balance:   Balance{Amount: make(map[string]int64)},
 		CreatedAt: uint(time.Now().Unix()),
 		UpdatedAt: uint(time.Now().Unix()),
 	}
@@ -176,6 +176,6 @@ type WalletService interface {
 	Transfer(context.Context, string, int64, string) (*TransferEvent, error)
 	ConfirmTransfer(context.Context, string, string) error
 	FindByOwner(context.Context, string) (*Wallet, error)
-	Balance(context.Context, string) (int64, error)
+	Balance(context.Context, string) (Balance, error)
 	Transactions(context.Context, string) ([]TransferEvent, error)
 }

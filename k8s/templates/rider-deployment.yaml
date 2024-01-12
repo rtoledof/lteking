@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: rider
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/rider:v1.2.20
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/rider:v1.1.6
         ports:
         - containerPort: 80
         env:
@@ -33,7 +33,7 @@ spec:
         - name: SMTP_PASS
           value: "chej eqte xkvn yply"
         - name: MONGO_URL
-          value: "mongodb://mongodb:27017"
+          value: "mongodb://mongodb-svc:27017/?retryWrites=true&w=majority"
         - name: MONGO_DB_NAME
           value: "rider"
         - name: APP_NAME
@@ -45,7 +45,7 @@ spec:
         - name: AUTH_SERVICE_URL
           value: "http://auth:8001"
         - name: WALLET_SERVICE_URL
-          value: "http://wallet:8000"
+          value: "http://wallet:8004"
         - name: SEED
           value: "true"
         - name: REDIS_ADDR
@@ -56,3 +56,16 @@ spec:
           value: "z8TS2w:location_update"
         - name: AMQP_CUSTOMER
           value: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rider
+spec:
+  selector:
+    app: rider
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30001
+  type: LoadBalancer

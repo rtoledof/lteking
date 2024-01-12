@@ -47,6 +47,12 @@ func New(cfg Config) *App {
 	client := redis.NewClient(opt)
 	redisDB := rdb.NewRedis(client)
 	mongoDB := mongo.NewDB(cfg.Mongo)
+
+	user := mongo.NewUserService(
+		mongoDB,
+		cfg.ServiceDiscovery.WalletService,
+		make(chan struct{}),
+	)
 	app := &App{
 		rdb:    redisDB,
 		config: cfg,
@@ -63,10 +69,7 @@ func New(cfg Config) *App {
 		realTime: realtime.NewRealTimeService(
 			rdb.NewRealTimeService(redisDB),
 			abl.Notifier{},
-			mongo.NewUserService(
-				mongoDB,
-				make(chan struct{}),
-			),
+			user,
 			redisDB,
 			mongo.NewOrderService(mongoDB, nil, redisDB),
 		),

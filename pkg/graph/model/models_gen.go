@@ -13,6 +13,29 @@ type Amount struct {
 	Currency string `json:"currency"`
 }
 
+type Balance struct {
+	Amount   int    `json:"amount"`
+	Currency string `json:"currency"`
+}
+
+type ChargeMethod struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type ProfileOutput struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	LastName string  `json:"last_name"`
+	Email    string  `json:"email"`
+	Dob      string  `json:"dob"`
+	Phone    string  `json:"phone"`
+	Photo    string  `json:"photo"`
+	Rate     float64 `json:"rate"`
+	Status   string  `json:"status"`
+	Gender   string  `json:"gender"`
+}
+
 type Transaction struct {
 	From      *string `json:"from,omitempty"`
 	To        *string `json:"to,omitempty"`
@@ -21,6 +44,51 @@ type Transaction struct {
 	Type      string  `json:"type"`
 	Status    string  `json:"status"`
 	CreatedAt string  `json:"created_at"`
+}
+
+type Method string
+
+const (
+	MethodCash           Method = "Cash"
+	MethodCupTransaction Method = "CupTransaction"
+	MethodMlcTransaction Method = "MlcTransaction"
+	MethodBalance        Method = "Balance"
+)
+
+var AllMethod = []Method{
+	MethodCash,
+	MethodCupTransaction,
+	MethodMlcTransaction,
+	MethodBalance,
+}
+
+func (e Method) IsValid() bool {
+	switch e {
+	case MethodCash, MethodCupTransaction, MethodMlcTransaction, MethodBalance:
+		return true
+	}
+	return false
+}
+
+func (e Method) String() string {
+	return string(e)
+}
+
+func (e *Method) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Method(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Method", str)
+	}
+	return nil
+}
+
+func (e Method) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type TransferStatus string

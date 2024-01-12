@@ -77,6 +77,10 @@ func (a *App) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to connect to redis: %w", err)
 	}
 
+	if err := a.mongo.Ping(ctx); err != nil {
+		return fmt.Errorf("failed to connect to mongo: %w", err)
+	}
+
 	defer func() {
 		if err := a.rdb.Close(); err != nil {
 			fmt.Println("failed to close redis", err)
@@ -146,7 +150,7 @@ func (a *App) loader() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	userSrv := mongo.NewUserService(a.mongo, a.done)
+	userSrv := mongo.NewUserService(a.mongo, a.config.WalletApi, a.done)
 	appSrv := mongo.NewApplicationService(a.mongo)
 
 	router.Use(middleware.RequestID)
@@ -155,6 +159,8 @@ func (a *App) loader() {
 	router.Use(CanonicalLog)
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(TokenMiddleware)
+	router.Use(ClientMiddleware)
+	router.Use(ContentType)
 
 	tokenVerifier := rdb.NewTokenVerifier(a.rdb, userSrv, appSrv)
 
@@ -180,18 +186,16 @@ func (a *App) loader() {
 
 	router.Group(func(r chi.Router) {
 
-		r.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
-		r.Use(AuthMiddleware)
-		r.Use(ClientMiddleware(appSrv))
-		r.Use(TokenMiddleware)
+		r.Use(oauth.Authorize(a.config.JWTPrivateKey, nil), ClientMiddleware, AuthMiddleware)
 
 		{
 			h := &handlers.OtpHandler{
-				OTP:  rdb.NewOtpService(a.rdb),
-				User: userSrv,
+				OTP:       rdb.NewOtpService(a.rdb),
+				User:      userSrv,
+				WalletApi: a.config.WalletApi,
 			}
 
-			router.Post("/otp", handler(h.Otp))
+			r.Post("/otp", handler(h.Otp))
 		}
 
 		{

@@ -82,7 +82,7 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 	order.Status = cubawheeler.OrderStatusConfirmed
 	for _, c := range order.CategoryPrice {
 		if c.Category == req.Category {
-			order.Price = &c.Price
+			order.Price = int(c.Price)
 			order.SelectedCategory = c
 			break
 		}
@@ -91,13 +91,16 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return err
 	}
-
-	charger, err := s.charge.Charge(ctx, order.ChargeMethod, *order.Price)
+	// TODO: move this to finish order if the order is not card
+	charger, err := s.charge.Charge(ctx, order.ChargeMethod, currency.Amount{
+		Amount:   int64(order.Price),
+		Currency: currency.MustParse(order.Currency),
+	})
 	if err != nil {
 		return err
 	}
 	order.ChargeID = charger.ID
-
+	// END TODO
 	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return err
 	}
@@ -140,10 +143,8 @@ func (s *OrderService) CalculatePrice(o *cubawheeler.Order) error {
 	for _, b := range brands {
 		o.CategoryPrice = append(o.CategoryPrice, &cubawheeler.CategoryPrice{
 			Category: b.Category,
-			Price: currency.Amount{
-				Amount:   int64(float64(price) * b.Factor),
-				Currency: o.Price.Currency,
-			},
+			Price:    int(float64(price) * b.Factor),
+			Currency: o.Currency,
 		})
 	}
 	return nil
@@ -424,6 +425,9 @@ func (s *OrderService) prepareOrder(ctx context.Context, order *cubawheeler.Orde
 			CreatedAt: time.Now().UTC().Unix(),
 		}
 	}
+	if order.ID == "" {
+		order.ID = cubawheeler.NewID().String()
+	}
 	var err error
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
@@ -431,19 +435,16 @@ func (s *OrderService) prepareOrder(ctx context.Context, order *cubawheeler.Orde
 	}
 	order.Rider = usr.ID
 	if req.Currency != "" {
-		order.Price.Currency, err = currency.Parse(req.Currency)
+		_, err = currency.Parse(req.Currency)
 		if err != nil {
 			return nil, fmt.Errorf("invalid currency: %v: %w", err, cubawheeler.ErrInvalidCurrency)
 		}
+		order.Currency = req.Currency
 	}
-	if order.Price == nil || order.Price.Currency == currency.XXX {
-		order.Price = &currency.Amount{}
-		order.Price.Currency = currency.MustParse(currency.CUP)
+	if order.Currency == currency.XXX.String() {
+		order.Currency = currency.CUP
 		if usr.Profile.PreferedCurrency != "" {
-			order.Price.Currency, err = currency.Parse(usr.Profile.PreferedCurrency)
-			if err != nil {
-				return nil, fmt.Errorf("invalid currency: %v: %w", err, cubawheeler.ErrInvalidCurrency)
-			}
+			order.Currency = usr.Profile.PreferedCurrency
 		}
 	}
 

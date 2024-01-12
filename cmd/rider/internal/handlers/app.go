@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -152,6 +151,7 @@ func (a *App) loader() {
 
 	userSrv := mongo.NewUserService(
 		a.mongo,
+		a.config.ServiceDiscovery.WalletService,
 		a.done,
 	)
 	client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
@@ -175,7 +175,6 @@ func (a *App) loader() {
 
 	router.Mount("/debug", middleware.Profiler())
 
-	slog.Info(fmt.Sprintf("Riders service discovery: %v", a.config.ServiceDiscovery))
 	router.Group(func(r chi.Router) {
 		grapgqlSrv := graph.NewHandler(
 			a.rdb,

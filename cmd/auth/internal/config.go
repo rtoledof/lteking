@@ -50,6 +50,8 @@ type Config struct {
 	BeansSecret   string
 
 	Ably Ably
+
+	WalletApi string
 }
 
 func LoadConfig() Config {
@@ -169,6 +171,13 @@ func LoadConfig() Config {
 	}
 	if cfg.JWTPrivateKey == "" {
 		panic("JWT_SECRET_KEY is not set")
+	}
+
+	if walletApi, exist := os.LookupEnv("WALLET_API"); exist {
+		cfg.WalletApi = walletApi
+	}
+	if cfg.WalletApi == "" {
+		panic("WALLET_API is not set")
 	}
 	return cfg
 }

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: order
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/order:v1.2.3
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/order:v1.1.8
         ports:
         - containerPort: 80
         env:
@@ -37,7 +37,7 @@ spec:
         - name: SERVER_PORT
           value: "80"
         - name: MONGO_URL
-          value: "mongodb://mongodb:27017"
+          value: "mongodb://mongodb-svc:27017/?retryWrites=true&w=majority"
         - name: REDIS_ADDR
           value: "redis://redis:6379"
         - name: MONGO_DB_NAME
@@ -46,3 +46,18 @@ spec:
           value: "Order service"
         - name: SEED
           value: "true"
+        - name: MAPBOX_TOKEN
+          value: "sk.eyJ1IjoiY3ViYXdoZWVsZXJhcHAiLCJhIjoiY2xyNzI3cHNkMDhzejJxbnhvOTljMnd1eCJ9.GYr_A_3ylsdmf2XTtqXQjw"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order
+spec:
+  selector:
+    app: order
+  ports:
+    - protocol: TCP
+      port: 8003
+      targetPort: 80
+  type: LoadBalancer

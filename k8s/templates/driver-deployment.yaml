@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: driver
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/driver:v1.2.10
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/driver:v1.1
         ports:
         - containerPort: 80
         env:
@@ -33,7 +33,7 @@ spec:
         - name: SMTP_PASS
           value: "chej eqte xkvn yply"
         - name: MONGO_URL
-          value: "mongodb://mongodb:27017"
+          value: "mongodb://mongodb-svc:27017/?retryWrites=true&w=majority"
         - name: MONGO_DB_NAME
           value: "driver"
         - name: APP_NAME
@@ -45,7 +45,7 @@ spec:
         - name: AUTH_SERVICE_URL
           value: "http://auth:8001"
         - name: WALLET_SERVICE_URL
-          value: "http://wallet:8000"
+          value: "http://wallet:8004"
         - name: SEED
           value: "true"
         - name: REDIS_ADDR
@@ -56,4 +56,16 @@ spec:
           value: "z8TS2w:location_update"
         - name: AMQP_CUSTOMER
           value: ""
-      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: driver
+spec:
+  selector:
+    app: driver
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30002
+  type: LoadBalancer

@@ -20,8 +20,8 @@ func (*orderResolver) Items(ctx context.Context, obj *cubawheeler.Order) (*cubaw
 // Price implements OrderResolver.
 func (*orderResolver) Price(ctx context.Context, obj *cubawheeler.Order) (*model.Amount, error) {
 	return &model.Amount{
-		Amount:   int(obj.Price.Amount),
-		Currency: obj.Price.Currency.String(),
+		Amount:   int(obj.Price),
+		Currency: obj.Currency,
 	}, nil
 }
 
@@ -81,7 +81,15 @@ func (r *createOrderRequestResolver) Baggages(ctx context.Context, obj *cubawhee
 	return nil
 }
 
+var _ ConfirmOrderResolver = &confirmOrderResolver{}
+
 type confirmOrderResolver struct{ *Resolver }
+
+// Method implements ConfirmOrderResolver.
+func (*confirmOrderResolver) Method(ctx context.Context, obj *cubawheeler.ConfirmOrder, data model.Method) error {
+	obj.Method = cubawheeler.ChargeMethod(data)
+	return nil
+}
 
 // Order is the resolver for the order field.
 func (r *confirmOrderResolver) Order(ctx context.Context, obj *cubawheeler.ConfirmOrder, data string) error {

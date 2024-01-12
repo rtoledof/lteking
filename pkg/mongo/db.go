@@ -44,3 +44,7 @@ func NewDB(serverURL string) *DB {
 func (db *DB) Collection(name Collections) *mongo.Collection {
 	return db.client.Database(database).Collection(name.String())
 }
+
+func (db *DB) Ping(ctx context.Context) error {
+	return db.client.Ping(ctx, nil)
+}

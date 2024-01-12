@@ -16,6 +16,23 @@ func NewWalletHandler(service cubawheeler.WalletService) *WalletHandler {
 	return &WalletHandler{service: service}
 }
 
+func (h *WalletHandler) Create(w http.ResponseWriter, r *http.Request) error {
+	client := cubawheeler.ClientFromContext(r.Context())
+	if client == nil {
+		return cubawheeler.NewError(nil, http.StatusForbidden, "you are not allowed to do this")
+	}
+	if err := r.ParseForm(); err != nil {
+		return err
+	}
+	owner := r.FormValue("owner")
+	_, err := h.service.Create(r.Context(), owner)
+	if err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusCreated)
+	return nil
+}
+
 func (h *WalletHandler) Balance(w http.ResponseWriter, r *http.Request) error {
 	if !canDo(r, []cubawheeler.Role{cubawheeler.RoleRider, cubawheeler.RoleDriver}...) {
 		return cubawheeler.NewError(nil, http.StatusForbidden, "you are not allowed to do this")

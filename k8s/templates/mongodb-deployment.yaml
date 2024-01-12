@@ -1,20 +1,36 @@
 # mongodb-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
 metadata:
   name: mongodb
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: mongodb
-  template:
-    metadata:
-      labels:
-        app: mongodb
+  members: 3
+  type: ReplicaSet
+  version: "4.2.6"
+  security:
+    authentication:
+      modes: ["SCRAM"]
+  users:
+  - name: myUser
+    db: admin
+    passwordSecretRef: 
+      name: myUserPassword
+    roles:
+    - name: readWrite
+      db: cubawheeler
+  statefulSet:
     spec:
-      containers:
-      - name: mongodb
-        image: mongo:latest
-        ports:
-        - containerPort: 27017
+      serviceName: mongodb-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-svc
+spec:
+  type: NodePort
+  ports:
+  - port: 27017
+    targetPort: 27017
+    nodePort: 30000
+  selector:
+    app: mongodb

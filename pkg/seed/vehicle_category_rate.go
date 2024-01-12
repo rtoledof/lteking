@@ -2,6 +2,7 @@ package seed
 
 import (
 	"context"
+	"errors"
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/mongo"
@@ -62,7 +63,7 @@ func (r *VehicleCategoryRate) Up() error {
 	ctx := cubawheeler.NewContextWithUser(context.Background(), &usr)
 	for _, feature := range r.features {
 		_, err := r.service.FindByCategory(ctx, feature.Category)
-		if err != nil && err == cubawheeler.ErrNotFound {
+		if err != nil && errors.Is(err, cubawheeler.ErrNotFound) {
 			if _, err := r.service.Create(ctx, &feature); err != nil {
 				return err
 			}

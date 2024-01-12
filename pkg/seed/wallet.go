@@ -17,7 +17,7 @@ type Wallet struct {
 func NewWallet(db *mongo.DB) *Wallet {
 	return &Wallet{
 		service: mongo.NewWalletService(db),
-		user:    mongo.NewUserService(db, nil),
+		user:    mongo.NewUserService(db, "", nil),
 	}
 }
 

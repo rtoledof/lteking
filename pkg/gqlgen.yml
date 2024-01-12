@@ -184,8 +184,6 @@ models:
     model: cubawheeler.io/pkg/cubawheeler.WaitPoint
   DirectionRequest: 
     model: cubawheeler.io/pkg/cubawheeler.DirectionRequest
-  ChargeMethod: 
-    model: cubawheeler.io/pkg/cubawheeler.ChargeMethod
   ConfirmOrder: 
     model: cubawheeler.io/pkg/cubawheeler.ConfirmOrder
   GrantType: 

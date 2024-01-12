@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"cubawheeler.io/pkg/cannon"
+	"cubawheeler.io/pkg/client/wallet"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/derrors"
 )
@@ -19,11 +22,13 @@ var _ cubawheeler.UserService = &UserService{}
 const UsersCollection Collections = "users"
 
 type UserService struct {
-	db *DB
+	db     *DB
+	wallet string
 }
 
 func NewUserService(
 	db *DB,
+	wallet string,
 	done chan struct{},
 ) *UserService {
 
@@ -46,7 +51,8 @@ func NewUserService(
 	}
 
 	s := &UserService{
-		db: db,
+		db:     db,
+		wallet: wallet,
 	}
 
 	return s
@@ -62,9 +68,10 @@ func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest)
 				return nil, fmt.Errorf("no application provided: %w", cubawheeler.ErrAccessDenied)
 			}
 			user = &cubawheeler.User{
-				ID:     cubawheeler.NewID().String(),
-				Email:  input.Email,
-				Status: cubawheeler.UserStatusOnReview,
+				ID:      cubawheeler.NewID().String(),
+				Email:   input.Email,
+				Status:  cubawheeler.UserStatusOnReview,
+				Referal: input.Referer,
 			}
 
 			switch app.Type {
@@ -87,6 +94,11 @@ func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest)
 		return nil, err
 	}
 
+	user.Otp = ""
+	if err := updateUser(ctx, s.db, user); err != nil {
+		return nil, err
+	}
+
 	if !user.IsActive() {
 		return nil, cubawheeler.ErrAccessDenied
 	}
@@ -96,7 +108,8 @@ func (s *UserService) Login(ctx context.Context, input cubawheeler.LoginRequest)
 
 func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.CreateUser")
-
+	logger := cannon.LoggerFromContext(ctx)
+	logger.Info("start otp handler")
 	if user.Referer != "" {
 		user.Referer = cubawheeler.NewID().String()[:8]
 	}
@@ -109,17 +122,14 @@ func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (e
 	if err := tx.StartTransaction(); err != nil {
 		return fmt.Errorf("unable to start a new transaction: %v: %w", err, cubawheeler.ErrInternal)
 	}
+	if err := createWallet(ctx, s.wallet, user.ID); err != nil {
+		tx.AbortTransaction(ctx)
+		return err
+	}
 	_, err = s.db.Collection(UsersCollection).InsertOne(ctx, user)
 	if err != nil {
 		tx.AbortTransaction(ctx)
 		return fmt.Errorf("unable to store the user: %w", err)
-	}
-	w := cubawheeler.NewWallet()
-	w.Owner = user.ID
-
-	if err = storeWallet(ctx, s.db, w); err != nil {
-		tx.AbortTransaction(ctx)
-		return fmt.Errorf("unable to store the wallet: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return tx.CommitTransaction(ctx)
 }
@@ -277,6 +287,11 @@ func (s *UserService) UpdateProfile(ctx context.Context, request *cubawheeler.Up
 	if usr == nil {
 		return errors.New("invalid token provided")
 	}
+	usr, err = findUserByEmail(ctx, s.db, usr.Email)
+	if err != nil {
+		return err
+	}
+
 	if request.Name != nil {
 		usr.Profile.Name = *request.Name
 	}
@@ -320,6 +335,10 @@ func (s *UserService) AddDevice(ctx context.Context, device string) (err error) 
 	if usr == nil {
 		return cubawheeler.ErrNilUserInContext
 	}
+	usr, err = findUserByEmail(ctx, s.db, usr.Email)
+	if err != nil {
+		return err
+	}
 	usr.Devices = append(usr.Devices, cubawheeler.Device{Token: device, Active: true})
 	return updateUser(ctx, s.db, usr)
 }
@@ -347,6 +366,10 @@ func (s *UserService) SetAvailability(ctx context.Context, user string, availabl
 }
 
 func (s *UserService) Update(ctx context.Context, user *cubawheeler.User) error {
+	if user.Profile.IsCompleted(user.Role) {
+		user.Profile.Status = cubawheeler.ProfileStatusCompleted
+		user.Status = cubawheeler.UserStatusActive
+	}
 	return updateUser(ctx, s.db, user)
 }
 
@@ -468,4 +491,29 @@ func getDevices(ctx context.Context, db *DB, users []string) ([]string, error) {
 		devices = append(devices, token)
 	}
 	return devices, nil
+}
+
+func createWallet(ctx context.Context, walletURL, owner string) error {
+	logger := cannon.LoggerFromContext(ctx)
+	logger.Info("start create wallet")
+	token := cubawheeler.JWTFromContext(ctx)
+	if token == "" {
+		logger.Info("nil token in context")
+		return cubawheeler.NewError(cubawheeler.ErrAccessDenied, http.StatusUnauthorized, "token is nil")
+	}
+	walletTransport := wallet.AuthTransport{
+		Token: token,
+	}
+	walletClient, err := wallet.NewClient(walletTransport.Client(), walletURL)
+	if err != nil {
+		logger.Info(fmt.Sprintf("create waller: %v", err))
+		return fmt.Errorf("error creating wallet client: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	if _, err = walletClient.Service.Create(ctx, wallet.CreateRequest{
+		Owner: owner,
+	}); err != nil {
+		logger.Info(fmt.Sprintf("create wallet: %v", err))
+		return fmt.Errorf("error creating wallet: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return nil
 }

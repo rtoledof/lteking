@@ -94,14 +94,11 @@ func (s *WalletService) Withdraw(ctx context.Context, owner string, amount int64
 	if user == nil {
 		return nil, cubawheeler.ErrAccessDenied
 	}
-	if user.Role != cubawheeler.RoleAdmin {
-		return nil, fmt.Errorf("you are not allowed to do this: %w", cubawheeler.ErrForbidden)
-	}
 	w, err := s.FindByOwner(ctx, owner)
 	if err != nil {
 		return nil, err
 	}
-	if w.Balance-amount < 0 {
+	if w.Balance.Amount[currency]-amount < 0 {
 		return nil, fmt.Errorf("insufficient funds: %w", cubawheeler.ErrInsufficientFunds)
 	}
 	w.Withdraw(amount, currency)
@@ -120,7 +117,7 @@ func (s *WalletService) Transfer(ctx context.Context, to string, amount int64, c
 	if err != nil {
 		return nil, err
 	}
-	if !fromW.CanTransfer(amount) {
+	if !fromW.CanTransfer(amount, currency) {
 		return nil, fmt.Errorf("insufficient funds: %w", cubawheeler.ErrInsufficientFunds)
 	}
 
@@ -156,7 +153,7 @@ func (s *WalletService) ConfirmTransfer(ctx context.Context, id, pin string) (er
 	if pendingTransfer == nil {
 		return fmt.Errorf("transfer not found: %w", cubawheeler.ErrNotFound)
 	}
-	if !fromW.CanTransfer(pendingTransfer.Amount) {
+	if !fromW.CanTransfer(pendingTransfer.Amount, pendingTransfer.Currency) {
 		return fmt.Errorf("insufficient funds: %w", cubawheeler.ErrInsufficientFunds)
 	}
 	toW, err := s.FindByOwner(ctx, pendingTransfer.To)
@@ -194,11 +191,11 @@ func (s *WalletService) ConfirmTransfer(ctx context.Context, id, pin string) (er
 }
 
 // Balance implements cubawheeler.WalletService.
-func (s *WalletService) Balance(ctx context.Context, owner string) (_ int64, err error) {
+func (s *WalletService) Balance(ctx context.Context, owner string) (_ cubawheeler.Balance, err error) {
 	defer derrors.Wrap(&err, "mongo.WalletService.Balance")
 	w, err := findWalletByOwner(ctx, s.db, owner)
 	if err != nil {
-		return 0, err
+		return cubawheeler.Balance{}, err
 	}
 	return w.Balance, nil
 }

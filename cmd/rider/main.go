@@ -10,8 +10,8 @@ import (
 	_ "github.com/go-faker/faker/v4"
 	"github.com/joho/godotenv"
 
-	"cubawheeler.io/cmd/cubawheeler/internal/handlers"
 	"cubawheeler.io/cmd/internal"
+	"cubawheeler.io/cmd/rider/internal/handlers"
 )
 
 func init() {

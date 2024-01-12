@@ -42,6 +42,15 @@ func handler(f fn) http.HandlerFunc {
 	}
 }
 
+func ContentType(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(fn)
+}
+
 // AuthMiddleware decodes the share session cookie and packs the session into context
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -75,35 +84,33 @@ func AuthMiddleware(next http.Handler) http.Handler {
 }
 
 // ClientMiddleware decodes the share session cookie and packs the session into context
-func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func ClientMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			claims := cubawheeler.GetClaimsFromContext(r.Context())
-			if claims == nil {
+		claims := cubawheeler.GetClaimsFromContext(r.Context())
+		if claims == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		ctx := r.Context()
+
+		claimClient, ok := claims["client"]
+		if ok {
+			var client cubawheeler.Application
+			if err := json.Unmarshal([]byte(claimClient), &client); err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
-			ctx := r.Context()
+			ctx = cubawheeler.NewContextWithClient(ctx, &client)
+		}
 
-			claimClient, ok := claims["client"]
-			if ok {
-				var client cubawheeler.Application
-				if err := json.Unmarshal([]byte(claimClient), &client); err != nil {
-					next.ServeHTTP(w, r)
-					return
-				}
-				ctx = cubawheeler.NewContextWithClient(ctx, &client)
-			}
+		token := requestToken(r)
+		if token != "" {
+			ctx = cubawheeler.NewContextWithJWT(ctx, token)
+		}
 
-			token := requestToken(r)
-			if token != "" {
-				ctx = cubawheeler.NewContextWithJWT(ctx, token)
-			}
-
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // / TokenMiddleware decodes the share session cookie and packs the session into context

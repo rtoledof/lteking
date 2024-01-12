@@ -58,6 +58,7 @@ func New(cfg Config) *App {
 	app.loader()
 	if s := os.Getenv("SEED"); len(s) > 0 {
 		seed.RegisterSeeder("rate", func() seed.Seeder { return seed.NewRate(app.mongo) })
+		seed.RegisterSeeder("vehicle_categories", func() seed.Seeder { return seed.NewVehicleCategoryRate(app.mongo) })
 		if err := seed.Up(); err != nil {
 			fmt.Printf("unable to upload seeds: %s\n", err.Error())
 		}
@@ -152,9 +153,6 @@ func (a *App) loader() {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(CanonicalLog)
-	router.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
-	router.Use(AuthMiddleware)
-
 	router.Mount("/debug", middleware.Profiler())
 
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) {
@@ -168,8 +166,11 @@ func (a *App) loader() {
 			h := handlers.OrderHandler{
 				Service: mongo.NewOrderService(a.mongo, nil, a.rdb),
 			}
+			r.Use(TokenMiddleware)
+			r.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))
+			r.Use(AuthMiddleware)
 
-			router.Route("/v1/orders", func(r chi.Router) {
+			r.Route("/v1/orders", func(r chi.Router) {
 				r.Post("/", handler(h.Create))
 				r.Get("/", handler(h.List))
 

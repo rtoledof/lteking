@@ -90,7 +90,7 @@ func (r *mutationResolver) CreateOrder(ctx context.Context, input *cubawheeler.D
 		value.Add("points", fmt.Sprintf("%f,%f", v.Lat, v.Lng))
 	}
 
-	resp, err := makeRequest(ctx, http.MethodPost, r.OrderService, value)
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders", r.OrderService), value)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
 	}
@@ -178,13 +178,14 @@ func (r *mutationResolver) ConfirmOrder(ctx context.Context, req cubawheeler.Con
 	response := cubawheeler.Response{
 		Success: true,
 		Code:    http.StatusOK,
+		Message: "order confirmed",
 	}
 	value := url.Values{
 		"category": {string(req.Category)},
 		"method":   {string(req.Method)},
 		"currency": {req.Currency},
 	}
-	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/%s/confirm", r.OrderService, req.OrderID), value)
+	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/confirm", r.OrderService, req.OrderID), value)
 	if err != nil {
 		response.Success = false
 		response.Code = http.StatusBadRequest
@@ -279,15 +280,30 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, profile cubawheele
 		Success: true,
 		Code:    http.StatusOK,
 	}
-	value := url.Values{
-		"name":      {*profile.Name},
-		"last_name": {*profile.LastName},
-		"dob":       {*profile.Dob},
-		"phone":     {*profile.Phone},
-		"photo":     {*profile.Photo},
-		"gender":    {string(*profile.Gender)},
-		"dni":       {*profile.Dni},
+	value := url.Values{}
+
+	if profile.Name != nil {
+		value.Add("name", *profile.Name)
 	}
+	if profile.LastName != nil {
+		value.Add("last_name", *profile.LastName)
+	}
+	if profile.Dob != nil {
+		value.Add("dob", *profile.Dob)
+	}
+	if profile.Phone != nil {
+		value.Add("phone", *profile.Phone)
+	}
+	if profile.Photo != nil {
+		value.Add("photo", *profile.Photo)
+	}
+	if profile.Gender != nil {
+		value.Add("gender", profile.Gender.String())
+	}
+	if profile.Dni != nil {
+		value.Add("dni", *profile.Dni)
+	}
+
 	_, err := makeRequest(ctx, http.MethodPut, fmt.Sprintf("%s/profile", r.AuthService), value)
 	if err != nil {
 		rsp.Success = false
@@ -377,11 +393,12 @@ func (r *mutationResolver) AddDevice(ctx context.Context, device string) (*cubaw
 	var rsp = cubawheeler.Response{
 		Success: true,
 		Code:    http.StatusOK,
+		Message: "device added",
 	}
 	value := url.Values{
 		"device_id": {device},
 	}
-	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/profile/device", r.AuthService), value)
+	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/profile/devices", r.AuthService), value)
 	if err != nil {
 		rsp.Message = err.Error()
 		rsp.Code = http.StatusBadRequest

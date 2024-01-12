@@ -119,6 +119,19 @@ type Profile struct {
 	PreferedCurrency *string        `json:"prefered_currency,omitempty"`
 }
 
+type ProfileOutput struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	LastName string  `json:"last_name"`
+	Email    string  `json:"email"`
+	Dob      string  `json:"dob"`
+	Phone    string  `json:"phone"`
+	Photo    string  `json:"photo"`
+	Rate     float64 `json:"rate"`
+	Status   string  `json:"status"`
+	Gender   string  `json:"gender"`
+}
+
 type Response struct {
 	Message string `json:"message"`
 	Code    int    `json:"code"`
@@ -139,6 +152,19 @@ type Transaction struct {
 	Type      string  `json:"type"`
 	Status    string  `json:"status"`
 	CreatedAt string  `json:"created_at"`
+}
+
+type UpdateProfile struct {
+	Name              *string         `json:"name,omitempty"`
+	Dob               *string         `json:"dob,omitempty"`
+	LastName          *string         `json:"last_name,omitempty"`
+	Gender            *Gender         `json:"gender,omitempty"`
+	Phone             *string         `json:"phone,omitempty"`
+	Photo             *string         `json:"photo,omitempty"`
+	License           *string         `json:"license,omitempty"`
+	Circulation       *graphql.Upload `json:"circulation,omitempty"`
+	TechnicInspection *graphql.Upload `json:"technic_inspection,omitempty"`
+	Dni               *string         `json:"dni,omitempty"`
 }
 
 type User struct {

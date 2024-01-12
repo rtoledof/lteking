@@ -231,8 +231,22 @@ type Transaction {
   created_at: String!
 }
 
+type ProfileOutput {
+  id: ID!
+  name: String!
+  last_name: String!
+  email: String!
+  dob: String!
+  phone: String!
+  photo: String!
+  rate: Float!
+  status: String!
+  gender: String!
+}
+
+
 type Query {
-  me: User!
+  me: ProfileOutput!
 
   balance: Int!
   transactions: [Transaction!]!
@@ -262,10 +276,25 @@ input AddVehicle {
   technic_inspection: Upload
 }
 
+input UpdateProfile {
+  name: String
+  dob: String
+  last_name: String
+  gender: Gender
+  phone: String
+  photo: String
+  license: String
+  circulation: Upload
+  technic_inspection: Upload
+  dni: String
+}
+
 type Mutation {
   login(email: String!, otp: String!): Token!
   otp(email: String!): Response!
   authorize(client_id: String!, client_secret: String!, refresh_token: String): Token!
+
+  updateProfile(profile: UpdateProfile!): Response!
 
   setStatus(active: Boolean): Response!
   addDevice(decive: String!): Response!

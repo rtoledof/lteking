@@ -54,27 +54,17 @@ func makeRequest(ctx context.Context, method string, url string, body url.Values
 	return resp, nil
 }
 
-func assambleUser(user *cubawheeler.User) *model.User {
-	return &model.User{
-		ID:      user.ID,
-		Email:   user.Email,
-		Role:    model.Role(user.Role.String()),
-		Profile: assambleProfile(&user.Profile),
-	}
-}
-
-func assambleProfile(profile *cubawheeler.Profile) *model.Profile {
-	gender := model.Gender(profile.Gender.String())
-	return &model.Profile{
-		ID:               profile.ID,
-		Name:             &profile.Name,
-		LastName:         &profile.LastName,
-		Phone:            profile.Phone,
-		Dob:              &profile.DOB,
-		Photo:            profile.Photo,
-		Dni:              &profile.Dni,
-		Licence:          &profile.Licence,
-		Gender:           &gender,
-		PreferedCurrency: &profile.PreferedCurrency,
+func assambleUser(user *cubawheeler.User) *model.ProfileOutput {
+	return &model.ProfileOutput{
+		ID:       user.ID,
+		Email:    user.Email,
+		Name:     user.Profile.Name,
+		LastName: user.Profile.LastName,
+		Phone:    user.Profile.Phone,
+		Dob:      user.Profile.DOB,
+		Photo:    user.Profile.Photo,
+		Rate:     user.Rate,
+		Status:   user.Profile.Status.String(),
+		Gender:   user.Profile.Gender.String(),
 	}
 }

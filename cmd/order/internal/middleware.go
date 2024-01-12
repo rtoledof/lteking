@@ -2,16 +2,11 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 	_ "time"
-
-	"github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 
 	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
@@ -32,6 +27,8 @@ func handler(f fn) http.HandlerFunc {
 // / AuthMiddleware decodes the share session cookie and packs the session into context
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := cannon.LoggerFromContext(r.Context())
+		logger.Info("Populating user to the context")
 		claims := cubawheeler.GetClaimsFromContext(r.Context())
 		if claims == nil {
 			next.ServeHTTP(w, r)
@@ -59,18 +56,22 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r.WithContext(ctx))
+		logger.Info("END User populated to the context")
 	})
 }
 
 // / AuthMiddleware decodes the share session cookie and packs the session into context
 func TokenMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := cannon.LoggerFromContext(r.Context())
+		logger.Info("Populating token to the context")
 		ctx := r.Context()
 		token := requestToken(r)
 		if token != "" {
 			ctx = cubawheeler.NewContextWithJWT(ctx, token)
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
+		logger.Info("END Token populated to the context")
 	})
 }
 
@@ -108,37 +109,6 @@ func ClientMiddleware(srv cubawheeler.ApplicationService) func(http.Handler) htt
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-}
-
-var authHeaderExtractor = &request.PostExtractionFilter{
-	Extractor: request.HeaderExtractor{"Authorization"},
-	Filter:    stripBearerPrefixFromToken,
-}
-
-var authExtractor = &request.MultiExtractor{
-	authHeaderExtractor,
-	request.ArgumentExtractor{"access_token"},
-}
-
-func parseToken(r *http.Request) (*jwt.Token, error) {
-	jwtToken, err := request.ParseFromRequest(r, authHeaderExtractor, func(token *jwt.Token) (interface{}, error) {
-		secret := []byte(os.Getenv("JWT_SECRET"))
-		return secret, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("inavalid token provided: %w", err)
-	}
-	return jwtToken, nil
-}
-
-var replacer = strings.NewReplacer("sk_", "", "pk_", "", "test_", "")
-
-func stripBearerPrefixFromToken(token string) (string, error) {
-	const prefix = "Bearer "
-	if strings.HasPrefix(token, prefix) {
-		token = strings.TrimPrefix(token, prefix)
-	}
-	return token, nil
 }
 
 func requestToken(r *http.Request) string {

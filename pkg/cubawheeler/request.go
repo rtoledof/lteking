@@ -12,6 +12,7 @@ type LoginRequest struct {
 	GrantType    GrantType `json:"grant_type"`
 	Client       string    `json:"client"`
 	Secret       string    `json:"secret"`
+	Referer      string    `json:"referer"`
 	RefreshToken string    `json:"refresh_token"`
 }
 

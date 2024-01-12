@@ -32,13 +32,13 @@ func (o *OrderStatistics) AddOrder(order Order, date Time) {
 				Orders: []string{},
 				Total:  0,
 				Amount: currency.Amount{
-					Currency: order.Price.Currency,
+					Currency: currency.MustParse(order.Currency),
 				},
 			}
 		}
 		o.Orders[interval].Orders = append(o.Orders[interval].Orders, order.ID)
 		o.Orders[interval].Total++
-		o.Orders[interval].Amount.Amount += order.Price.Amount
+		o.Orders[interval].Amount.Amount += int64(order.Price)
 	}
 }
 

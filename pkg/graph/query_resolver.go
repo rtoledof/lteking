@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/graph/model"
 )
@@ -17,21 +19,28 @@ var _ QueryResolver = &queryResolver{}
 type queryResolver struct{ *Resolver }
 
 // Balance implements QueryResolver.
-func (r *queryResolver) Balance(ctx context.Context) (int, error) {
+func (r *queryResolver) Balance(ctx context.Context) ([]*model.Balance, error) {
 	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/wallet", r.WalletService), nil)
 	if err != nil {
-		return 0, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
 	}
 
-	var balance int
+	var balance cubawheeler.Balance
 	if err := json.NewDecoder(resp.Body).Decode(&balance); err != nil {
-		return 0, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
+		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
 	}
-	return balance, nil
+	var rsp []*model.Balance
+	for currency, value := range balance.Amount {
+		rsp = append(rsp, &model.Balance{
+			Currency: currency,
+			Amount:   int(value),
+		})
+	}
+	return rsp, nil
 }
 
 // Transactions implements QueryResolver.
@@ -49,12 +58,25 @@ func (r *queryResolver) Transactions(ctx context.Context) ([]*model.Transaction,
 }
 
 // PaymentMethods implements QueryResolver.
-func (*queryResolver) PaymentMethods(ctx context.Context) ([]cubawheeler.ChargeMethod, error) {
-	return []cubawheeler.ChargeMethod{
-		cubawheeler.ChargeMethodCash,
-		cubawheeler.ChargeMethodCUPTransaction,
-		cubawheeler.ChargeMethodMLCTransaction,
-		cubawheeler.ChargeMethodBalance,
+func (*queryResolver) PaymentMethods(ctx context.Context) ([]*model.ChargeMethod, error) {
+
+	return []*model.ChargeMethod{
+		{
+			Name:        cubawheeler.ChargeMethodCash.String(),
+			Description: "Pago en Efectivo",
+		},
+		{
+			Name:        cubawheeler.ChargeMethodCUPTransaction.String(),
+			Description: "Transferencia Bancaria (CUP)",
+		},
+		{
+			Name:        cubawheeler.ChargeMethodMLCTransaction.String(),
+			Description: "Transferencia Bancaria (MLC)",
+		},
+		{
+			Name:        cubawheeler.ChargeMethodBalance.String(),
+			Description: "Balance",
+		},
 	}, nil
 }
 
@@ -68,41 +90,37 @@ func (r *queryResolver) Orders(ctx context.Context, filter *cubawheeler.OrderFil
 	if filter == nil {
 		filter = &cubawheeler.OrderFilter{}
 	}
+	if filter.Limit == 0 {
+		filter.Limit = 10
+	}
 	value := url.Values{
-		"limit":  []string{fmt.Sprintf("%d", filter.Limit)},
-		"token":  []string{*filter.Token},
-		"ids":    filter.IDs,
-		"rider":  []string{*filter.Rider},
-		"driver": []string{*filter.Driver},
-		"status": []string{*filter.Status},
+		"limit": []string{fmt.Sprintf("%d", filter.Limit)},
+		"ids":   filter.IDs,
 	}
-	jwtToken := cubawheeler.JWTFromContext(ctx)
+	if filter.Token != nil {
+		value.Add("token", *filter.Token)
+	}
+	if filter.Rider != nil {
+		value.Add("rider", *filter.Rider)
+	}
+	if filter.Driver != nil {
+		value.Add("driver", *filter.Driver)
+	}
+	if filter.Status != nil {
+		value.Add("status", *filter.Status)
+	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s?%s", r.OrderService, value.Encode()), nil)
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders?%s", r.OrderService, value.Encode()), nil)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %v: %w", err, cubawheeler.ErrInternal)
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", jwtToken))
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
+		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		if resp.StatusCode == http.StatusUnauthorized {
-			return nil, cubawheeler.ErrAccessDenied
-		}
-	}
-	var orderList cubawheeler.OrderList
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response: %v: %w", err, cubawheeler.ErrInternal)
-	}
-	if err := json.Unmarshal(data, &orderList); err != nil {
+	orderList := new(cubawheeler.OrderList)
+	if err := json.NewDecoder(resp.Body).Decode(orderList); err != nil {
 		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
 	}
 
-	return &orderList, nil
+	return orderList, nil
 }
 
 // Charges is the resolver for the charges field.
@@ -111,17 +129,32 @@ func (r *queryResolver) Charges(ctx context.Context, filter cubawheeler.ChargeRe
 }
 
 // Profile is the resolver for the profile field.
-func (r *queryResolver) Me(ctx context.Context) (*cubawheeler.Profile, error) {
-	resp, err := makeRequest(ctx, http.MethodGet, r.AuthService, nil)
+func (r *queryResolver) Me(ctx context.Context) (*model.ProfileOutput, error) {
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/me", r.AuthService), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	defer resp.Body.Close()
-	var profile cubawheeler.Profile
-	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+	var user cubawheeler.User
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
 	}
-	return &profile, nil
+	return assambleUser(&user), nil
+}
+
+func assambleUser(user *cubawheeler.User) *model.ProfileOutput {
+	return &model.ProfileOutput{
+		ID:       user.ID,
+		Email:    user.Email,
+		Name:     user.Profile.Name,
+		LastName: user.Profile.LastName,
+		Phone:    user.Profile.Phone,
+		Dob:      user.Profile.DOB,
+		Photo:    user.Profile.Photo,
+		Rate:     user.Rate,
+		Status:   user.Profile.Status.String(),
+		Gender:   user.Profile.Gender.String(),
+	}
 }
 
 // LastNAddress is the resolver for the lastNAddress field.
@@ -136,18 +169,22 @@ func (r *queryResolver) Charge(ctx context.Context, id *string) (*cubawheeler.Ch
 
 // Trip is the resolver for the trip field.
 func (r *queryResolver) Order(ctx context.Context, id string) (*cubawheeler.Order, error) {
-	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/%s", r.OrderService, id), nil)
+	logger := cannon.LoggerFromContext(ctx)
+	logger.Info("Making request to %s", fmt.Sprintf("%s/v1/orders/%s", r.OrderService, id), nil)
+	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders/%s", r.OrderService, id), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v: %w", err, cubawheeler.ErrInternal)
 	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	logger.Info("Response body: %s", string(data), resp.StatusCode)
 	defer resp.Body.Close()
 
 	var order cubawheeler.Order
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response: %v: %w", err, cubawheeler.ErrInternal)
-	}
-	if err := json.Unmarshal(data, &order); err != nil {
+	if err := json.NewDecoder(bytes.NewBuffer(data)).Decode(&order); err != nil {
 		return nil, fmt.Errorf("error decoding response: %v: %w", err, cubawheeler.ErrInternal)
 	}
 
@@ -181,6 +218,9 @@ func (r *queryResolver) NearByDrivers(ctx context.Context, input *cubawheeler.Po
 		userLocations[l.User] = l
 	}
 
+	if len(users) == 0 {
+		return nil, fmt.Errorf("no drivers found")
+	}
 	rsp, err := r.user.FindAll(ctx, &cubawheeler.UserFilter{
 		Ids:    users,
 		Status: []cubawheeler.UserStatus{cubawheeler.UserStatusActive},

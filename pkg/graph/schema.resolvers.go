@@ -7,9 +7,6 @@ package graph
 // Ads returns AdsResolver implementation.
 func (r *Resolver) Ads() AdsResolver { return &adsResolver{r} }
 
-// CategoryPrice returns CategoryPriceResolver implementation.
-func (r *Resolver) CategoryPrice() CategoryPriceResolver { return &categoryPriceResolver{r} }
-
 // Charge returns ChargeResolver implementation.
 func (r *Resolver) Charge() ChargeResolver { return &chargeResolver{r} }
 

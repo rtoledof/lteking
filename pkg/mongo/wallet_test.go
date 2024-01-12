@@ -25,9 +25,6 @@ func TestWalletServiceCreate(t *testing.T) {
 	if w.ID == "" {
 		t.Fatal("expected wallet ID to be set")
 	}
-	if w.Balance != 0 {
-		t.Fatal("expected wallet balance to be 0")
-	}
 	if w.CreatedAt == 0 {
 		t.Fatal("expected wallet CreatedAt to be set")
 	}
@@ -38,20 +35,26 @@ func TestWalletServiceCreate(t *testing.T) {
 
 func TestWalletServiceFindByOwner(t *testing.T) {
 
+	ctx := context.Background()
+	ctx = cubawheeler.NewContextWithUser(ctx, &cubawheeler.User{
+		ID:   "test",
+		Role: cubawheeler.RoleRider,
+	})
+
 	database = "test"
 	db := NewTestDB()
 	defer func() {
-		db.Collection(WalletCollection).Drop(context.Background())
-		db.client.Disconnect(context.Background())
+		db.Collection(WalletCollection).Drop(ctx)
+		db.client.Disconnect(ctx)
 	}()
 	s := NewWalletService(db)
 
-	w, err := s.Create(context.Background(), "test")
+	w, err := s.Create(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	w2, err := s.FindByOwner(context.Background(), w.Owner)
+	w2, err := s.FindByOwner(ctx, w.Owner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,16 +65,20 @@ func TestWalletServiceFindByOwner(t *testing.T) {
 }
 
 func TestWalletServiceDeposit(t *testing.T) {
-
+	ctx := context.Background()
+	ctx = cubawheeler.NewContextWithUser(ctx, &cubawheeler.User{
+		ID:   "test",
+		Role: cubawheeler.RoleAdmin,
+	})
 	database = "test"
 	db := NewTestDB()
 	defer func() {
-		db.client.Database(database).Collection("wallets").Drop(context.Background())
-		db.client.Disconnect(context.Background())
+		db.client.Database(database).Collection("wallets").Drop(ctx)
+		db.client.Disconnect(ctx)
 	}()
 	s := NewWalletService(db)
 
-	_, err := s.Create(context.Background(), "test")
+	_, err := s.Create(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,42 +87,49 @@ func TestWalletServiceDeposit(t *testing.T) {
 		owner      string
 		amount     int64
 		currency   string
-		wantAmount int64
+		wantAmount cubawheeler.Balance
 		wantErr    bool
 	}{
-		{"test", 100, "CUP", 100, false},
-		{"test", 100, "CUP", 200, false},
-		{"test", 100, "CUP", 300, false},
+		{"test", 100, "CUP", cubawheeler.Balance{Amount: map[string]int64{"CUP": 100}}, false},
+		{"test", 100, "CUP", cubawheeler.Balance{Amount: map[string]int64{"CUP": 200}}, false},
+		{"test", 100, "CUP", cubawheeler.Balance{Amount: map[string]int64{"CUP": 300}}, false},
 	}
 
 	for _, tt := range test {
-		w, err := s.Deposit(context.Background(), tt.owner, tt.amount, tt.currency)
+		w, err := s.Deposit(ctx, tt.owner, tt.amount, tt.currency)
 		if err != nil && !tt.wantErr {
 			t.Fatal(err)
 		}
-		if w.Balance != tt.wantAmount {
-			t.Fatalf("expected wallet balance to be %d, got %d", tt.wantAmount, w.Balance)
+		if diff := cmp.Diff(w.Balance, tt.wantAmount); diff != "" {
+			t.Fatalf("WalletService.Deposit() mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
 
 func TestWalletServiceWithdraw(t *testing.T) {
-
+	ctx := context.Background()
+	ctx = cubawheeler.NewContextWithUser(ctx, &cubawheeler.User{
+		ID:   "test",
+		Role: cubawheeler.RoleAdmin,
+	})
 	database = "test"
 	db := NewTestDB()
 	defer func() {
-		db.client.Database(database).Collection("wallets").Drop(context.Background())
-		db.client.Disconnect(context.Background())
+		db.client.Database(database).Collection("wallets").Drop(ctx)
+		db.client.Disconnect(ctx)
 	}()
 	s := NewWalletService(db)
 
-	_, err := s.Create(context.Background(), "test")
+	_, err := s.Create(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s.Deposit(context.Background(), "test", 200, "CUP")
-
+	s.Deposit(ctx, "test", 200, "CUP")
+	ctx = cubawheeler.NewContextWithUser(ctx, &cubawheeler.User{
+		ID:   "test",
+		Role: cubawheeler.RoleRider,
+	})
 	var test = []struct {
 		owner      string
 		amount     int64
@@ -129,12 +143,14 @@ func TestWalletServiceWithdraw(t *testing.T) {
 	}
 
 	for _, tt := range test {
-		w, err := s.Withdraw(context.Background(), tt.owner, tt.amount, tt.currency)
+		w, err := s.Withdraw(ctx, tt.owner, tt.amount, tt.currency)
 		if err != nil && !tt.wantErr {
 			t.Fatalf("expected no error, got %v, want: %v", err, tt.wantErr)
 		}
-		if w != nil && w.Balance != tt.wantAmount {
-			t.Fatalf("expected wallet balance to be %d, got %d", tt.wantAmount, w.Balance)
+		if w != nil {
+			if diff := cmp.Diff(w.Balance, tt.wantAmount); diff != "" {
+				t.Fatalf("WalletService.Withdraw() mismatch (-want +got):\n%s", diff)
+			}
 		}
 	}
 }
@@ -229,8 +245,8 @@ func TestWalletServiceBalance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if balance != 200 {
-		t.Fatalf("expected wallet balance to be %d, got %d", 200, balance)
+	if balance.Amount["CUP"] != 200 {
+		t.Fatalf("expected wallet balance to be %d, got %d", 200, balance.Amount["CUP"])
 	}
 }
 

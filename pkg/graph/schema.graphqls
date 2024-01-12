@@ -189,7 +189,6 @@ type Device {
   available: Boolean
   status: UserStatus
   active_vehicle: Vehicle
-  code: String!
   referer: ID!
   role: Role!
   profile: Profile!
@@ -535,16 +534,9 @@ type NearByResponse {
   location: Location!
 }
 
-enum ChargeMethod {
-  CASH
-  CARD
-  BANK
-  Paypal
-  Bitcoin
-  Ethereum
-  Balance
-  CUP_TRANSACTION
-  MLC_TRANSACTION
+type ChargeMethod {
+  name: String!
+  description: String!
 }
 
 
@@ -558,26 +550,38 @@ type Transaction {
   created_at: String!
 }
 
-type Query {
-  users(filter: UserFilter): UserList!
+type ProfileOutput {
+  id: ID!
+  name: String!
+  last_name: String!
+  email: String!
+  dob: String!
+  phone: String!
+  photo: String!
+  rate: Float!
+  status: String!
+  gender: String!
+}
 
+type Balance {
+  amount: Int!
+  currency: String!  
+}
+
+type Query {
   orders(filter: OrderFilter): OrderList!
   order(id: String!): Order!
   charges(filter: ChargeRequest!): ChargeList!
   charge(id: String): Charge
 
-  me: Profile
+  me: ProfileOutput
   lastNAddress(number: Int!): [Location!]!
-
-  findVehicle(vehicle: String!): Vehicle!
-
-  findApplications(input: ApplicationFilter): ApplicationList!
 
   nearByDrivers(input: PointInput): [NearByResponse!]!
 
   paymentMethods: [ChargeMethod!]!
 
-  balance: Int!
+  balance: [Balance!]!
   transactions: [Transaction!]!
 }
 
@@ -685,10 +689,17 @@ type CostPerBrand {
   price: Int!
 }
 
+enum Method {
+  Cash
+  CupTransaction
+  MlcTransaction
+  Balance
+}
+
 input ConfirmOrder {
   order: String!
   category: VehicleCategory!
-  method: ChargeMethod!
+  method: Method!
   currency: String!
 }
 
@@ -699,7 +710,7 @@ type Mutation {
 
   updateProfile(profile: UpdateProfile!): Response!
   changePin(old: String, pin: String!): Response!
-  addDevice(decive: String!): Response!
+  addDevice(device: String!): Response!
 
   createOrder(input: DirectionRequest): Order!
   updateOrder(input: DirectionRequest): Order!
@@ -717,9 +728,6 @@ type Mutation {
 
   addRate(input: RateRequest!): Rate!
   updateRate(input: RateRequest!): Rate!
-
-  createApplication(input: ApplicationRequest!): Application!
-  updateApplicationCredentials(application: String!): Application!
 
   redeem(input: String!): Response!
 
