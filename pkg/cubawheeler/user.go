@@ -42,6 +42,17 @@ type User struct {
 	jwt.StandardClaims
 }
 
+func (u *User) GetDevices() []string {
+	devices := make([]string, len(u.Devices))
+	addedDevices := make(map[string]bool)
+	for i, device := range u.Devices {
+		if _, ok := addedDevices[device.Token]; !ok {
+			devices[i] = device.Token
+			addedDevices[device.Token] = true
+		}
+	}
+	return devices
+}
 func (u *User) HasVehicle(id string) bool {
 	for _, v := range u.Vehicles {
 		if v.ID == id || v.Plate == id {
@@ -102,7 +113,7 @@ type UserService interface {
 	UpdatePlace(context.Context, *UpdatePlace) (*Location, error)
 	UpdateProfile(context.Context, *UpdateProfile) error
 	AddDevice(context.Context, string) error
-	GetUserDevices(context.Context, []string) ([]string, error)
+	GetUserDevices(context.Context, UserFilter) ([]string, error)
 	SetAvailability(ctx context.Context, user string, available bool) error
 	Update(context.Context, *User) error
 }

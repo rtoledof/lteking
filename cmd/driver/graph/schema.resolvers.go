@@ -132,10 +132,6 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, profile model.Upda
 
 // SetStatus is the resolver for the setStatus field.
 func (r *mutationResolver) SetStatus(ctx context.Context, active *bool) (*model.Response, error) {
-	user := cubawheeler.UserFromContext(ctx)
-	if user == nil {
-		return nil, fmt.Errorf("unable to add the vehicle: %w", cubawheeler.ErrAccessDenied)
-	}
 	response := model.Response{
 		Success: true,
 		Code:    http.StatusNoContent,
@@ -176,83 +172,53 @@ func (r *mutationResolver) AddDevice(ctx context.Context, decive string) (*model
 }
 
 // AcceptOrder is the resolver for the acceptOrder field.
-func (r *mutationResolver) AcceptOrder(ctx context.Context, id string) (*model.Order, error) {
-	user := cubawheeler.UserFromContext(ctx)
-	if user == nil {
-		return nil, fmt.Errorf("unable to add the vehicle: %w", cubawheeler.ErrAccessDenied)
+func (r *mutationResolver) AcceptOrder(ctx context.Context, id string) (*model.Response, error) {
+	var response = model.Response{
+		Success: true,
+		Code:    http.StatusNoContent,
+		Message: "order accepted successfully",
 	}
 	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/accept", r.orderService, id), nil)
 	if err != nil {
-		return nil, err
+		response.Success = false
+		response.Code = http.StatusInternalServerError
+		response.Message = err.Error()
 	}
 	defer resp.Body.Close()
 
-	var order model.Order
-	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-		return nil, err
-	}
-
-	return &order, nil
+	return &response, nil
 }
 
 // CancelOrder is the resolver for the cancelOrder field.
-func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*model.Order, error) {
-	user := cubawheeler.UserFromContext(ctx)
-	if user == nil {
-		return nil, fmt.Errorf("unable to add the vehicle: %w", cubawheeler.ErrAccessDenied)
+func (r *mutationResolver) CancelOrder(ctx context.Context, id string) (*model.Response, error) {
+	var response = model.Response{
+		Success: true,
+		Code:    http.StatusNoContent,
+		Message: "order canceled successfully",
 	}
 	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/cancel", r.orderService, id), nil)
 	if err != nil {
-		return nil, err
+		response.Success = false
+		response.Code = http.StatusInternalServerError
 	}
 	defer resp.Body.Close()
-
-	var order model.Order
-	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-		return nil, err
-	}
-
-	return &order, nil
-}
-
-// FindOrder is the resolver for the findOrder field.
-func (r *mutationResolver) FindOrder(ctx context.Context, id string) (*model.Order, error) {
-	user := cubawheeler.UserFromContext(ctx)
-	if user == nil {
-		return nil, cubawheeler.ErrAccessDenied
-	}
-	resp, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders/%s", r.orderService, id), nil)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var order model.Order
-	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-		return nil, err
-	}
-
-	return &order, nil
+	return &response, nil
 }
 
 // FinishOrder is the resolver for the finishOrder field.
-func (r *mutationResolver) FinishOrder(ctx context.Context, id string) (*model.Order, error) {
-	user := cubawheeler.UserFromContext(ctx)
-	if user == nil {
-		return nil, fmt.Errorf("unable to add the vehicle: %w", cubawheeler.ErrAccessDenied)
+func (r *mutationResolver) FinishOrder(ctx context.Context, id string) (*model.Response, error) {
+	var response = model.Response{
+		Success: true,
+		Code:    http.StatusNoContent,
+		Message: "order completed successfully",
 	}
 	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/complete", r.orderService, id), nil)
 	if err != nil {
-		return nil, err
+		response.Success = false
+		response.Code = http.StatusInternalServerError
 	}
 	defer resp.Body.Close()
-
-	var order model.Order
-	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-		return nil, err
-	}
-
-	return &order, nil
+	return &response, nil
 }
 
 // AddVehicle is the resolver for the addVehicle field.
@@ -516,25 +482,25 @@ func (r *queryResolver) Orders(ctx context.Context) ([]*model.Order, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var orders []*model.Order
+	var orders []*cubawheeler.Order
 	if err := json.NewDecoder(resp.Body).Decode(&orders); err != nil {
 		return nil, err
 	}
-	return orders, nil
+	return assambleOrders(orders), nil
 }
 
 // Order is the resolver for the order field.
 func (r *queryResolver) Order(ctx context.Context, id string) (*model.Order, error) {
-	response, err := http.Get(fmt.Sprintf("%s/%s", r.orderService, id))
+	response, err := makeRequest(ctx, http.MethodGet, fmt.Sprintf("%s/v1/orders/%s", r.orderService, id), nil)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
-	var order model.Order
+	var order cubawheeler.Order
 	if err := json.NewDecoder(response.Body).Decode(&order); err != nil {
 		return nil, err
 	}
-	return &order, nil
+	return assambleOrder(order), nil
 }
 
 // Mutation returns MutationResolver implementation.
@@ -545,3 +511,45 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func assambleOrders(ords []*cubawheeler.Order) []*model.Order {
+	var result []*model.Order
+	for _, v := range ords {
+		result = append(result, assambleOrder(*v))
+	}
+	return result
+}
+func assambleOrder(ord cubawheeler.Order) *model.Order {
+	return &model.Order{
+		ID: ord.ID,
+		Price: &model.Amount{
+			Amount:   ord.Price,
+			Currency: ord.Currency,
+		},
+		Rider:  ord.Rider, // TODO: add rider information
+		Status: ord.Status.String(),
+		Item: &model.Item{
+			Points: assamblePoints(ord.Items.Points),
+		},
+		RouteString: &ord.RouteString,
+	}
+}
+func assamblePoints(points []*cubawheeler.Point) []*model.Point {
+	var result []*model.Point
+	for _, v := range points {
+		result = append(result, assamblePoint(*v))
+	}
+	return result
+}
+func assamblePoint(point cubawheeler.Point) *model.Point {
+	return &model.Point{
+		Lat: point.Lat,
+		Lng: point.Lng,
+	}
+}

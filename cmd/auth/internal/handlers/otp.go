@@ -40,7 +40,8 @@ func (h *OtpHandler) Otp(w http.ResponseWriter, r *http.Request) error {
 	}
 	user, err := h.User.FindByEmail(r.Context(), email)
 	if err != nil {
-		if errors.Is(err, cubawheeler.ErrNotFound) {
+		var e *cubawheeler.Error
+		if errors.As(err, &e) {
 			user = &cubawheeler.User{
 				ID:    cubawheeler.NewID().String(),
 				Email: email,

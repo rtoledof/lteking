@@ -19,7 +19,8 @@ import (
 
 var _ cubawheeler.UserService = &UserService{}
 
-const UsersCollection Collections = "users"
+const RiderCollection Collections = "riders"
+const DriverCollection Collections = "drivers"
 
 type UserService struct {
 	db     *DB
@@ -40,9 +41,15 @@ func NewUserService(
 			},
 		},
 	}
-	db.client.Database(database).Collection(UsersCollection.String()).Indexes().DropAll(context.Background())
 
-	_, err := db.Collection(UsersCollection).Indexes().CreateMany(
+	_, err := db.Collection(RiderCollection).Indexes().CreateMany(
+		context.Background(),
+		indexes,
+	)
+	if err != nil {
+		panic("unable to create user email index")
+	}
+	_, err = db.Collection(DriverCollection).Indexes().CreateMany(
 		context.Background(),
 		indexes,
 	)
@@ -126,7 +133,12 @@ func (s *UserService) CreateUser(ctx context.Context, user *cubawheeler.User) (e
 		tx.AbortTransaction(ctx)
 		return err
 	}
-	_, err = s.db.Collection(UsersCollection).InsertOne(ctx, user)
+	collection := RiderCollection
+	if user.Role == cubawheeler.RoleDriver {
+		collection = DriverCollection
+	}
+
+	_, err = s.db.Collection(collection).InsertOne(ctx, user)
 	if err != nil {
 		tx.AbortTransaction(ctx)
 		return fmt.Errorf("unable to store the user: %w", err)
@@ -343,7 +355,7 @@ func (s *UserService) AddDevice(ctx context.Context, device string) (err error) 
 	return updateUser(ctx, s.db, usr)
 }
 
-func (s *UserService) GetUserDevices(ctx context.Context, users []string) (_ []string, err error) {
+func (s *UserService) GetUserDevices(ctx context.Context, filter cubawheeler.UserFilter) (_ []string, err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.GetUserDevices")
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil {
@@ -352,7 +364,7 @@ func (s *UserService) GetUserDevices(ctx context.Context, users []string) (_ []s
 	if usr.Role != cubawheeler.RoleAdmin {
 		return nil, cubawheeler.ErrAccessDenied
 	}
-	return getDevices(ctx, s.db, users)
+	return getDevices(ctx, s.db, filter)
 }
 
 func (s *UserService) SetAvailability(ctx context.Context, user string, available bool) (err error) {
@@ -393,13 +405,12 @@ func findUserByID(ctx context.Context, db *DB, id string) (*cubawheeler.User, er
 		return nil, err
 	}
 	if len(users) == 0 {
-		return nil, errors.New("user not found")
+		return nil, cubawheeler.NewNotFound("user not found")
 	}
 	return users[0], nil
 }
 
 func findAllUsers(ctx context.Context, db *DB, filter *cubawheeler.UserFilter) ([]*cubawheeler.User, string, error) {
-	collection := db.Collection(UsersCollection)
 	var users []*cubawheeler.User
 	var token string
 	f := bson.D{}
@@ -421,10 +432,18 @@ func findAllUsers(ctx context.Context, db *DB, filter *cubawheeler.UserFilter) (
 	if len(filter.Role) > 0 {
 		f = append(f, bson.E{Key: "role", Value: filter.Role})
 	}
-	cur, err := collection.Find(ctx, f)
+	cur, err := db.Collection(RiderCollection).Find(ctx, f)
+	if err != nil {
+		return nil, "", cubawheeler.NewInternalError(fmt.Errorf("mongo error: %v: %w", err, cubawheeler.ErrInternal))
+	}
+	cur1, err := db.Collection(DriverCollection).Find(ctx, f)
 	if err != nil {
 		return nil, "", err
 	}
+	defer func() {
+		cur.Close(ctx)
+		cur1.Close(ctx)
+	}()
 	for cur.Next(ctx) {
 		var user cubawheeler.User
 		err := cur.Decode(&user)
@@ -439,21 +458,39 @@ func findAllUsers(ctx context.Context, db *DB, filter *cubawheeler.UserFilter) (
 		if len(users) == filter.Limit+1 && filter.Limit > 0 {
 			token = users[filter.Limit].ID
 			users = users[:filter.Limit]
-			break
+			return users, token, nil
 		}
 	}
+	for cur1.Next(ctx) {
+		var user cubawheeler.User
+		err := cur1.Decode(&user)
+		if err != nil {
+			return nil, "", err
+		}
+		if user.Role == cubawheeler.Role("") {
+			user.Role = cubawheeler.RoleDriver
+		}
+		users = append(users, &user)
 
-	if err := cur.Err(); err != nil {
-		return nil, "", err
+		if len(users) == filter.Limit+1 && filter.Limit > 0 {
+			token = users[filter.Limit].ID
+			users = users[:filter.Limit]
+			return users, token, nil
+		}
 	}
-	cur.Close(ctx)
-	return users, token, nil
+	if len(users) > 0 {
+		return users, "", nil
+	}
+	return nil, "", cubawheeler.NewNotFound("users not found")
 }
 
 func updateAddFavoritesPlaces(ctx context.Context, db *DB, usr *cubawheeler.User) error {
-	collection := db.client.Database(database).Collection(UsersCollection.String())
+	collection := RiderCollection
+	if usr.Role == cubawheeler.RoleDriver {
+		collection = DriverCollection
+	}
 	f := bson.D{{Key: "$set", Value: bson.E{Key: "locations", Value: usr.Locations}}}
-	_, err := collection.UpdateOne(ctx, bson.D{{Key: "_id", Value: usr.ID}}, f)
+	_, err := db.Collection(collection).UpdateOne(ctx, bson.D{{Key: "_id", Value: usr.ID}}, f)
 	if err != nil {
 		return fmt.Errorf("unable to update the location: %w", err)
 	}
@@ -461,35 +498,74 @@ func updateAddFavoritesPlaces(ctx context.Context, db *DB, usr *cubawheeler.User
 }
 
 func updateUser(ctx context.Context, db *DB, user *cubawheeler.User) error {
-	collection := db.client.Database(database).Collection(UsersCollection.String())
-	_, err := collection.UpdateOne(ctx, bson.D{{Key: "email", Value: user.Email}}, bson.D{{Key: "$set", Value: user}})
+	collection := RiderCollection
+	if user.Role == cubawheeler.RoleDriver {
+		collection = DriverCollection
+	}
+	_, err := db.Collection(collection).UpdateOne(ctx, bson.D{{Key: "email", Value: user.Email}}, bson.D{{Key: "$set", Value: user}})
 	if err != nil {
-		return fmt.Errorf("unable to update the user: %v: %w", err, cubawheeler.ErrInternal)
+		return cubawheeler.NewError(cubawheeler.ErrInternal, http.StatusInternalServerError, "unable to update the user")
 	}
 	return nil
 }
 
-func getDevices(ctx context.Context, db *DB, users []string) ([]string, error) {
-	collection := db.Collection(UsersCollection)
-	var devices []string
-
-	f := bson.D{
-		{Key: "_id", Value: bson.A{"$in", users}},
-		{Key: "devices.active", Value: true},
+func getDevices(ctx context.Context, db *DB, filter cubawheeler.UserFilter) ([]string, error) {
+	user := cubawheeler.UserFromContext(ctx)
+	if user == nil {
+		return nil, cubawheeler.NewError(cubawheeler.ErrAccessDenied, http.StatusUnauthorized, "invalid token provided")
 	}
-	projection := bson.D{{Key: "devices.token", Value: 1}}
-	cur, err := collection.Find(ctx, f, &options.FindOptions{Projection: projection})
+	collection := RiderCollection
+	if user.Role == cubawheeler.RoleDriver {
+		collection = DriverCollection
+	}
+
+	switch filter.Role {
+	case cubawheeler.RoleRider:
+		collection = RiderCollection
+	case cubawheeler.RoleDriver:
+		collection = DriverCollection
+	}
+
+	var users []cubawheeler.User
+
+	// f := bson.D{
+	// 	{Key: "_id",
+	// 		Value: bson.D{
+	// 			{Key: "$in",
+	// 				Value: bson.A{
+	// 					filter.Ids,
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// 	{Key: "devices.active", Value: true},
+	// }
+	// projection := bson.D{{Key: "devices.id", Value: 1}}
+	cur, err := db.Collection(collection).Find(ctx, bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to get devices: %v: %w", err, cubawheeler.ErrInternal)
 	}
+	defer cur.Close(ctx)
+	var devices []string
 	for cur.Next(ctx) {
-		var token string
+		var token cubawheeler.User
 		err := cur.Decode(&token)
 		if err != nil {
 			return nil, fmt.Errorf("unable to decode user: %v: %w", err, cubawheeler.ErrInternal)
 		}
-		devices = append(devices, token)
+		users = append(users, token)
 	}
+	var addedDevices = map[string]bool{}
+	for _, v := range users {
+		for _, d := range v.Devices {
+			if _, ok := addedDevices[d.Token]; ok {
+				continue
+			}
+			addedDevices[d.Token] = true
+			devices = append(devices, d.Token)
+		}
+	}
+
 	return devices, nil
 }
 
@@ -514,6 +590,18 @@ func createWallet(ctx context.Context, walletURL, owner string) error {
 	}); err != nil {
 		logger.Info(fmt.Sprintf("create wallet: %v", err))
 		return fmt.Errorf("error creating wallet: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	return nil
+}
+
+func CreateUser(ctx context.Context, db *DB, user *cubawheeler.User) error {
+	collection := RiderCollection
+	if user.Role == cubawheeler.RoleDriver {
+		collection = DriverCollection
+	}
+	_, err := db.Collection(collection).InsertOne(ctx, user)
+	if err != nil {
+		return fmt.Errorf("unable to store the user: %w", err)
 	}
 	return nil
 }

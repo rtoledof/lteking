@@ -21,7 +21,7 @@ func NewRealTimeService(redis *Redis) *RealTimeService {
 
 func (s *RealTimeService) FindNearByDrivers(ctx context.Context, location cubawheeler.GeoLocation) ([]*cubawheeler.Location, error) {
 	res, _ := s.redis.client.GeoRadius(ctx, key, location.Long, location.Lat, &redis.GeoRadiusQuery{
-		Radius:      5,
+		Radius:      500, // TODO: change this to 5km
 		Unit:        "km",
 		WithGeoHash: true,
 		WithCoord:   true,
@@ -52,7 +52,7 @@ func (s *RealTimeService) UpdateLocation(ctx context.Context, user string, locat
 		Longitude: location.Long,
 		Latitude:  location.Lat,
 	})
-	if err := s.redis.client.GeoAdd(ctx, key, geoLocations...); err != nil {
+	if err := s.redis.client.GeoAdd(ctx, key, geoLocations...).Err(); err != nil {
 		return fmt.Errorf("unable to update driver locations: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil

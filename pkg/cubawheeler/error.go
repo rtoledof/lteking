@@ -88,3 +88,7 @@ func NewMissingParameter(param string) *Error {
 func NewNotFound(param string) *Error {
 	return NewError(ErrNotFound, http.StatusNotFound, fmt.Sprintf("%s not found", param))
 }
+
+func NewInternalError(err error) *Error {
+	return NewError(err, http.StatusInternalServerError, "internal error")
+}

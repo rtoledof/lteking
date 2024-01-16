@@ -299,10 +299,9 @@ type Mutation {
   setStatus(active: Boolean): Response!
   addDevice(decive: String!): Response!
 
-  acceptOrder(id: ID!): Order!
-  cancelOrder(id: ID!): Order!
-  findOrder(id: ID!): Order!
-  finishOrder(id: ID!): Order!
+  acceptOrder(id: ID!): Response!
+  cancelOrder(id: ID!): Response!
+  finishOrder(id: ID!): Response!
 
   addVehicle(input: AddVehicle): Vehicle!
   updateVehicle(id: ID!, input: AddVehicle): Vehicle!

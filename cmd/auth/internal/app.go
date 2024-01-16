@@ -159,7 +159,6 @@ func (a *App) loader() {
 	router.Use(CanonicalLog)
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(TokenMiddleware)
-	router.Use(ClientMiddleware)
 	router.Use(ContentType)
 
 	tokenVerifier := rdb.NewTokenVerifier(a.rdb, userSrv, appSrv)

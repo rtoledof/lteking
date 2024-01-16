@@ -153,6 +153,7 @@ func (a *App) loader() {
 				r.Post("/", handler(h.Create))
 				r.Get("/transactions", handler(h.Transactions))
 				r.Post("/transfer", handler(h.Transfer))
+				r.Post("/topup", handler(h.TopUp))
 			})
 		}
 	})

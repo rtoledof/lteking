@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/ably/ably-go/ably"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -32,14 +33,16 @@ func init() {
 }
 
 type App struct {
-	router   http.Handler
-	rdb      *rdb.Redis
-	mongo    *mongo.DB
-	config   Config
-	seed     seed.Seeder
-	dialer   *gomail.Dialer
-	done     chan struct{}
-	realTime *realtime.RealTimeService
+	router             http.Handler
+	rdb                *rdb.Redis
+	mongo              *mongo.DB
+	config             Config
+	seed               seed.Seeder
+	dialer             *gomail.Dialer
+	done               chan struct{}
+	realTime           *realtime.RealTimeService
+	ablyRealTimeClient *ably.Realtime
+	ablClient          *abl.Client
 }
 
 func New(cfg Config) *App {
@@ -53,6 +56,22 @@ func New(cfg Config) *App {
 		cfg.ServiceDiscovery.WalletService,
 		make(chan struct{}),
 	)
+	ablyRealTimeClient, err := ably.NewRealtime(ably.WithKey(cfg.Ably.ApiKey))
+	if err != nil {
+		panic(err)
+	}
+
+	done := make(chan struct{})
+	transport := abl.AuthTransport{
+		Token: cfg.Ably.ApiKey,
+	}
+	ablClient := abl.NewClient(
+		cfg.Amqp.Connection,
+		done,
+		cfg.Ably.ApiKey,
+		ablyRealTimeClient,
+		transport.Client(),
+	)
 	app := &App{
 		rdb:    redisDB,
 		config: cfg,
@@ -64,14 +83,19 @@ func New(cfg Config) *App {
 			cfg.SMTPPassword,
 		),
 
-		done: make(chan struct{}),
+		done: done,
+
+		ablClient: ablClient,
+
+		ablyRealTimeClient: ablyRealTimeClient,
 
 		realTime: realtime.NewRealTimeService(
 			rdb.NewRealTimeService(redisDB),
-			abl.Notifier{},
+			ablClient.Notifier,
 			user,
 			redisDB,
-			mongo.NewOrderService(mongoDB, nil, redisDB),
+			mongo.NewOrderService(mongoDB, nil, redisDB, ablClient.Notifier),
+			ablyRealTimeClient,
 		),
 	}
 
@@ -167,9 +191,7 @@ func (a *App) loader() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
-
-	go client.Consumer.Consume(
+	go a.ablClient.Consumer.Consume(
 		a.config.Amqp.Queue,
 		a.config.Amqp.Consumer,
 		a.config.Amqp.AutoAsk,
@@ -186,6 +208,7 @@ func (a *App) loader() {
 	router.Use(CanonicalLog)
 	router.Use(TokenMiddleware)
 	router.Use(ClientMiddleware)
+	router.Use(AuthMiddleware)
 
 	router.Group(func(r chi.Router) {
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ably/ably-go/ably"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -16,6 +17,7 @@ import (
 	"gopkg.in/gomail.v2"
 
 	"cubawheeler.io/cmd/order/internal/handlers"
+	abl "cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/mailer"
 	"cubawheeler.io/pkg/mongo"
 	rdb "cubawheeler.io/pkg/redis"
@@ -36,12 +38,30 @@ type App struct {
 	config Config
 	dialer *gomail.Dialer
 	done   chan struct{}
+	client *abl.Client
 }
 
 func New(cfg Config) *App {
 	opt, _ := redis.ParseURL(cfg.Redis)
 	client := redis.NewClient(opt)
 	redisDB := rdb.NewRedis(client)
+
+	ablyRealTimeClient, err := ably.NewRealtime(ably.WithKey(cfg.Ably.ApiKey))
+	if err != nil {
+		panic(err)
+	}
+	done := make(chan struct{})
+	transport := abl.AuthTransport{
+		Token: cfg.Ably.ApiKey,
+	}
+	ablClient := abl.NewClient(
+		cfg.Amqp.Connection,
+		done,
+		cfg.Ably.ApiKey,
+		ablyRealTimeClient,
+		transport.Client(),
+	)
+
 	app := &App{
 		rdb:    redisDB,
 		config: cfg,
@@ -52,7 +72,8 @@ func New(cfg Config) *App {
 			cfg.SMTPUSer,
 			cfg.SMTPPassword,
 		),
-		done: make(chan struct{}),
+		done:   make(chan struct{}),
+		client: ablClient,
 	}
 
 	app.loader()
@@ -164,7 +185,7 @@ func (a *App) loader() {
 	router.Group(func(r chi.Router) {
 		{
 			h := handlers.OrderHandler{
-				Service: mongo.NewOrderService(a.mongo, nil, a.rdb),
+				Service: mongo.NewOrderService(a.mongo, nil, a.rdb, a.client.Notifier),
 			}
 			r.Use(TokenMiddleware)
 			r.Use(oauth.Authorize(a.config.JWTPrivateKey, nil))

@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/currency"
 	"cubawheeler.io/pkg/derrors"
 	"cubawheeler.io/pkg/mapbox"
 	"cubawheeler.io/pkg/processor"
+	"cubawheeler.io/pkg/realtime"
 	"cubawheeler.io/pkg/redis"
 )
 
@@ -30,14 +30,21 @@ type OrderService struct {
 	charge    *processor.Charge
 	mutex     sync.Map
 	redis     *redis.Redis
+	notifier  realtime.Notifier
 }
 
-func NewOrderService(db *DB, charge *processor.Charge, redis *redis.Redis) *OrderService {
+func NewOrderService(
+	db *DB,
+	charge *processor.Charge,
+	redis *redis.Redis,
+	notifier realtime.Notifier,
+) *OrderService {
 	return &OrderService{
 		db:        db,
 		orderChan: make(chan *cubawheeler.Order, 10000),
 		charge:    charge,
 		redis:     redis,
+		notifier:  notifier,
 	}
 }
 
@@ -63,8 +70,8 @@ func (s *OrderService) Create(ctx context.Context, req *cubawheeler.DirectionReq
 
 // ConfirmOrder implements cubawheeler.OrderService.
 func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.ConfirmOrder) error {
-	s.orderLock(req.OrderID)
-	defer s.orderUnlock(req.OrderID)
+	// s.orderLock(req.OrderID)
+	// defer s.orderUnlock(req.OrderID)
 	usr := cubawheeler.UserFromContext(ctx)
 	if usr == nil || usr.Role != cubawheeler.RoleRider {
 		return cubawheeler.ErrAccessDenied
@@ -79,7 +86,7 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 	if order.Status != cubawheeler.OrderStatusNew {
 		return cubawheeler.ErrNotFound
 	}
-	order.Status = cubawheeler.OrderStatusConfirmed
+	// order.Status = cubawheeler.OrderStatusConfirmed
 	for _, c := range order.CategoryPrice {
 		if c.Category == req.Category {
 			order.Price = int(c.Price)
@@ -91,21 +98,11 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, req cubawheeler.Confirm
 	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return err
 	}
-	// TODO: move this to finish order if the order is not card
-	charger, err := s.charge.Charge(ctx, order.ChargeMethod, currency.Amount{
-		Amount:   int64(order.Price),
-		Currency: currency.MustParse(order.Currency),
-	})
-	if err != nil {
-		return err
-	}
-	order.ChargeID = charger.ID
-	// END TODO
 	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return err
 	}
 
-	if err := s.redis.Publish(ctx, "order", order.ID); err != nil {
+	if err := s.redis.Publish(ctx, "orders", order); err != nil {
 		return err
 	}
 	return nil
@@ -210,11 +207,17 @@ func (s *OrderService) AcceptOrder(ctx context.Context, id string) (*cubawheeler
 		return nil, cubawheeler.ErrOrderAccepted
 	}
 	order.Driver = usr.ID
-	order.Status = cubawheeler.OrderStatusConfirmed
+	order.Status = cubawheeler.OrderStatusOnTheWay
 	if err := updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
-	// TODO: send the order to the drivers
+	rider, err := findUserByID(ctx, s.db, order.Rider)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.notifier.NotifyRiderOrderAccepted(ctx, rider.GetDevices(), realtime.AssambleOrderNotification(order)); err != nil {
+		return nil, err
+	}
 	return order, nil
 }
 
@@ -232,11 +235,21 @@ func (s *OrderService) CancelOrder(ctx context.Context, id string) (*cubawheeler
 	if err != nil {
 		return nil, err
 	}
-	order.Status = cubawheeler.OrderStatusDropOff
+	order.Status = cubawheeler.OrderStatusCancel
+	if user.Role == cubawheeler.RoleDriver {
+		order.Status = cubawheeler.OrderStatusWaitingDriver
+		order.Driver = ""
+		order.BannedDrivers[user.ID] = true
+	}
+
 	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
-	// TODO: if the order was sent to the drivers, cancel it
+	if order.Status == cubawheeler.OrderStatusWaitingDriver {
+		if err := s.redis.Publish(ctx, "orders", order); err != nil {
+			return order, err
+		}
+	}
 	return order, nil
 }
 
@@ -259,14 +272,27 @@ func (s *OrderService) FinishOrder(ctx context.Context, id string) (*cubawheeler
 	if err = updateOrder(ctx, s.db, order.ID, order); err != nil {
 		return nil, err
 	}
-	lastPoint := order.Items.Points[len(order.Items.Points)-1]
-	user.LastLocations = append(user.LastLocations, &cubawheeler.Location{
-		Name: "",
-		Geolocation: cubawheeler.GeoLocation{
-			Lat:  lastPoint.Lat,
-			Long: lastPoint.Lng,
-		},
-	})
+	// Create order charge
+	switch order.ChargeMethod {
+	case cubawheeler.ChargeMethodCash,
+		cubawheeler.ChargeMethodMLCTransaction,
+		cubawheeler.ChargeMethodCUPTransaction,
+		cubawheeler.ChargeMethodBalance:
+		charger, err := s.charge.Charge(ctx, order.ChargeMethod, currency.Amount{
+			Amount:   int64(order.Price),
+			Currency: currency.MustParse(order.Currency),
+		})
+		if err != nil {
+			return nil, err
+		}
+		order.ChargeID = charger.ID
+	default:
+		return nil, fmt.Errorf("unsupported charge method: %s", order.ChargeMethod)
+	}
+
+	// TODO: send notification to rider that driver started the ride
+	// TODO: update rider last location in the trip
+
 	return order, nil
 }
 
@@ -298,29 +324,36 @@ func (s *OrderService) StartOrder(ctx context.Context, id string) (*cubawheeler.
 func findOrders(ctx context.Context, db *DB, filter *cubawheeler.OrderFilter) ([]*cubawheeler.Order, string, error) {
 	collection := db.Collection(OrderCollection)
 	user := cubawheeler.UserFromContext(ctx)
-	if user == nil {
-		return nil, "", errors.New("invalid token provided")
+	if user != nil {
+		switch user.Role {
+		case cubawheeler.RoleRider:
+			filter.Rider = &user.ID
+		case cubawheeler.RoleDriver:
+			filter.Driver = &user.ID
+		}
 	}
-	switch user.Role {
-	case cubawheeler.RoleRider:
-		filter.Rider = &user.ID
-	case cubawheeler.RoleDriver:
-		filter.Driver = &user.ID
-	}
+
 	var trips []*cubawheeler.Order
 	var token string
 	f := bson.D{}
+
+	if filter.IDs != nil {
+		f = append(f, bson.E{Key: "_id", Value: bson.D{{Key: "$in", Value: filter.IDs}}})
+	}
 	if filter.Rider != nil {
 		f = append(f, bson.E{Key: "rider", Value: filter.Rider})
 	}
 	if filter.Driver != nil {
-		f = append(f, bson.E{Key: "driver", Value: bson.M{"$in": []interface{}{filter.Driver, nil, ""}}})
+		f = append(f, bson.E{Key: "driver", Value: filter.Driver})
+	}
+	if filter.Status != nil {
+		f = append(f, bson.E{Key: "status", Value: filter.Status})
+	}
+	if filter.Limit == 0 {
+		filter.Limit = 10
 	}
 	if filter.Token != nil {
-		f = append(f, bson.E{Key: "_id", Value: primitive.E{Key: "$gt", Value: filter.Token}})
-	}
-	if len(filter.IDs) > 0 {
-		f = append(f, bson.E{Key: "_id", Value: bson.D{{Key: "$in", Value: filter.IDs}}})
+		f = append(f, bson.E{Key: "_id", Value: bson.D{{Key: "$gt", Value: filter.Token}}})
 	}
 
 	cur, err := collection.Find(ctx, f)

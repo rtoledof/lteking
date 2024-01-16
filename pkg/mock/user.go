@@ -18,7 +18,7 @@ type UserService struct {
 	FindAllFn            func(context.Context, *cubawheeler.UserFilter) (*cubawheeler.UserList, error)
 	FindByEmailFn        func(context.Context, string) (*cubawheeler.User, error)
 	FindByIDFn           func(context.Context, string) (*cubawheeler.User, error)
-	GetUserDevicesFn     func(context.Context, []string) ([]string, error)
+	GetUserDevicesFn     func(context.Context, cubawheeler.UserFilter) ([]string, error)
 	LastNAddressFn       func(context.Context, int) ([]*cubawheeler.Location, error)
 	LoginFn              func(context.Context, cubawheeler.LoginRequest) (*cubawheeler.User, error)
 	MeFn                 func(context.Context) (*cubawheeler.Profile, error)
@@ -75,8 +75,8 @@ func (s *UserService) FindByID(ctz context.Context, id string) (*cubawheeler.Use
 }
 
 // GetUserDevices implements cubawheeler.UserService.
-func (s *UserService) GetUserDevices(ctx context.Context, devices []string) ([]string, error) {
-	return s.GetUserDevicesFn(ctx, devices)
+func (s *UserService) GetUserDevices(ctx context.Context, filter cubawheeler.UserFilter) ([]string, error) {
+	return s.GetUserDevicesFn(ctx, filter)
 }
 
 // LastNAddress implements cubawheeler.UserService.

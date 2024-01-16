@@ -105,3 +105,55 @@ func (h *WalletHandler) ConfirmTransfer(w http.ResponseWriter, r *http.Request) 
 	}
 	return h.service.ConfirmTransfer(r.Context(), id, pin)
 }
+
+type topupBody struct {
+	Amount   int64  `json:"amount"`
+	Currency string `json:"currency"`
+	To       string `json:"to"`
+}
+
+func (b topupBody) Valid() error {
+	if b.Amount <= 0 {
+		return cubawheeler.NewInvalidParameter("amount", strconv.FormatInt(b.Amount, 10))
+	}
+
+	if b.Currency == "" {
+		return cubawheeler.NewMissingParameter("currency")
+	}
+
+	if b.To == "" {
+		return cubawheeler.NewMissingParameter("to")
+	}
+
+	return nil
+}
+
+func (h *WalletHandler) TopUp(w http.ResponseWriter, r *http.Request) (err error) {
+	if !canDo(r, cubawheeler.RoleAdmin) {
+		return cubawheeler.NewError(nil, http.StatusForbidden, "you are not allowed to do this")
+	}
+
+	if err := r.ParseForm(); err != nil {
+		return err
+	}
+	body := topupBody{
+		To: r.FormValue("to"),
+	}
+	if amount := r.FormValue("amount"); amount != "" {
+		body.Amount, err = strconv.ParseInt(amount, 10, 64)
+		if err != nil {
+			return cubawheeler.NewInvalidParameter("amount", amount)
+		}
+	}
+	body.Currency = r.FormValue("currency")
+	if err := body.Valid(); err != nil {
+		return err
+	}
+
+	tx, err := h.service.Deposit(r.Context(), body.To, body.Amount, body.Currency)
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(w).Encode(tx)
+}

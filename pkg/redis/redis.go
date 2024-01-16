@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"cubawheeler.io/pkg/cubawheeler"
+	"github.com/goccy/go-json"
+	"github.com/redis/go-redis/v9"
 	r "github.com/redis/go-redis/v9"
 )
 
@@ -32,16 +34,24 @@ func (db *Redis) Close() error {
 }
 
 func (db *Redis) Publish(ctx context.Context, channel string, message interface{}) error {
-	if err := db.client.LPush(ctx, channel, message); err != nil {
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %v: %w", err, cubawheeler.ErrInternal)
+	}
+	if err := db.client.Publish(ctx, channel, data).Err(); err != nil {
 		return fmt.Errorf("failed to publish message to redis: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return nil
 }
 
 func (db *Redis) Orders(ctx context.Context) ([]string, error) {
-	orders, err := db.client.LRange(ctx, "orders", 0, -1).Result()
+	orders, err := db.client.LRange(ctx, "order", 0, -1).Result()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get orders from redis: %v: %w", err, cubawheeler.ErrInternal)
 	}
 	return orders, nil
+}
+
+func (db *Redis) Subscripe(ctx context.Context, channel string) *redis.PubSub {
+	return db.client.Subscribe(ctx, channel)
 }

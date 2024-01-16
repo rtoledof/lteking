@@ -185,13 +185,12 @@ func (r *mutationResolver) ConfirmOrder(ctx context.Context, req cubawheeler.Con
 		"method":   {string(req.Method)},
 		"currency": {req.Currency},
 	}
-	resp, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/confirm", r.OrderService, req.OrderID), value)
+	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/v1/orders/%s/confirm", r.OrderService, req.OrderID), value)
 	if err != nil {
 		response.Success = false
 		response.Code = http.StatusBadRequest
 		response.Message = err.Error()
 	}
-	defer resp.Body.Close()
 	return &response, nil
 }
 
@@ -279,6 +278,7 @@ func (r *mutationResolver) UpdateProfile(ctx context.Context, profile cubawheele
 	var rsp = cubawheeler.Response{
 		Success: true,
 		Code:    http.StatusOK,
+		Message: "profile updated",
 	}
 	value := url.Values{}
 
@@ -365,17 +365,7 @@ func (r *mutationResolver) UpdateRate(ctx context.Context, input cubawheeler.Rat
 }
 
 func (r *mutationResolver) ChangePin(ctx context.Context, old *string, pin string) (*cubawheeler.Response, error) {
-	var rsp = cubawheeler.Response{
-		Success: true,
-		Code:    http.StatusOK,
-	}
-	_, err := r.profile.ChangePin(ctx, old, pin)
-	if err != nil {
-		rsp.Success = false
-		rsp.Message = err.Error()
-		rsp.Code = http.StatusBadRequest
-	}
-	return &rsp, nil
+	panic("implement me")
 }
 
 // CreateApplication is the resolver for the createApplication field.
@@ -396,7 +386,7 @@ func (r *mutationResolver) AddDevice(ctx context.Context, device string) (*cubaw
 		Message: "device added",
 	}
 	value := url.Values{
-		"device_id": {device},
+		"device": {device},
 	}
 	_, err := makeRequest(ctx, http.MethodPost, fmt.Sprintf("%s/profile/devices", r.AuthService), value)
 	if err != nil {

@@ -46,9 +46,9 @@ type Message struct {
 }
 
 type Location struct {
-	Latitude  float64 `json:"l"`
-	Longitude float64 `json:"lo"`
-	Bearing   float64 `json:"b"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Bearing   float64 `json:"bearing"`
 }
 
 type Consumer service
@@ -92,16 +92,16 @@ func (c Consumer) Consume(queue, consumer string, autoAsk, exclusive, noLocal, n
 							slog.Info(fmt.Sprintf("unable to unmarshal the message: %s", m.Data))
 							continue
 						}
-					}
-					realtime.DriverLocations <- cubawheeler.Location{
-						User: m.User,
-						Geolocation: cubawheeler.GeoLocation{
-							Type:        cubawheeler.ShapeTypePoint,
-							Lat:         location.Latitude,
-							Long:        location.Longitude,
-							Bearing:     location.Bearing,
-							Coordinates: []float64{location.Longitude, location.Latitude},
-						},
+						realtime.DriverLocations <- cubawheeler.Location{
+							User: m.User,
+							Geolocation: cubawheeler.GeoLocation{
+								Type:        cubawheeler.ShapeTypePoint,
+								Lat:         location.Latitude,
+								Long:        location.Longitude,
+								Bearing:     location.Bearing,
+								Coordinates: []float64{location.Longitude, location.Latitude},
+							},
+						}
 					}
 				}
 			case ChannelPrecense:

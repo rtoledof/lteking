@@ -46,6 +46,7 @@ type Order struct {
 	RouteString      string                `json:"route_string,omitempty" bson:"route_string,omitempty"`
 	ChargeMethod     ChargeMethod          `json:"charge_method,omitempty" bson:"charge_method,omitempty"`
 	ChargeID         string                `json:"charge_id,omitempty" bson:"charge_id,omitempty"`
+	BannedDrivers    map[string]bool       `json:"banned_drivers,omitempty" bson:"banned_drivers,omitempty"`
 }
 
 type Item struct {
@@ -117,16 +118,18 @@ type OrderStatusHistory struct {
 type OrderStatus string
 
 const (
-	OrderStatusNew       OrderStatus = "NEW"
-	OrderStatusPickUp    OrderStatus = "PICKED_UP"
-	OrderStatusConfirmed OrderStatus = "CONFIRMED"
-	OrderStatusOnTheWay  OrderStatus = "ON_THE_WAY"
-	OrderStatusDropOff   OrderStatus = "DROPED_OFF"
-	OrderStatusCancel    OrderStatus = "CANCELED"
+	OrderStatusNew           OrderStatus = "NEW"
+	OrderStatusWaitingDriver OrderStatus = "WAITING_DRIVER"
+	OrderStatusPickUp        OrderStatus = "PICKED_UP"
+	OrderStatusConfirmed     OrderStatus = "CONFIRMED"
+	OrderStatusOnTheWay      OrderStatus = "ON_THE_WAY"
+	OrderStatusDropOff       OrderStatus = "DROPED_OFF"
+	OrderStatusCancel        OrderStatus = "CANCELED"
 )
 
 var AllOrderStatus = []OrderStatus{
 	OrderStatusNew,
+	OrderStatusWaitingDriver,
 	OrderStatusPickUp,
 	OrderStatusConfirmed,
 	OrderStatusOnTheWay,
@@ -136,7 +139,7 @@ var AllOrderStatus = []OrderStatus{
 
 func (e OrderStatus) IsValid() bool {
 	switch e {
-	case OrderStatusNew, OrderStatusPickUp, OrderStatusOnTheWay, OrderStatusDropOff, OrderStatusCancel:
+	case OrderStatusNew, OrderStatusPickUp, OrderStatusOnTheWay, OrderStatusDropOff, OrderStatusCancel, OrderStatusWaitingDriver:
 		return true
 	}
 	return false

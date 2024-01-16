@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: wallet
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/wallet:v1.1
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/wallet:v1.1.1
         ports:
         - containerPort: 80
         env:

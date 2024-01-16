@@ -32,10 +32,11 @@ func (h *StatusHandler) Availability(w http.ResponseWriter, r *http.Request) err
 			return cubawheeler.NewError(err, http.StatusBadRequest, "invalid status")
 		}
 		user.Available = status
+		if err := h.User.Update(r.Context(), user); err != nil {
+			return err
+		}
 	}
-	if err := h.User.Update(r.Context(), user); err != nil {
-		return err
-	}
+
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

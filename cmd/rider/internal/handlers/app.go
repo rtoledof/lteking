@@ -15,7 +15,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
 
-	abl "cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/graph"
 	"cubawheeler.io/pkg/mailer"
@@ -34,7 +33,6 @@ type App struct {
 	dialer    *gomail.Dialer
 	done      chan struct{}
 	orderChan chan *cubawheeler.Order
-	realTime  cubawheeler.RealTimeService
 	rest      *ably.REST
 }
 
@@ -154,17 +152,6 @@ func (a *App) loader() {
 		a.config.ServiceDiscovery.WalletService,
 		a.done,
 	)
-	client := abl.NewClient(a.config.Amqp.Connection, a.done, a.config.Ably.ApiKey)
-
-	go client.Consumer.Consume(
-		a.config.Amqp.Queue,
-		a.config.Amqp.Consumer,
-		a.config.Amqp.AutoAsk,
-		a.config.Amqp.Exclusive,
-		a.config.Amqp.NoLocal,
-		a.config.Amqp.NoWait,
-		a.config.Amqp.Arg,
-	)
 
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
@@ -187,6 +174,7 @@ func (a *App) loader() {
 			a.config.ServiceDiscovery.OrderService,
 			a.config.ServiceDiscovery.AuthService,
 			a.config.ServiceDiscovery.WalletService,
+			nil,
 		)
 		r.Handle("/", playground.Handler("Rider GraphQL playground", "/query"))
 		r.Handle("/query", grapgqlSrv)

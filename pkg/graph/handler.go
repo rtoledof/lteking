@@ -12,7 +12,6 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 
-	"cubawheeler.io/pkg/ably"
 	"cubawheeler.io/pkg/cannon"
 	"cubawheeler.io/pkg/cubawheeler"
 	"cubawheeler.io/pkg/mongo"
@@ -32,32 +31,24 @@ func NewHandler(
 	orderServiceURL string,
 	authServiceURL string,
 	walletService string,
+	notifier realtime.Notifier,
 ) *handler.Server {
 	resolver := &Resolver{
 		user:          user,
 		ads:           mongo.NewAdsService(db),
 		charge:        mongo.NewChargeService(db),
 		coupon:        mongo.NewCouponService(db),
-		profile:       mongo.NewProfileService(db),
 		processor:     processor.NewCharge(pmConfig),
 		vehicle:       mongo.NewVehicleService(db),
 		location:      mongo.NewLocationService(db),
 		plan:          mongo.NewPlanService(db),
 		message:       mongo.NewMessageService(db),
 		otp:           redis.NewOtpService(client),
-		ablyClient:    ably.NewClient(connectionString, exit, abyKey),
 		OrderService:  orderServiceURL,
 		AuthService:   authServiceURL,
 		WalletService: walletService,
 	}
-	resolver.order = mongo.NewOrderService(db, resolver.processor, client)
-	resolver.realTimeLocation = realtime.NewRealTimeService(
-		redis.NewRealTimeService(client),
-		resolver.ablyClient.Notifier,
-		resolver.user,
-		client,
-		resolver.order,
-	)
+	resolver.order = mongo.NewOrderService(db, resolver.processor, client, notifier)
 	return handler.NewDefaultServer(NewExecutableSchema(Config{Resolvers: resolver}))
 }
 

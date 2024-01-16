@@ -89,7 +89,6 @@ type ComplexityRoot struct {
 		CancelOrder        func(childComplexity int, id string) int
 		ConfirmTransaction func(childComplexity int, id string, pin string) int
 		DeleteVehicle      func(childComplexity int, id string) int
-		FindOrder          func(childComplexity int, id string) int
 		FinishOrder        func(childComplexity int, id string) int
 		ListVehicles       func(childComplexity int) int
 		Login              func(childComplexity int, email string, otp string) int
@@ -249,10 +248,9 @@ type MutationResolver interface {
 	UpdateProfile(ctx context.Context, profile model.UpdateProfile) (*model.Response, error)
 	SetStatus(ctx context.Context, active *bool) (*model.Response, error)
 	AddDevice(ctx context.Context, decive string) (*model.Response, error)
-	AcceptOrder(ctx context.Context, id string) (*model.Order, error)
-	CancelOrder(ctx context.Context, id string) (*model.Order, error)
-	FindOrder(ctx context.Context, id string) (*model.Order, error)
-	FinishOrder(ctx context.Context, id string) (*model.Order, error)
+	AcceptOrder(ctx context.Context, id string) (*model.Response, error)
+	CancelOrder(ctx context.Context, id string) (*model.Response, error)
+	FinishOrder(ctx context.Context, id string) (*model.Response, error)
 	AddVehicle(ctx context.Context, input *model.AddVehicle) (*model.Vehicle, error)
 	UpdateVehicle(ctx context.Context, id string, input *model.AddVehicle) (*model.Vehicle, error)
 	DeleteVehicle(ctx context.Context, id string) (*model.Vehicle, error)
@@ -485,18 +483,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.DeleteVehicle(childComplexity, args["id"].(string)), true
-
-	case "Mutation.findOrder":
-		if e.complexity.Mutation.FindOrder == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_findOrder_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.FindOrder(childComplexity, args["id"].(string)), true
 
 	case "Mutation.finishOrder":
 		if e.complexity.Mutation.FinishOrder == nil {
@@ -1583,21 +1569,6 @@ func (ec *executionContext) field_Mutation_confirmTransaction_args(ctx context.C
 }
 
 func (ec *executionContext) field_Mutation_deleteVehicle_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_findOrder_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -2974,9 +2945,9 @@ func (ec *executionContext) _Mutation_acceptOrder(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Order)
+	res := resTmp.(*model.Response)
 	fc.Result = res
-	return ec.marshalNOrder2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐOrder(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_acceptOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2987,38 +2958,14 @@ func (ec *executionContext) fieldContext_Mutation_acceptOrder(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Order_id(ctx, field)
-			case "rate":
-				return ec.fieldContext_Order_rate(ctx, field)
-			case "price":
-				return ec.fieldContext_Order_price(ctx, field)
-			case "rider":
-				return ec.fieldContext_Order_rider(ctx, field)
-			case "driver":
-				return ec.fieldContext_Order_driver(ctx, field)
-			case "status":
-				return ec.fieldContext_Order_status(ctx, field)
-			case "status_history":
-				return ec.fieldContext_Order_status_history(ctx, field)
-			case "history":
-				return ec.fieldContext_Order_history(ctx, field)
-			case "coupon":
-				return ec.fieldContext_Order_coupon(ctx, field)
-			case "start_at":
-				return ec.fieldContext_Order_start_at(ctx, field)
-			case "end_at":
-				return ec.fieldContext_Order_end_at(ctx, field)
-			case "item":
-				return ec.fieldContext_Order_item(ctx, field)
-			case "cost":
-				return ec.fieldContext_Order_cost(ctx, field)
-			case "selected_cost":
-				return ec.fieldContext_Order_selected_cost(ctx, field)
-			case "route_string":
-				return ec.fieldContext_Order_route_string(ctx, field)
+			case "message":
+				return ec.fieldContext_Response_message(ctx, field)
+			case "code":
+				return ec.fieldContext_Response_code(ctx, field)
+			case "success":
+				return ec.fieldContext_Response_success(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
 		},
 	}
 	defer func() {
@@ -3061,9 +3008,9 @@ func (ec *executionContext) _Mutation_cancelOrder(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Order)
+	res := resTmp.(*model.Response)
 	fc.Result = res
-	return ec.marshalNOrder2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐOrder(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_cancelOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3074,38 +3021,14 @@ func (ec *executionContext) fieldContext_Mutation_cancelOrder(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Order_id(ctx, field)
-			case "rate":
-				return ec.fieldContext_Order_rate(ctx, field)
-			case "price":
-				return ec.fieldContext_Order_price(ctx, field)
-			case "rider":
-				return ec.fieldContext_Order_rider(ctx, field)
-			case "driver":
-				return ec.fieldContext_Order_driver(ctx, field)
-			case "status":
-				return ec.fieldContext_Order_status(ctx, field)
-			case "status_history":
-				return ec.fieldContext_Order_status_history(ctx, field)
-			case "history":
-				return ec.fieldContext_Order_history(ctx, field)
-			case "coupon":
-				return ec.fieldContext_Order_coupon(ctx, field)
-			case "start_at":
-				return ec.fieldContext_Order_start_at(ctx, field)
-			case "end_at":
-				return ec.fieldContext_Order_end_at(ctx, field)
-			case "item":
-				return ec.fieldContext_Order_item(ctx, field)
-			case "cost":
-				return ec.fieldContext_Order_cost(ctx, field)
-			case "selected_cost":
-				return ec.fieldContext_Order_selected_cost(ctx, field)
-			case "route_string":
-				return ec.fieldContext_Order_route_string(ctx, field)
+			case "message":
+				return ec.fieldContext_Response_message(ctx, field)
+			case "code":
+				return ec.fieldContext_Response_code(ctx, field)
+			case "success":
+				return ec.fieldContext_Response_success(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
 		},
 	}
 	defer func() {
@@ -3116,93 +3039,6 @@ func (ec *executionContext) fieldContext_Mutation_cancelOrder(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_cancelOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_findOrder(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_findOrder(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().FindOrder(rctx, fc.Args["id"].(string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Order)
-	fc.Result = res
-	return ec.marshalNOrder2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐOrder(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_findOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Order_id(ctx, field)
-			case "rate":
-				return ec.fieldContext_Order_rate(ctx, field)
-			case "price":
-				return ec.fieldContext_Order_price(ctx, field)
-			case "rider":
-				return ec.fieldContext_Order_rider(ctx, field)
-			case "driver":
-				return ec.fieldContext_Order_driver(ctx, field)
-			case "status":
-				return ec.fieldContext_Order_status(ctx, field)
-			case "status_history":
-				return ec.fieldContext_Order_status_history(ctx, field)
-			case "history":
-				return ec.fieldContext_Order_history(ctx, field)
-			case "coupon":
-				return ec.fieldContext_Order_coupon(ctx, field)
-			case "start_at":
-				return ec.fieldContext_Order_start_at(ctx, field)
-			case "end_at":
-				return ec.fieldContext_Order_end_at(ctx, field)
-			case "item":
-				return ec.fieldContext_Order_item(ctx, field)
-			case "cost":
-				return ec.fieldContext_Order_cost(ctx, field)
-			case "selected_cost":
-				return ec.fieldContext_Order_selected_cost(ctx, field)
-			case "route_string":
-				return ec.fieldContext_Order_route_string(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_findOrder_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3235,9 +3071,9 @@ func (ec *executionContext) _Mutation_finishOrder(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Order)
+	res := resTmp.(*model.Response)
 	fc.Result = res
-	return ec.marshalNOrder2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐOrder(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖcubawheelerᚗioᚋcmdᚋdriverᚋgraphᚋmodelᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_finishOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3248,38 +3084,14 @@ func (ec *executionContext) fieldContext_Mutation_finishOrder(ctx context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Order_id(ctx, field)
-			case "rate":
-				return ec.fieldContext_Order_rate(ctx, field)
-			case "price":
-				return ec.fieldContext_Order_price(ctx, field)
-			case "rider":
-				return ec.fieldContext_Order_rider(ctx, field)
-			case "driver":
-				return ec.fieldContext_Order_driver(ctx, field)
-			case "status":
-				return ec.fieldContext_Order_status(ctx, field)
-			case "status_history":
-				return ec.fieldContext_Order_status_history(ctx, field)
-			case "history":
-				return ec.fieldContext_Order_history(ctx, field)
-			case "coupon":
-				return ec.fieldContext_Order_coupon(ctx, field)
-			case "start_at":
-				return ec.fieldContext_Order_start_at(ctx, field)
-			case "end_at":
-				return ec.fieldContext_Order_end_at(ctx, field)
-			case "item":
-				return ec.fieldContext_Order_item(ctx, field)
-			case "cost":
-				return ec.fieldContext_Order_cost(ctx, field)
-			case "selected_cost":
-				return ec.fieldContext_Order_selected_cost(ctx, field)
-			case "route_string":
-				return ec.fieldContext_Order_route_string(ctx, field)
+			case "message":
+				return ec.fieldContext_Response_message(ctx, field)
+			case "code":
+				return ec.fieldContext_Response_code(ctx, field)
+			case "success":
+				return ec.fieldContext_Response_success(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Order", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
 		},
 	}
 	defer func() {
@@ -11238,13 +11050,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "cancelOrder":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_cancelOrder(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "findOrder":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_findOrder(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

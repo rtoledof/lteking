@@ -21,7 +21,6 @@ type Resolver struct {
 	order            cubawheeler.OrderService
 	review           cubawheeler.ReviewService
 	rate             cubawheeler.RateService
-	profile          cubawheeler.ProfileService
 	plan             cubawheeler.PlanService
 	message          cubawheeler.MessageService
 	location         cubawheeler.LocationService

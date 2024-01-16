@@ -65,7 +65,7 @@ func (h *ProfileHandler) Update(w http.ResponseWriter, r *http.Request) error {
 func (h *ProfileHandler) Get(w http.ResponseWriter, r *http.Request) error {
 	user := cubawheeler.UserFromContext(r.Context())
 	if user == nil {
-		return cubawheeler.ErrUnauthorized
+		return cubawheeler.NewError(cubawheeler.ErrUnauthorized, http.StatusUnauthorized, "unauthorized")
 	}
 	usr, err := h.User.FindByEmail(r.Context(), user.Email)
 	if err != nil {

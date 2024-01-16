@@ -66,7 +66,7 @@ func (s *TokenVerifier) AddClaims(tokenType oauth.TokenType, credential string, 
 		}
 		claim["user"] = string(data)
 	case oauth.ClientToken:
-		app, err := s.application.FindByID(context.Background(), credential)
+		app, err := s.application.FindByClient(context.Background(), credential)
 		if err != nil {
 			return nil, err
 		}
