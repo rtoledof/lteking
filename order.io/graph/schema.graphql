@@ -1,0 +1,208 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+# ------- START ENUMS -------
+"Order status enum"
+enum OrderStatus {
+  NEW
+  PENDING
+  ACCEPTED
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+  WAITING_DRIVER
+}
+"Available payment method"
+enum PaymentMethod {
+  Cash
+  Card
+  Bank
+  Paypal
+  Bitcoin
+  Ethereum
+  Balance
+  CUPTransaction
+  MLCTransaction
+}
+"Card categories"
+enum Category {
+  X
+  XL
+  Confort
+  Green
+  Pets
+  Package
+  Priority
+}
+
+# ------- END ENUMS -------
+"Point information used to request a ride"
+type Point {
+  """Latitude"""
+  lat: Float!
+  """Longitude"""
+  lng: Float!
+}
+"Item information used to request a ride"
+type Item {
+  """List of the points for the route"""
+  points: [Point!]!
+  """Coupon code if any"""
+  coupon: String
+  """Number of riders"""
+  riders: Int
+  """If the passenger has baggages"""
+  baggages: Boolean
+  """Currency. Default currency is CUP"""
+  currency: String
+}
+"Order status history"
+type OrderStatusHistory {
+  """Status that the order was"""
+  status: OrderStatus!
+  """Timestamp of the status change"""
+  timestamp: String!
+}
+"Category price"
+type CategoryPrice {
+  """Category selected by the rider"""
+  category: Category!
+  """Price of the category"""
+  price: Int!
+  """Currency of the price"""
+  currency: String!
+}
+"Order information. Contain all the information about the order."
+type Order {
+  """Unique identifier"""
+  id: ID!
+  """List of the points for the route"""
+  items: Item!
+  """Coupon code if any"""
+  history: [Point!]
+  """Number of riders"""
+  rider: ID!
+  """If the passenger has baggages"""
+  driver: ID
+  """Currency. Default currency is CUP"""
+  status: OrderStatus
+  """Status history"""
+  status_history: [OrderStatusHistory!]
+  """Rate of the order"""
+  rate: Float
+  """Comment of the order"""
+  price: Int
+  """Currency of the price"""
+  currency: String
+  """Creation date"""
+  created_at: String!
+  """Distance of the ride"""
+  distance: Float
+  """Duration of the ride"""
+  duration: Float
+  """Route of the ride"""
+  route: String
+  """Payment method"""
+  payment_method: PaymentMethod
+  """Payment charge id"""
+  charge_id: String
+  """Payment charge id"""
+  category: Category
+}
+"Order list filter"
+input OrderListFilter {
+  """Filter by status"""
+  status: OrderStatus
+  """Filter by category"""
+  category: Category
+  """Filter by payment method"""
+  payment_method: PaymentMethod
+  """Filter by date"""
+  created_at: String
+  """Order list limit"""
+  limit: Int
+  """Next page token"""
+  token: String
+}
+
+type OrdersResponse {
+  """List of the orders"""
+  items: [Order!]!
+  """Next page token"""
+  token: String!
+}
+
+type Error {
+  field: String!
+  message: String!
+}
+
+type Response {
+  success: Boolean!
+  message: String
+  errors: [Error!]
+}
+
+type Query {
+  """List of the orders"""
+  orders(filter: OrderListFilter!): OrdersResponse!
+  """Get order by id. Return the order information linked to the given id"""
+  order(id: ID!): Order!
+  """Get the list of categories. Used to get the list of categories only available for the rider"""
+  categories(order: String!): [CategoryPrice!]!
+  """Get the list of payment methods. Used to get the list of payment methods only available for the rider"""
+  paymentMethods: [PaymentMethod!]!
+}
+"Input point information used to request a ride"
+input PointInput {
+  """Latitude"""
+  lat: Float!
+  """Longitude"""
+  lng: Float!
+}
+"Input item information used to request a ride"
+input RideInput {
+  """List of the points for the route"""
+  item: [PointInput!]!
+  """Coupon code if any"""
+  coupon: String
+  """Number of riders"""
+  riders: Int
+  """If the passenger has baggages"""
+  baggages: Boolean
+  """Currency. Default currency is CUP"""
+  currency: String
+}
+"Input to confirm the ride and select the vategory and payment method"
+input ConfirmRideInput {
+  """Order id"""
+  id: ID!
+  """Selected Category"""
+  category: Category!
+  """Selected Payment method"""
+  method: PaymentMethod!
+}
+
+type Mutation {
+  """Request to create a new ride. This is only available to the rider"""
+  createRide(input: RideInput!): Order!
+  """Request to update a ride. This is only available to the rider"""
+  updateRide(id: ID!, input: RideInput!): Order!
+  """Request to confirm a ride. This is only available to the rider"""
+  confirmRide(input: ConfirmRideInput!): Response!
+  """Request to cancel a ride. This is only available to the rider"""
+  cancelRide(id: ID!): Response!
+  """Request to accept a ride. This is only available to the driver"""
+  acceptRide(id: ID!): Response!
+  """Request to start a ride. This is only available to the driver"""
+  startRide(id: ID!): Response!
+  """Request to finish a ride. This is only available to the driver"""
+  finishRide(id: ID!): Response!
+  # """Request to rate a ride. This is only available to the rider"""
+  # rateRide(id: ID!, rate: Float!, comment: String): Response!
+  # """Request to pay a ride. This is only available to the rider"""
+  # payRide(id: ID!, method: PaymentMethod!): Response!
+  """Request to rate a rider. This is only available to the driver"""
+  rateRider(id: ID!, rate: Float!, comment: String): Response!
+}
