@@ -1,0 +1,59 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+"Specify the type of the vehicle."
+type Balance {
+  """Map that contain currency and amount for each currency"""
+  amount: Int!
+  """Currency"""
+  currency: String!
+}
+
+type Wallet {
+  """Wallet ID"""
+  id: ID!
+  """Wallet balance"""
+  balance: [Balance!]
+  """Wallet prefered currency"""
+  preferedCurrency: String!
+}
+
+type Query {
+  """Get wallet by ID"""
+  balance(currency: String!): Int!
+}
+
+type Error {
+  field: String!
+  message: String!
+}
+
+type Response {
+  success: Boolean!
+  message: String
+  errors: [Error!]
+}
+
+type Transfer {
+  id: ID!
+  from: String!
+  to: String!
+  amount: Int!
+  currency: String!
+  status: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Mutation {
+  """Set wallet pin. Return true if success or false if not."""
+  setPin(pin: String!, old: String): Response!
+  """Withdraw money from wallet. Return true if success or false if not. This is available only for driver"""
+  withdraw(amount: Int!, currency: String!): Response!
+  """Transfer money from wallet to another wallet. Return true if success or false if not."""
+  transfer(amount: Int!, currency: String!, to: String!): Transfer!
+  """Confirm transfer. Return true if success or false if not. The initializer of the transfer should confirm the transfer using the pin."""
+  confirmTransfer(id: ID!, pin: String!): Response!
+  # """Add money to wallet. Return true if success or false if not. The user should provide a prove of the transaction"""
+  # deposit(amount: Int!, currency: String!, confirm: String!): Response!
+}
