@@ -1,0 +1,367 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+## ---- Start Enums ----
+"Specify the type of the vehicle."
+enum VechicleType {
+  CAR
+  BIKE
+  TRUCK
+  VAN
+  BUS
+  OTHER
+}
+
+"Specify the category of the vehicle."
+enum VechicleCategory {
+  PETS
+  LUXURY
+  PACKAGE
+  ECONOMY
+  PREMIUM
+  PREIORITY
+}
+
+"Specify the brand of the vehicle."
+enum Brand {
+  TOYOTA
+  HONDA
+  SUZUKI
+  NISSAN
+  BMW
+  MERCEDES
+  AUDI
+  VOLKSWAGEN
+  HYUNDAI
+  KIA
+  MAZDA
+  MITSUBISHI
+  FORD
+  CHEVROLET
+  OTHER
+}
+
+"Specify the status of the vehicle."
+enum VechicleStatus {
+  NEW
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+}
+
+"Specify the facilities of the vehicle."
+enum Facilities {
+  AC
+  MUSIC
+  WIFI
+  TV
+  CHARGER
+  OTHER
+}
+
+"Specify the gender of the user."
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+## ---- End Enums ----
+"Scalar type uset to upload files."
+scalar Upload
+"Scalar type uset to entering a DateTime."
+scalar DateTime
+
+"Specify a point in space in WGS84 coordinates."
+type Point {
+  """Latitude"""
+  lat: Float!
+  """Longitude"""
+  lng: Float!
+}
+"Specify a location that can be stored by the riders."
+type Location {
+  """Unique identifier"""
+  id: ID!
+  """Name of the location"""
+  name: String!
+  """Geographic coordinates"""
+  point: Point!
+  """Address line 1"""
+  line1: String
+  """Address line 2"""
+  line2: String
+  """City"""
+  city: String
+  """State"""
+  state: String
+  """Country"""
+  country: String
+  """Zip code"""
+  zip: String
+}
+"Contains the vehicle information."
+type Vehicle {
+  """Unique identifier"""
+  id: ID!
+  """Name of the vehicle"""
+  name: String!
+  """Category of the vehicle"""
+  category: VechicleCategory!
+  """Type of the vehicle"""
+  type: VechicleType!
+  """Brand of the vehicle"""
+  brand: Brand!
+  """Model of the vehicle"""
+  model: String!
+  """Color of the vehicle"""
+  colors: [String!]
+  """Plate number of the vehicle"""
+  plateNumber: String!
+  """Photos of the vehicle"""
+  photo: [String!]
+  """Status of the vehicle"""
+  status: VechicleStatus
+  """Facilities of the vehicle"""
+  facilities: [Facilities!]
+  """Number of seats"""
+  seats: Int!
+  """Creation date"""
+  createdAt: DateTime!
+  """Year of the vehicle"""
+  year: Int
+}
+"Contains the user information."
+type Profile {
+  """Unique identifier"""
+  id: ID!
+  """Name of the user"""
+  name: String!
+  """Email of the user"""
+  email: String!
+  """Phone number of the user"""
+  phone: String
+  """Rate of the user"""
+  rate: Float!
+  """Number of trips"""
+  photo: String
+  """Status of the user"""
+  status: String
+  """User date of birth"""
+  dob: String
+  """User referal code"""
+  referalCode: String
+  """Avalability of the user. Used to know if the user is online or not"""
+  available: Boolean!
+  """Driver active vehicle"""
+  activeVehicle: Vehicle
+  """Prefered currency"""
+  preferedCurrency: String
+}
+"Structure that contain list of vehicles response."
+type ListVechicleResponse {
+  """List of vehicles"""
+  items: [Vehicle!]
+  """Next page token"""
+  nextToken: String
+}
+
+type Query {
+  """Get the current user profile"""
+  me: Profile!
+  """Get the vehicle id. Used to get the vehicle information only available for the driver"""
+  vehicle(id: ID!): Vehicle!
+  """Get the list of vehicles. Used to get the list of vehicles only available for the driver"""
+  vehicles: [Vehicle!]!
+  """Get the list of places. Used to get the list of favorite places only available for the rider"""
+  places: [Location!]!
+  """Get the list of favorite places. Used to get the list of favorite places only available for the rider"""
+  place(name: String!): Location!
+  """Get the list of last directions. Used to get the list of last directions only available for the rider"""
+  lastDirections(number: Int): [Location!]!
+  """Get the vehicle information. Used to get the vehicle information only available for the driver"""
+  findVehicle(id: ID!): Vehicle!
+  """Get the list of vehicles. Used to get the list of vehicles only available for the driver"""
+  listVehicles(filter: VehicleFilter!): ListVechicleResponse!
+  """Get the location of a favority direction from the rider."""
+  findDirection(name: String!): Location!
+  """Get the list of favorite directions from the rider."""
+  listDirections: [Location!]!
+}
+"Input request used to the otp."
+input OtpInput {
+  """Phone number of the user"""
+  phone: String
+  """Email of the user"""
+  email: String
+}
+"Input request used to update the profile."
+input ProfileInput {
+  """Name of the user"""
+  name: String
+  """Email of the user"""
+  email: String
+  """Phone number of the user"""
+  phone: String
+  """User profile photo"""
+  photo: Upload
+  """User date of birth"""
+  dob: String
+  """User referal code. The code of the user that refered to the current user"""
+  referalCode: String
+  """Prefered currency"""
+  preferedCurrency: String
+  """User gender. This will be usefull to include later on the find for an specific type of gender"""
+  gender: Gender
+  """User id card"""
+  dni: Upload
+  """User driver licence"""
+  licence: Upload
+  """User vehicle circulation"""
+  circulation: Upload
+  """User vehicle technical inspection"""
+  technicalInspection: Upload
+  """User vehicle insurance"""
+  insurance: Upload
+}
+"Input request used to add a vehicle."
+input VehicleInput {
+  """Name of the vehicle if any"""
+  name: String
+  """Category of the vehicle"""
+  category: VechicleCategory
+  """Type of the vehicle"""
+  type: VechicleType
+  """Brand of the vehicle"""
+  brand: Brand
+  """Model of the vehicle"""
+  model: String
+  """Colors of the vehicle"""
+  colors: [String!]
+  """Plate number of the vehicle"""
+  plateNumber: String
+  """Photos of the vehicle"""
+  photo: [Upload!]
+  """Status of the vehicle"""
+  status: VechicleStatus
+  """Facilities of the vehicle"""
+  facilities: [Facilities!]
+  """Number of seats"""
+  seats: Int
+  """Year of the vehicle"""
+  year: Int
+}
+"Input request used to add a location."
+input PointInput {
+  """Latitude"""
+  lat: Float!
+  """Longitude"""
+  lng: Float!
+}
+"Input request used to add a location."
+input LocationInput {
+  """Name of the location"""
+  name: String!
+  """Geographic coordinates"""
+  point: PointInput!
+  """Address line 1"""
+  line1: String
+  """Address line 2"""
+  line2: String
+  """City"""
+  city: String
+  """State"""
+  state: String
+  """Country"""
+  country: String
+  """Zip code"""
+  zip: String
+}
+"Input request used to filter the list of vehicles."
+input VehicleFilter {
+  """Category of the vehicle"""
+  category: VechicleCategory
+  """Type of the vehicle"""
+  type: VechicleType
+  """Brand of the vehicle"""
+  brand: Brand
+  """Model of the vehicle"""
+  model: String
+  """Colors of the vehicle"""
+  colors: [String!]
+  """Plate number of the vehicle"""
+  plateNumber: String
+  """Status of the vehicle"""
+  status: VechicleStatus
+  """Facilities of the vehicle"""
+  facilities: [Facilities!]
+  """Number of seats"""
+  seats: Int
+  """Number of items to return"""
+  limit: Int
+  """Next page token"""
+  token: String
+}
+
+type Error {
+  field: String!
+  message: String!
+}
+
+type Response {
+  success: Boolean!
+  message: String
+  errors: [Error!]
+}
+
+type LoginResponse {
+  success: Boolean!
+  message: String
+  errors: [Error!]
+  token: String
+}
+
+input FavoritePlaceInput {
+  name: String!
+  lat: Float!
+  lng: Float!
+}
+
+type Mutation {
+  """Send the otp to the user"""
+  otp(input: OtpInput!): Response!
+  """Login the user. Return the token"""
+  login(input: OtpInput!, otp: String!): LoginResponse!
+  """Logout the user"""
+  logout: Response!
+  """Update user profile"""
+  updateProfile(input: ProfileInput!): Profile!
+  """Add new vehicle. Used to add a new vehicle to the driver"""
+  addVehicle(input: VehicleInput!): Response!
+  """Update vehicle. Used to update a vehicle to the driver"""
+  updateVehicle(id: ID!, input: VehicleInput!): Response!
+  """Delete vehicle. Used to delete a vehicle to the driver"""
+  deleteVehicle(id: ID!): Response!
+  """Add new place. Used to add a new place to the rider"""
+  addFavoriteDirection(input: FavoritePlaceInput!): Response!
+  """Delete place. Used to delete a place to the rider"""
+  deleteDirection(id: ID!): Response!
+  """Update place. Used to update a place to the rider"""
+  updateDirection(id: ID!, input: LocationInput!): Response!
+  """Add favorite vehicle. Used to add a new place to the rider"""
+  addFavoriteVehicle(plate: String!, name: String): Response!
+  """Delete favorite vehicle. Used to delete a place to the rider"""
+  removeFavoriteVehicle(plate: String!): Response!
+  """Set active vehicle. Used to set the active vehicle to the driver"""
+  setActiveVehicle(id: ID!): Response!
+  """Set available. Used to set the available status to the driver"""
+  setAvailable(available: Boolean!): Response!
+  """Set prefered currency. Used to set the prefered currency to the user"""
+  setPreferedCurrency(currency: String!): Response!
+  """Add device token. Used to add a new device token to the user"""
+  addDeviceToken(token: String!, name: String): Response!
+  """Remove device token. Used to remove a device token to the user"""
+  removeDeviceToken(token: String!): Response!
+}
