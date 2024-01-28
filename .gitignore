@@ -1,10 +1,4 @@
-vendor/
-.fleet/
-.vscode/
-*__debug*
-*.db 
-cmd/cubawheeler/cubawheeler
-tmp/
-*.log
-.env*
-.DS_Store
+node_modules
+.vscode
+.fleet
+```
