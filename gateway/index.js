@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { ApolloServer } = require('apollo-server');
 const { ApolloGateway, IntrospectAndCompose, RemoteGraphQLDataSource } = require('@apollo/gateway');
 
@@ -9,11 +10,11 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
     }
 }
 
-const config = require('./config.json');
+const subgraphs = JSON.parse(process.env.SUBGRAPHS);
 
 const gateway = new ApolloGateway({
     supergraphSdl: new IntrospectAndCompose({
-        subgraphs: config.subgraphs
+        subgraphs: subgraphs
     }),
     buildService({ name, url }) {
         return new AuthenticatedDataSource({ url });
