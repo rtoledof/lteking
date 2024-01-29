@@ -9,13 +9,11 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
     }
 }
 
+const config = require('./config.json');
+
 const gateway = new ApolloGateway({
     supergraphSdl: new IntrospectAndCompose({
-        subgraphs: [
-            { name: 'auth', url: 'http://localhost:3001/query' },
-            { name: 'wallet', url: 'http://localhost:3002/query' },
-            { name: 'orders', url: 'http://localhost:3003/query' },
-        ],
+        subgraphs: config.subgraphs
     }),
     buildService({ name, url }) {
         return new AuthenticatedDataSource({ url });
