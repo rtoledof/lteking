@@ -41,6 +41,9 @@ func assembleUpdateProfile(p model.ProfileInput) *identity.UpdateProfile {
 }
 
 func assembleModelProfile(p *identity.Profile) *model.Profile {
+	if p == nil {
+		return &model.Profile{}
+	}
 	status := string(p.Status)
 	return &model.Profile{
 		ID:     p.ID,

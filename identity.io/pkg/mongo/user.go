@@ -805,9 +805,22 @@ func checkRole(ctx context.Context, db *DB, role identity.Role) (*identity.User,
 	if claims == nil {
 		return nil, identity.ErrNilUserInContext
 	}
-	if role != identity.Role("") && claims["role"] != role {
+	if role == identity.Role("") {
 		return nil, identity.ErrAccessDenied
 	}
 
-	return findUserByID(ctx, db, claims["id"].(string))
+	if user, ok := claims["user"]; ok {
+		for key, r := range user.(map[string]interface{}) {
+			if key == "email" {
+				usr, err := findUserByEmail(ctx, db, r.(string))
+				if err != nil {
+					return nil, err
+				}
+				return usr, nil
+			}
+
+		}
+	}
+
+	return nil, identity.ErrAccessDenied
 }

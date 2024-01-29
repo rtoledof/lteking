@@ -190,18 +190,14 @@ func TokenAuthMiddleware(tokenAuth *jwtauth.JWTAuth) func(next http.Handler) htt
 				return
 			}
 
+			ctx := identity.NewContextWithToken(r.Context(), token)
+
 			if !strings.HasPrefix(token, "sk_") &&
 				!strings.HasPrefix(token, "pk_") {
-				jwtauth.Verifier(tokenAuth)(next).ServeHTTP(w, r)
-				jwtauth.Authenticator(next).ServeHTTP(w, r)
-			}
-
-			token, err := stripBearerPrefixFromToken(token)
-			if err != nil {
-				next.ServeHTTP(w, r)
+				jwtauth.Authenticator(next).ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
-			ctx := identity.NewContextWithToken(r.Context(), token)
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

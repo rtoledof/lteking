@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 	"github.com/go-chi/jwtauth"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
@@ -165,6 +166,8 @@ func (a *App) loader() {
 	router.Use(CanonicalLog)
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(ClientAuthenticate(a.client))
+	router.Use(httprate.LimitByIP(100, 1*time.Minute))
+	router.Use(jwtauth.Verifier(a.tokenAuth))
 	router.Use(TokenAuthMiddleware(a.tokenAuth))
 
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
