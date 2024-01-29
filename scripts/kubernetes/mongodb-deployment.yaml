@@ -1,0 +1,36 @@
+# mongodb-deployment.yaml
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: mongodb
+spec:
+  members: 3
+  type: ReplicaSet
+  version: "4.2.6"
+  security:
+    authentication:
+      modes: ["SCRAM"]
+  users:
+  - name: myUser
+    db: admin
+    passwordSecretRef: 
+      name: myUserPassword
+    roles:
+    - name: readWrite
+      db: cubawheeler
+  statefulSet:
+    spec:
+      serviceName: mongodb-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-svc
+spec:
+  type: NodePort
+  ports:
+  - port: 27017
+    targetPort: 27017
+    nodePort: 30000
+  selector:
+    app: mongodb
