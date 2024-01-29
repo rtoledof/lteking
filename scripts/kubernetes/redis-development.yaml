@@ -18,13 +18,20 @@ spec:
         app: redis
         api: redis
     spec:
-      containers:
-        - name: redis
-          image: redis:latest
-          ports:
-            - name: redis
-              containerPort: 6379
-              protocol: TCP
+            containers:
+              - name: redis
+                image: redis:latest
+                ports:
+                  - name: redis
+                    containerPort: 6379
+                    protocol: TCP
+                resources:
+                  limits:
+                    cpu: "0.5"
+                    memory: "512Mi"
+                  requests:
+                    cpu: "0.1"
+                    memory: "128Mi"
 ---
 apiVersion: v1
 kind: Service
