@@ -12,29 +12,29 @@ spec:
       labels:
         app: mongodb
     spec:
-            containers:
-            - name: mongodb
-              image: mongo:latest
-              ports:
-              - containerPort: 27017
-              env:
-              - name: MONGO_INITDB_ROOT_USERNAME
-                valueFrom:
-                  secretKeyRef:
-                    name: mongodb-secret
-                    key: mongo-root-username
-              - name: MONGO_INITDB_ROOT_PASSWORD
-                valueFrom:
-                  secretKeyRef:
-                    name: mongodb-secret
-                    key: mongo-root-password
-              resources:
-                limits:
-                  cpu: "1"
-                  memory: "1Gi"
-                requests:
-                  cpu: "0.5"
-                  memory: "512Mi"
+        containers:
+        - name: mongodb
+          image: mongo:latest
+          ports:
+          - containerPort: 27017
+          env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mongodb-secret
+                key: mongo-root-username
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongodb-secret
+                key: mongo-root-password
+          resources:
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+            requests:
+              cpu: "0.5"
+              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
