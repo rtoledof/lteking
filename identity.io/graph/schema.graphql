@@ -137,8 +137,10 @@ type Vehicle {
 type Profile {
   """Unique identifier"""
   id: ID!
-  """Name of the user"""
-  name: String!
+  """First name of the user"""
+  firstName: String!
+  """last name of the user"""
+  lastName: String!
   """Email of the user"""
   email: String!
   """Phone number of the user"""

@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/go-chi/jwtauth"
 	"github.com/go-chi/oauth"
@@ -48,7 +47,6 @@ func GetTokenTypeFromContext(ctx context.Context) string {
 	raw, _ := ctx.Value(oauth.TokenTypeContext).(string)
 	return raw
 }
-
 func UserFromContext(ctx context.Context) *User {
 	_, claim, err := jwtauth.FromContext(ctx)
 	if err != nil || claim == nil {
@@ -59,8 +57,17 @@ func UserFromContext(ctx context.Context) *User {
 		return nil
 	}
 	var user User
-	if err := json.Unmarshal(userData.([]byte), &user); err != nil {
-		return nil
+	for key, v := range userData.(map[string]interface{}) {
+		switch key {
+		case "id":
+			user.ID = v.(string)
+		case "email":
+			user.Email = v.(string)
+		case "name":
+			user.Name = v.(string)
+		case "role":
+			user.Role = Role(v.(string))
+		}
 	}
 	return &user
 }

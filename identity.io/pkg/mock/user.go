@@ -21,7 +21,7 @@ type UserService struct {
 	GetUserDevicesFn        func(context.Context, identity.UserFilter) ([]string, error)
 	LastNAddressFn          func(context.Context, int) ([]*identity.Location, error)
 	LoginFn                 func(context.Context, string, string, ...string) (*identity.User, error)
-	MeFn                    func(context.Context) (*identity.Profile, error)
+	MeFn                    func(context.Context) (*identity.User, error)
 	SetAvailabilityFn       func(context.Context, bool) error
 	UpdateFn                func(context.Context, *identity.User) error
 	UpdatePlaceFn           func(context.Context, *identity.UpdatePlace) (*identity.Location, error)
@@ -185,7 +185,7 @@ func (s *UserService) Login(ctx context.Context, email, otp string, role ...stri
 }
 
 // Me implements identity.UserService.
-func (s *UserService) Me(ctx context.Context) (*identity.Profile, error) {
+func (s *UserService) Me(ctx context.Context) (*identity.User, error) {
 	return s.MeFn(ctx)
 }
 

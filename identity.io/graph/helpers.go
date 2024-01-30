@@ -40,19 +40,29 @@ func assembleUpdateProfile(p model.ProfileInput) *identity.UpdateProfile {
 	return &updateProfile
 }
 
-func assembleModelProfile(p *identity.Profile) *model.Profile {
+func assembleModelProfile(p *identity.User) *model.Profile {
+	profile := &model.Profile{}
 	if p == nil {
-		return &model.Profile{}
+		return profile
 	}
-	status := string(p.Status)
-	return &model.Profile{
-		ID:     p.ID,
-		Name:   p.Name,
-		Dob:    &p.DOB,
-		Phone:  &p.Phone,
-		Photo:  &p.Photo,
-		Status: &status,
+	profile.ID = p.ID
+	profile.Email = p.Email
+	status := p.Status.String()
+	profile.Status = &status
+	profile.ReferalCode = &p.Referer
+	if p.Profile != nil {
+		profile.LastName = p.Profile.LastName
+		profile.FirstName = p.Profile.Name
+		profile.Dob = &p.Profile.DOB
+		profile.Phone = &p.Profile.Phone
+		vehicle, err := assembleModelVehicle(p.GetActiveVehicle())
+		if err != nil {
+			return profile
+		}
+		profile.ActiveVehicle = vehicle
 	}
+
+	return profile
 }
 
 func assembleVehicle(v model.VehicleInput) (*identity.Vehicle, error) {

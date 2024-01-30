@@ -105,7 +105,9 @@ func (a *App) loader() {
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(CanonicalLog)
 	router.Use(httprate.LimitByIP(100, 1*time.Minute))
+	router.Use(jwtauth.Verifier(a.jwtAuth))
 	router.Use(TokenAuthMiddleware(a.jwtAuth))
+	router.Use(middleware.Heartbeat("/ping"))
 
 	router.Mount("/debug", middleware.Profiler())
 

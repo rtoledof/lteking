@@ -2,7 +2,6 @@ package order
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/go-chi/jwtauth"
 	"github.com/go-chi/oauth"
@@ -10,10 +9,7 @@ import (
 
 // A private key for context that only this package can access. This is important
 // to prevent collisions between different context uses
-var userCtxKey = &contextKey{"user_object"}
-var clientCtxKey = &contextKey{"client"}
 var jwtCtxKey = &contextKey{"jwt"}
-var tokenCtxKey = &contextKey{"token"}
 
 type contextKey struct {
 	name string
@@ -26,16 +22,6 @@ func NewContextWithJWT(ctx context.Context, jwt string) context.Context {
 // UserFromContext finds the user from the context. REQUIRES Middleware to have run.
 func JWTFromContext(ctx context.Context) string {
 	raw, _ := ctx.Value(jwtCtxKey).(string)
-	return raw
-}
-
-func NewContextWithToken(ctx context.Context, token *oauth.Token) context.Context {
-	return context.WithValue(ctx, jwtCtxKey, token)
-}
-
-// TokenFromContext finds the user from the context. REQUIRES Middleware to have run.
-func TokenFromContext(ctx context.Context) *oauth.Token {
-	raw, _ := ctx.Value(tokenCtxKey).(*oauth.Token)
 	return raw
 }
 
@@ -59,8 +45,17 @@ func UserFromContext(ctx context.Context) *User {
 		return nil
 	}
 	var user User
-	if err := json.Unmarshal(userData.([]byte), &user); err != nil {
-		return nil
+	for key, v := range userData.(map[string]interface{}) {
+		switch key {
+		case "id":
+			user.ID = v.(string)
+		case "email":
+			user.Email = v.(string)
+		case "name":
+			user.Name = v.(string)
+		case "role":
+			user.Role = Role(v.(string))
+		}
 	}
 	return &user
 }

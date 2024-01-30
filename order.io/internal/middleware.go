@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	_ "time"
 
+	"github.com/go-chi/jwtauth"
 	"order.io/pkg/cannon"
+	"order.io/pkg/order"
 )
 
 type fn func(w http.ResponseWriter, r *http.Request) error
@@ -91,4 +92,27 @@ func CanonicalLog(next http.Handler) http.Handler {
 			slog.String("duration", time.Since(start).String()),
 		)
 	})
+}
+
+func TokenAuthMiddleware(tokenAuth *jwtauth.JWTAuth) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			token := requestToken(r)
+			if token == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx := order.NewContextWithJWT(r.Context(), token)
+
+			if !strings.HasPrefix(token, "sk_") &&
+				!strings.HasPrefix(token, "pk_") {
+				jwtauth.Authenticator(next).ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }

@@ -140,6 +140,15 @@ func (u *User) DeleteVehicle(id string) error {
 	return NewInvalidParameter("vehicle", id)
 }
 
+func (u *User) GetActiveVehicle() *Vehicle {
+	for _, v := range u.Vehicles {
+		if v.ID == u.ActiveVehicle {
+			return v
+		}
+	}
+	return nil
+}
+
 func (u *User) GetVehicles() []*Vehicle {
 	return u.Vehicles
 }
@@ -194,15 +203,6 @@ func (u *User) SetActiveVehicle(id string) bool {
 		}
 	}
 	return false
-}
-
-func (u *User) GetActiveVehicle() *Vehicle {
-	for _, v := range u.Vehicles {
-		if v.ID == u.ActiveVehicle {
-			return v
-		}
-	}
-	return nil
 }
 
 func (u *User) GetFavoritePlace(id string) *Location {
@@ -261,7 +261,7 @@ type UserService interface {
 	FindByEmail(context.Context, string) (*User, error)
 	FindAll(context.Context, *UserFilter) (*UserList, error)
 	CreateUser(context.Context, *User) error
-	Me(context.Context) (*Profile, error)
+	Me(context.Context) (*User, error)
 	SetPreferedCurrency(context.Context, string) error
 
 	AddDeviceToken(context.Context, string, string) error

@@ -107,8 +107,9 @@ type ComplexityRoot struct {
 		Available        func(childComplexity int) int
 		Dob              func(childComplexity int) int
 		Email            func(childComplexity int) int
+		FirstName        func(childComplexity int) int
 		ID               func(childComplexity int) int
-		Name             func(childComplexity int) int
+		LastName         func(childComplexity int) int
 		Phone            func(childComplexity int) int
 		Photo            func(childComplexity int) int
 		PreferedCurrency func(childComplexity int) int
@@ -570,6 +571,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Profile.Email(childComplexity), true
 
+	case "Profile.firstName":
+		if e.complexity.Profile.FirstName == nil {
+			break
+		}
+
+		return e.complexity.Profile.FirstName(childComplexity), true
+
 	case "Profile.id":
 		if e.complexity.Profile.ID == nil {
 			break
@@ -577,12 +585,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Profile.ID(childComplexity), true
 
-	case "Profile.name":
-		if e.complexity.Profile.Name == nil {
+	case "Profile.lastName":
+		if e.complexity.Profile.LastName == nil {
 			break
 		}
 
-		return e.complexity.Profile.Name(childComplexity), true
+		return e.complexity.Profile.LastName(childComplexity), true
 
 	case "Profile.phone":
 		if e.complexity.Profile.Phone == nil {
@@ -2449,8 +2457,10 @@ func (ec *executionContext) fieldContext_Mutation_updateProfile(ctx context.Cont
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Profile_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Profile_name(ctx, field)
+			case "firstName":
+				return ec.fieldContext_Profile_firstName(ctx, field)
+			case "lastName":
+				return ec.fieldContext_Profile_lastName(ctx, field)
 			case "email":
 				return ec.fieldContext_Profile_email(ctx, field)
 			case "phone":
@@ -3440,8 +3450,8 @@ func (ec *executionContext) fieldContext_Profile_id(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Profile_name(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Profile_name(ctx, field)
+func (ec *executionContext) _Profile_firstName(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Profile_firstName(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3454,7 +3464,7 @@ func (ec *executionContext) _Profile_name(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
+		return obj.FirstName, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3471,7 +3481,51 @@ func (ec *executionContext) _Profile_name(ctx context.Context, field graphql.Col
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Profile_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Profile_firstName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Profile",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Profile_lastName(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Profile_lastName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Profile_lastName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Profile",
 		Field:      field,
@@ -3974,8 +4028,10 @@ func (ec *executionContext) fieldContext_Query_me(ctx context.Context, field gra
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Profile_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Profile_name(ctx, field)
+			case "firstName":
+				return ec.fieldContext_Profile_firstName(ctx, field)
+			case "lastName":
+				return ec.fieldContext_Profile_lastName(ctx, field)
 			case "email":
 				return ec.fieldContext_Profile_email(ctx, field)
 			case "phone":
@@ -8299,8 +8355,13 @@ func (ec *executionContext) _Profile(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "name":
-			out.Values[i] = ec._Profile_name(ctx, field, obj)
+		case "firstName":
+			out.Values[i] = ec._Profile_firstName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "lastName":
+			out.Values[i] = ec._Profile_lastName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

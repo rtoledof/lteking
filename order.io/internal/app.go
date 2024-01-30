@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/go-chi/jwtauth/v5"
+	"github.com/go-chi/jwtauth"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/gomail.v2"
 
@@ -20,20 +19,16 @@ import (
 	rdb "order.io/pkg/redis"
 )
 
-var tokenAuth *jwtauth.JWTAuth
 var privateKey string
 
-func init() {
-	tokenAuth = jwtauth.New("HS256", []byte(os.Getenv("JWT_PRIVATE_KEY")), nil)
-}
-
 type App struct {
-	router http.Handler
-	rdb    *rdb.Redis
-	mongo  *mongo.DB
-	config Config
-	dialer *gomail.Dialer
-	done   chan struct{}
+	router    http.Handler
+	rdb       *rdb.Redis
+	mongo     *mongo.DB
+	config    Config
+	dialer    *gomail.Dialer
+	done      chan struct{}
+	tokenAuth *jwtauth.JWTAuth
 }
 
 func New(cfg Config) *App {
@@ -42,10 +37,11 @@ func New(cfg Config) *App {
 	redisDB := rdb.NewRedis(client)
 
 	app := &App{
-		rdb:    redisDB,
-		config: cfg,
-		mongo:  mongo.NewDB(cfg.DB.ConnectionString(), cfg.DB.Database),
-		done:   make(chan struct{}),
+		rdb:       redisDB,
+		config:    cfg,
+		mongo:     mongo.NewDB(cfg.DB.ConnectionString(), cfg.DB.Database),
+		done:      make(chan struct{}),
+		tokenAuth: jwtauth.New("HS256", []byte(cfg.JWTPrivateKey), nil),
 	}
 
 	app.loader()
@@ -132,6 +128,8 @@ func (a *App) loader() {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Timeout(60 * time.Second))
 	router.Use(CanonicalLog)
+	router.Use(jwtauth.Verifier(a.tokenAuth))
+	router.Use(TokenAuthMiddleware(a.tokenAuth))
 	router.Mount("/debug", middleware.Profiler())
 
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {

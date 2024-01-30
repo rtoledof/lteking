@@ -53,13 +53,6 @@ func NewUserService(
 	if err != nil {
 		panic("unable to create user email index")
 	}
-	_, err = db.Collection(DriverCollection).Indexes().CreateMany(
-		context.Background(),
-		indexes,
-	)
-	if err != nil {
-		panic("unable to create user email index")
-	}
 
 	s := &UserService{
 		db:        db,
@@ -289,14 +282,14 @@ func (s *UserService) FavoriteVehicles(ctx context.Context) (_ []string, err err
 	return usr.GetFavoriteVehicles(), nil
 }
 
-func (s *UserService) Me(ctx context.Context) (_ *identity.Profile, err error) {
+func (s *UserService) Me(ctx context.Context) (_ *identity.User, err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.Me")
 	usr, err := checkRole(ctx, s.db, identity.RoleRider)
 	if err != nil {
 		return nil, err
 	}
 
-	return usr.Profile, nil
+	return usr, nil
 }
 
 func (s *UserService) LastNAddress(ctx context.Context, number int) (_ []*identity.Location, err error) {
@@ -789,6 +782,9 @@ func CreateUser(ctx context.Context, db *DB, user *identity.User) error {
 	collection := RiderCollection
 	if user.Role == identity.RoleDriver {
 		collection = DriverCollection
+	}
+	if user.Referer != "" {
+		user.Referer = identity.NewReferalCode()
 	}
 	_, err := db.Collection(collection).InsertOne(ctx, user)
 	if err != nil {

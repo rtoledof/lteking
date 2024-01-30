@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/jwtauth"
 
 	"wallet.io/pkg/cannon"
+	"wallet.io/pkg/wallet"
 )
 
 type fn func(w http.ResponseWriter, r *http.Request) error
@@ -134,12 +135,21 @@ func TokenAuthMiddleware(tokenAuth *jwtauth.JWTAuth) func(next http.Handler) htt
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			if r.URL.Path != "/health" && r.URL.Path != "/query" {
-				jwtauth.Verifier(tokenAuth)(next).ServeHTTP(w, r)
-				jwtauth.Authenticator(next).ServeHTTP(w, r)
+			token := requestToken(r)
+			if token == "" {
+				next.ServeHTTP(w, r)
+				return
 			}
 
-			next.ServeHTTP(w, r)
+			ctx := wallet.NewContextWithJWT(r.Context(), token)
+
+			if !strings.HasPrefix(token, "sk_") &&
+				!strings.HasPrefix(token, "pk_") {
+				jwtauth.Authenticator(next).ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

@@ -109,8 +109,10 @@ type PointInput struct {
 type Profile struct {
 	// Unique identifier
 	ID string `json:"id"`
-	// Name of the user
-	Name string `json:"name"`
+	// First name of the user
+	FirstName string `json:"firstName"`
+	// last name of the user
+	LastName string `json:"lastName"`
 	// Email of the user
 	Email string `json:"email"`
 	// Phone number of the user
