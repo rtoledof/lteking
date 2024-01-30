@@ -12,47 +12,52 @@ spec:
       labels:
         app: wallet
     spec:
-            containers:
-            - name: wallet
-              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/wallet:v1.1.1
-              ports:
-              - containerPort: 80
-              env:
-              - name: AUTH_SERVICE_URL
-                value: "http://auth"
-              - name: JWT_SECRET_KEY
-                value: "asdasdasdasdasdasdasdasd"
-              - name: ABLY_API_KEY
-                value: "z8TS2w.nyBXtw:7QTI5Uq-wOaCLoazlWNigoh9LEbGIaNdIx4nRb2ZWKM"
-              - name: ABLY_API_SUBSCRIBER_KEY
-                value: "z8TS2w.nHdvAA:-VDt5rWDKbechfJ6PjkiWeYkAGAs5oeVGuQVJrmQv4Q"
-              - name: SMTP_SERVER
-                value: "smtp.gmail.com"
-              - name: SMTP_PORT
-                value: "587"
-              - name: SMTP_USER
-                value: "rtoledofernandez@gmail.com"
-              - name: SMTP_PASS
-                value: "chej eqte xkvn yply"
-              - name: SERVER_PORT
-                value: "80"
-              - name: MONGO_URL
-                value: "mongodb://mongodb-svc:27017/?retryWrites=true&w=majority"
-              - name: REDIS_ADDR
-                value: "redis://redis:6379"
-              - name: MONGO_DB_NAME
-                value: "auth"
-              - name: APP_NAME
-                value: "Wallet service"
-              - name: SEED
-                value: "true"
-              resources:
-                limits:
-                  cpu: "500m"
-                  memory: "512Mi"
-                requests:
-                  cpu: "100m"
-                  memory: "256Mi"
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: wallet
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/wallet:v1.0.0
+        ports:
+        - containerPort: 80
+        env:
+        - name: AUTH_SERVICE_URL
+          value: "http://auth"
+        - name: JWT_SECRET_KEY
+          value: "asdasdasdasdasdasdasdasd"
+        - name: ABLY_API_KEY
+          value: "z8TS2w.nyBXtw:7QTI5Uq-wOaCLoazlWNigoh9LEbGIaNdIx4nRb2ZWKM"
+        - name: ABLY_API_SUBSCRIBER_KEY
+          value: "z8TS2w.nHdvAA:-VDt5rWDKbechfJ6PjkiWeYkAGAs5oeVGuQVJrmQv4Q"
+        - name: SMTP_SERVER
+          value: "smtp.gmail.com"
+        - name: SMTP_PORT
+          value: "587"
+        - name: SMTP_USER
+          value: "rtoledofernandez@gmail.com"
+        - name: SMTP_PASS
+          value: "chej eqte xkvn yply"
+        - name: SERVER_PORT
+          value: "80"
+        - name: MONGO_HOST
+          value: "mongodb-service"
+        - name: MONGO_PORT
+          value: "27017"
+        - name: REDIS_ADDR
+          value: "redis://redis:6379"
+        - name: MONGO_DB_NAME
+          value: "auth"
+        - name: APP_NAME
+          value: "Wallet service"
+        - name: SEED
+          value: "true"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+
 ---
 apiVersion: v1
 kind: Service
@@ -63,6 +68,6 @@ spec:
     app: wallet
   ports:
     - protocol: TCP
-      port: 8004
+      port: 5002
       targetPort: 80
   type: LoadBalancer

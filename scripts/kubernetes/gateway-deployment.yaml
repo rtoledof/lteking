@@ -19,7 +19,7 @@ spec:
               - containerPort: 80
               env:
               - name: SUBGRAPHS
-                value: "[{ 'name': 'auth', 'url': 'http://identity/query' },{ 'name': 'wallet', 'url': 'http://wallet/query' },{ 'name': 'orders', 'url': 'http://order/query'}]"
+                value: "[{ \"name\": \"auth\", \"url\": \"http://identity:5000/query\" },{ \"name\": \"wallet\", \"url\": \"http://wallet:5002/query\" },{ \"name\": \"orders\", \"url\": \"http://order:5001/query\"}]"
               resources:
                 limits:
                   cpu: "0.5"
@@ -27,6 +27,8 @@ spec:
                 requests:
                   cpu: "0.1"
                   memory: "256Mi"
+            imagePullSecrets:
+              - name: regcred
 ---
 apiVersion: v1
 kind: Service
@@ -37,6 +39,6 @@ spec:
     app: gateway
   ports:
     - protocol: TCP
-      port: 8001
-      targetPort: 80
+      port: 80
+      targetPort: 4000
   type: LoadBalancer
