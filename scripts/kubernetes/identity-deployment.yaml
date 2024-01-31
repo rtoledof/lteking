@@ -14,7 +14,7 @@ spec:
     spec:
             containers:
             - name: identity
-              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/identity:v1.0.0
+              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/identity:v1.0.1
               ports:
               - containerPort: 80
               env:
