@@ -2,3 +2,4 @@ node_modules
 .vscode
 .fleet
 __debub*
+vendor
