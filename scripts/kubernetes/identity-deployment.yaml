@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: identity
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: identity
@@ -14,7 +14,7 @@ spec:
     spec:
             containers:
             - name: identity
-              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/identity:v1.0.1
+              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/identity:v1.0.2
               ports:
               - containerPort: 80
               env:
@@ -67,4 +67,4 @@ spec:
     - protocol: TCP
       port: 5000
       targetPort: 80
-  type: LoadBalancer
+  type: ClusterIP

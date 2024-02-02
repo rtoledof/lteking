@@ -1,5 +1,5 @@
 node_modules
 .vscode
 .fleet
-__debub*
+__debug*
 vendor
