@@ -58,11 +58,13 @@ func assembleModelProfile(p *identity.User) *model.Profile {
 		profile.FirstName = p.Profile.Name
 		profile.Dob = &p.Profile.DOB
 		profile.Phone = &p.Profile.Phone
-		vehicle, err := assembleModelVehicle(p.GetActiveVehicle())
-		if err != nil {
-			return profile
+		if activeVehicle := p.GetActiveVehicle(); activeVehicle != nil {
+			vehicle, err := assembleModelVehicle(p.GetActiveVehicle())
+			if err != nil {
+				return profile
+			}
+			profile.ActiveVehicle = vehicle
 		}
-		profile.ActiveVehicle = vehicle
 	}
 
 	return profile

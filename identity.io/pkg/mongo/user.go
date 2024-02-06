@@ -284,7 +284,7 @@ func (s *UserService) FavoriteVehicles(ctx context.Context) (_ []string, err err
 
 func (s *UserService) Me(ctx context.Context) (_ *identity.User, err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.Me")
-	usr, err := checkRole(ctx, s.db, identity.RoleRider)
+	usr, err := checkRole(ctx, s.db, identity.Role(""))
 	if err != nil {
 		return nil, err
 	}
@@ -800,9 +800,6 @@ func checkRole(ctx context.Context, db *DB, role identity.Role) (*identity.User,
 	}
 	if claims == nil {
 		return nil, identity.ErrNilUserInContext
-	}
-	if role == identity.Role("") {
-		return nil, identity.ErrAccessDenied
 	}
 
 	if user, ok := claims["user"]; ok {

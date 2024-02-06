@@ -37,7 +37,7 @@ type User struct {
 	ActiveVehicle       string            `json:"active_vehicle,omitempty" bson:"active_vehicle"`
 	Referer             string            `json:"refer,omitempty" bson:"referer,omitempty"`
 	Referal             string            `json:"referal,omitempty" bson:"referal,omitempty"`
-	Role                Role              `json:"-" bson:"role"`
+	Role                Role              `json:"role" bson:"role"`
 	Locations           []*Location       `json:"locations,omitempty" bson:"locations,omitempty"`
 	LastLocations       []*Location       `json:"last_locations,omitempty" bson:"last_locations,omitempty"`
 	Vehicles            []*Vehicle        `json:"vehicles,omitempty" bson:"vehicles,omitempty"`
