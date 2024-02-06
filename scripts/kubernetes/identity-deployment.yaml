@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: identity
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: identity
@@ -67,4 +67,4 @@ spec:
     - protocol: TCP
       port: 5000
       targetPort: 80
-  type: ClusterIP
+  type: LoadBalancer
