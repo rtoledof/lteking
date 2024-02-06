@@ -138,13 +138,15 @@ type Profile struct {
 // Input request used to update the profile.
 type ProfileInput struct {
 	// Name of the user
-	Name *string `json:"name,omitempty"`
+	FirstName *string `json:"firstName,omitempty"`
+	// Last name of the user
+	LastName *string `json:"lastName,omitempty"`
 	// Email of the user
 	Email *string `json:"email,omitempty"`
 	// Phone number of the user
 	Phone *string `json:"phone,omitempty"`
 	// User profile photo
-	Photo *graphql.Upload `json:"photo,omitempty"`
+	Photo *string `json:"photo,omitempty"`
 	// User date of birth
 	Dob *string `json:"dob,omitempty"`
 	// User referal code. The code of the user that refered to the current user
@@ -154,7 +156,7 @@ type ProfileInput struct {
 	// User gender. This will be usefull to include later on the find for an specific type of gender
 	Gender *Gender `json:"gender,omitempty"`
 	// User id card
-	Dni *graphql.Upload `json:"dni,omitempty"`
+	Dni *string `json:"dni,omitempty"`
 	// User driver licence
 	Licence *graphql.Upload `json:"licence,omitempty"`
 	// User vehicle circulation

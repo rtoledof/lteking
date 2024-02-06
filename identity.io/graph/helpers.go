@@ -7,8 +7,11 @@ import (
 
 func assembleUpdateProfile(p model.ProfileInput) *identity.UpdateProfile {
 	updateProfile := identity.UpdateProfile{}
-	if p.Name != nil {
-		updateProfile.Name = *p.Name
+	if p.FirstName != nil {
+		updateProfile.Name = *p.FirstName
+	}
+	if p.LastName != nil {
+		updateProfile.LastName = *p.LastName
 	}
 	if p.Phone != nil {
 		updateProfile.Phone = *p.Phone
@@ -21,11 +24,11 @@ func assembleUpdateProfile(p model.ProfileInput) *identity.UpdateProfile {
 	}
 	if p.Photo != nil {
 		// TODO: process upload file
-		updateProfile.Photo = *&p.Photo.Filename
+		updateProfile.Photo = *p.Photo
 	}
 	if p.Dni != nil {
 		// TODO: process upload file
-		updateProfile.Dni = *&p.Dni.Filename
+		updateProfile.Dni = *p.Dni
 	}
 
 	if p.Licence != nil {

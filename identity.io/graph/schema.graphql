@@ -202,13 +202,15 @@ input OtpInput {
 "Input request used to update the profile."
 input ProfileInput {
   """Name of the user"""
-  name: String
+  firstName: String
+  """Last name of the user"""
+  lastName: String
   """Email of the user"""
   email: String
   """Phone number of the user"""
   phone: String
   """User profile photo"""
-  photo: Upload
+  photo: String
   """User date of birth"""
   dob: String
   """User referal code. The code of the user that refered to the current user"""
@@ -218,7 +220,7 @@ input ProfileInput {
   """User gender. This will be usefull to include later on the find for an specific type of gender"""
   gender: Gender
   """User id card"""
-  dni: Upload
+  dni: String
   """User driver licence"""
   licence: Upload
   """User vehicle circulation"""
