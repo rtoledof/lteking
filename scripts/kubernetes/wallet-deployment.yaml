@@ -16,7 +16,7 @@ spec:
       - name: regcred
       containers:
       - name: wallet
-        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/wallet:v1.0.1
+        image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/wallet:v1.0.2
         ports:
         - containerPort: 80
         env:
@@ -46,6 +46,10 @@ spec:
           value: "redis://redis:6379"
         - name: MONGO_DB_NAME
           value: "auth"
+        - name: MONGO_USER
+          value: ""
+        - name: MONGO_PASS
+          value: ""
         - name: APP_NAME
           value: "Wallet service"
         - name: SEED

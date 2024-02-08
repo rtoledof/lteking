@@ -14,7 +14,7 @@ spec:
     spec:
             containers:
             - name: order
-              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/order:v1.0.1
+              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/order:v1.0.2
               ports:
               - containerPort: 80
               env:
@@ -34,6 +34,10 @@ spec:
                 value: "27017"
               - name: MONGO_DB_NAME
                 value: "order"
+              - name: MONGO_USER
+                value: ""
+              - name: MONGO_PASS
+                value: ""
               - name: APP_NAME
                 value: "Order service"
               - name: REDIS_DB
