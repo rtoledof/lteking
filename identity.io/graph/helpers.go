@@ -39,6 +39,9 @@ func assembleUpdateProfile(p model.ProfileInput) *identity.UpdateProfile {
 		// TODO: Process upload file
 		updateProfile.Circulation = *&p.Circulation.Filename
 	}
+	if p.PreferedCurrency != nil {
+		updateProfile.PreferedCurrency = *p.PreferedCurrency
+	}
 
 	return &updateProfile
 }
@@ -58,6 +61,8 @@ func assembleModelProfile(p *identity.User) *model.Profile {
 		profile.FirstName = p.Profile.Name
 		profile.Dob = &p.Profile.DOB
 		profile.Phone = &p.Profile.Phone
+		profile.Photo = &p.Profile.Photo
+		profile.PreferedCurrency = &p.Profile.PreferedCurrency
 		if activeVehicle := p.GetActiveVehicle(); activeVehicle != nil {
 			vehicle, err := assembleModelVehicle(p.GetActiveVehicle())
 			if err != nil {

@@ -15,7 +15,11 @@ type DB struct {
 }
 
 func (db DB) ConnectionString() string {
-	return fmt.Sprintf("mongodb://%s:%d/?retryWrites=true&w=majority", db.Host, db.Port)
+	connectionString := fmt.Sprintf("mongodb://%s:%d/?retryWrites=true&w=majority", db.Host, db.Port)
+	if len(db.Username) > 0 {
+		connectionString = fmt.Sprintf("mongodb://%s:%s@%s:%d/?retryWrites=true&w=majority", db.Username, db.Password, db.Host, db.Port)
+	}
+	return connectionString
 }
 
 func (db DB) WithUsernamePassword(username, password string) DB {
@@ -69,6 +73,14 @@ func LoadConfig() Config {
 
 	if mongoDBName := os.Getenv("MONGO_DB_NAME"); len(mongoDBName) > 0 {
 		cfg.MongoDatabase = mongoDBName
+	}
+
+	if mongoUser := os.Getenv("MONGO_USER"); len(mongoUser) > 0 {
+		cfg.DB.Username = mongoUser
+	}
+
+	if mongoPass := os.Getenv("MONGO_PASS"); len(mongoPass) > 0 {
+		cfg.DB.Password = mongoPass
 	}
 
 	if key, exist := os.LookupEnv("JWT_SECRET_KEY"); exist {

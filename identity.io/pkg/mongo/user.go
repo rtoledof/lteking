@@ -308,6 +308,10 @@ func (s *UserService) UpdateProfile(ctx context.Context, request *identity.Updat
 		return err
 	}
 
+	if usr.Profile == nil {
+		usr.Profile = &identity.Profile{}
+	}
+
 	if request.Name != "" {
 		usr.Profile.Name = request.Name
 	}
@@ -331,6 +335,10 @@ func (s *UserService) UpdateProfile(ctx context.Context, request *identity.Updat
 	}
 	if request.Dni != "" {
 		usr.Profile.Dni = request.Dni
+	}
+
+	if request.PreferedCurrency != "" {
+		usr.Profile.PreferedCurrency = request.PreferedCurrency
 	}
 
 	if usr.Profile.IsCompleted(usr.Role) {

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -19,7 +20,11 @@ type DB struct {
 }
 
 func (db DB) ConnectionString() string {
-	return "mongodb://" + db.Host + ":" + strconv.FormatInt(db.Port, 10) + "/?" + db.Options
+	connectionString := fmt.Sprintf("mongodb://%s:%d/?retryWrites=true&w=majority", db.Host, db.Port)
+	if len(db.User) > 0 {
+		connectionString = fmt.Sprintf("mongodb://%s:%s@%s:%d/?retryWrites=true&w=majority", db.User, db.Pass, db.Host, db.Port)
+	}
+	return connectionString
 }
 
 type Config struct {
@@ -71,6 +76,18 @@ func LoadConfig() Config {
 		if err != nil {
 			cfg.DB.Port = 27017
 		}
+	}
+
+	if mongoDB := os.Getenv("MONGO_DB_NAME"); len(mongoDB) > 0 {
+		cfg.DB.Database = mongoDB
+	}
+
+	if mongoUser := os.Getenv("MONGO_USER"); len(mongoUser) > 0 {
+		cfg.DB.User = mongoUser
+	}
+
+	if mongoPass := os.Getenv("MONGO_PASS"); len(mongoPass) > 0 {
+		cfg.DB.Pass = mongoPass
 	}
 
 	if key, exist := os.LookupEnv("JWT_SECRET_KEY"); exist {
