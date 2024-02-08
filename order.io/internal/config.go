@@ -20,10 +20,19 @@ type DB struct {
 }
 
 func (db DB) ConnectionString() string {
-	connectionString := fmt.Sprintf("mongodb+srv://%s:%d/?retryWrites=true&w=majority", db.Host, db.Port)
-	if len(db.User) > 0 {
-		connectionString = fmt.Sprintf("mongodb+srv://%s:%s@%s:%d/?retryWrites=true&w=majority", db.User, db.Pass, db.Host, db.Port)
+	connectionString := "mongodb+srv://"
+	if db.Port > 0 {
+		connectionString = "mongodb://"
 	}
+	if len(db.User) > 0 {
+		connectionString += fmt.Sprintf("%s:%s@", db.User, db.Pass)
+	}
+	connectionString += db.Host
+
+	if db.Port > 0 {
+		connectionString += fmt.Sprintf(":%d", db.Port)
+	}
+	connectionString += "/?retryWrites=true&w=majority"
 	return connectionString
 }
 

@@ -12,13 +12,23 @@ type DB struct {
 	Username string
 	Password string
 	Database string
+	Options  string
 }
 
 func (db DB) ConnectionString() string {
-	connectionString := fmt.Sprintf("mongodb+srv://%s:%d/?retryWrites=true&w=majority", db.Host, db.Port)
-	if len(db.Username) > 0 {
-		connectionString = fmt.Sprintf("mongodb+srv://%s:%s@%s:%d/?retryWrites=true&w=majority", db.Username, db.Password, db.Host, db.Port)
+	connectionString := "mongodb+srv://"
+	if db.Port > 0 {
+		connectionString = "mongodb://"
 	}
+	if len(db.Username) > 0 {
+		connectionString += fmt.Sprintf("%s:%s@", db.Username, db.Password)
+	}
+	connectionString += db.Host
+
+	if db.Port > 0 {
+		connectionString += fmt.Sprintf(":%d", db.Port)
+	}
+	connectionString += "/?retryWrites=true&w=majority"
 	return connectionString
 }
 
