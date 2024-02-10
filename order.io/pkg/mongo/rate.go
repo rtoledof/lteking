@@ -176,36 +176,24 @@ func assembleRate(rate *order.Rate, req order.RateRequest) {
 	if req.BasePrice > 0 {
 		rate.BasePrice = req.BasePrice
 	}
-	if req.PricePerMin != nil {
-		rate.PricePerMin = *req.PricePerMin
-	}
-	if req.PricePerKm != nil {
-		rate.PricePerKm = *req.PricePerKm
-	}
-	if req.PricePerPassenger != nil {
-		rate.PricePerPassenger = *req.PricePerPassenger
-	}
-	if req.PricePerBaggage != nil {
-		rate.PricePerBaggage = *req.PricePerBaggage
-	}
+	rate.PricePerMin = req.PricePerMin
+	rate.PricePerKm = req.PricePerKm
+	rate.PricePerPassenger = req.PricePerPassenger
+	rate.PricePerBaggage = req.PricePerBaggage
 	if len(req.StartTime) > 0 {
 		rate.StartTime = req.StartTime
 	}
 	if len(req.EndTime) > 0 {
 		rate.EndTime = req.EndTime
 	}
-	if req.StartDate != nil {
-		startDate := time.Unix(*req.StartDate, 0)
+	if req.StartDate != 0 {
+		startDate := time.Unix(req.StartDate, 0)
 		rate.StartDate = startDate.Format("2006-01-02")
 	}
-	if req.EndDate != nil {
-		endDate := time.Unix(*req.EndDate, 0)
+	if req.EndDate != 0 {
+		endDate := time.Unix(req.EndDate, 0)
 		rate.EndDate = endDate.Format("2006-01-02")
 	}
-	if req.MinKm != nil {
-		rate.MinKm = *req.MinKm
-	}
-	if req.MaxKm != nil {
-		rate.MaxKm = *req.MaxKm
-	}
+	rate.MinKm = req.MinKm
+	rate.MaxKm = req.MaxKm
 }

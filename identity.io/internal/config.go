@@ -78,7 +78,6 @@ func LoadConfig() Config {
 		Redis: "redis://localhost:6379",
 		Mongo: DB{
 			Host:     "localhost",
-			Port:     27017,
 			Database: "identity",
 		},
 

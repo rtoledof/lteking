@@ -35,6 +35,10 @@ func GetTokenTypeFromContext(ctx context.Context) string {
 	return raw
 }
 
+func NewContextWithUser(ctx context.Context, user User) context.Context {
+	return context.WithValue(ctx, jwtauth.TokenCtxKey, user)
+}
+
 func UserFromContext(ctx context.Context) *User {
 	_, claim, err := jwtauth.FromContext(ctx)
 	if err != nil || claim == nil {

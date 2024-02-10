@@ -117,6 +117,9 @@ func (s *OrderService) CalculatePrice(o *order.Order) error {
 	if err != nil {
 		return err
 	}
+	if len(rates) == 0 {
+		return fmt.Errorf("no rates found: %w", order.ErrNotFound)
+	}
 	var rate *order.Rate = rates[0]
 	for _, r := range rates {
 		if checkRate(r) {

@@ -41,17 +41,17 @@ type RateRequest struct {
 	ID                string `json:"id"`
 	Code              string `json:"code"`
 	BasePrice         int    `json:"base_price"`
-	PricePerMin       *int   `json:"price_per_min,omitempty"`
-	PricePerKm        *int   `json:"price_per_km,omitempty"`
-	PricePerPassenger *int   `json:"price_per_passenger,omitempty"`
-	PricePerBaggage   *int   `json:"price_per_baggage,omitempty"`
+	PricePerMin       int    `json:"price_per_min,omitempty"`
+	PricePerKm        int    `json:"price_per_km,omitempty"`
+	PricePerPassenger int    `json:"price_per_passenger,omitempty"`
+	PricePerBaggage   int    `json:"price_per_baggage,omitempty"`
 	StartTime         string `json:"start_time,omitempty"`
 	EndTime           string `json:"end_time,omitempty"`
-	StartDate         *int64 `json:"start_date,omitempty"`
-	EndDate           *int64 `json:"end_date,omitempty"`
-	MinKm             *int   `json:"min_km,omitempty"`
-	MaxKm             *int   `json:"max_km,omitempty"`
-	HiDemand          *bool  `json:"high_demand,omitempty"`
+	StartDate         int64  `json:"start_date,omitempty"`
+	EndDate           int64  `json:"end_date,omitempty"`
+	MinKm             int    `json:"min_km,omitempty"`
+	MaxKm             int    `json:"max_km,omitempty"`
+	HiDemand          bool   `json:"high_demand,omitempty"`
 }
 
 type RateFilter struct {

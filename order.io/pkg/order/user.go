@@ -55,3 +55,12 @@ type User struct {
 	Email    string `json:"email" bson:"email"`
 	Role     Role   `json:"role" bson:"role"`
 }
+
+func (u *User) Claim() map[string]any {
+	return map[string]any{
+		"id":    u.ID,
+		"name":  u.Name,
+		"email": u.Email,
+		"role":  u.Role.String(),
+	}
+}

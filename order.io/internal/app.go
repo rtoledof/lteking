@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -17,9 +18,8 @@ import (
 	"order.io/graph"
 	"order.io/pkg/mongo"
 	rdb "order.io/pkg/redis"
+	"order.io/pkg/seed"
 )
-
-var privateKey string
 
 type App struct {
 	router    http.Handler
@@ -45,6 +45,15 @@ func New(cfg Config) *App {
 	}
 
 	app.loader()
+	if v := os.Getenv("SEED"); len(v) > 0 {
+		if v == "true" {
+			seed.RegisterSeeder("rate", func() seed.Seeder { return seed.NewRate(app.mongo) })
+			seed.RegisterSeeder("vehicle_category_rate", func() seed.Seeder { return seed.NewVehicleCategoryRate(app.mongo) })
+			if err := seed.Up(); err != nil {
+				fmt.Println("failed to seed rate", err)
+			}
+		}
+	}
 
 	return app
 }
