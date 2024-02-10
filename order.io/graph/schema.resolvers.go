@@ -187,12 +187,7 @@ func (r *queryResolver) Categories(ctx context.Context, order string) ([]*model.
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*model.CategoryPrice, len(categories))
-	for i, c := range categories {
-		item, _ := assembleCategoryPrice(c.Category, c.Price, c.Currency)
-		items[i] = item
-	}
-	return items, nil
+	return assembleCategoryPrices(categories), nil
 }
 
 // PaymentMethods is the resolver for the paymentMethods field.

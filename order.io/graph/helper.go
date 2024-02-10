@@ -58,11 +58,13 @@ func assembleModelOrder(o *order.Order) (*model.Order, error) {
 		return nil, order.NewInvalidParameter("status", "invalid status")
 	}
 	ord.Status = &status
-	pm := model.PaymentMethod(o.ChargeMethod)
-	if !pm.IsValid() {
-		return nil, order.NewInvalidParameter("payment_method", "invalid payment method")
+	if o.ChargeMethod != "" {
+		pm := model.PaymentMethod(o.ChargeMethod)
+		if !pm.IsValid() {
+			return nil, order.NewInvalidParameter("payment_method", "invalid payment method")
+		}
+		ord.PaymentMethod = &pm
 	}
-	ord.PaymentMethod = &pm
 
 	return ord, nil
 }

@@ -529,9 +529,9 @@ func (s *OrderService) prepareOrder(ctx context.Context, o *order.Order, req ord
 		return nil, fmt.Errorf("no routes found: %w", order.ErrNotFound)
 	}
 
-	o.Distance = routes.Distance
-	o.Duration = routes.Duration
 	o.Route = routes.Routes[0]
+	o.Distance = o.Route.Distance
+	o.Duration = o.Route.Duration
 	o.RouteString = base64.StdEncoding.EncodeToString([]byte(strBody))
 
 	err = s.CalculatePrice(o)

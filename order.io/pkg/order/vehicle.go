@@ -11,11 +11,11 @@ type VehicleCategory string
 const (
 	VehicleCategoryX        VehicleCategory = "X"
 	VehicleCategoryXl       VehicleCategory = "XL"
-	VehicleCategoryConfort  VehicleCategory = "CONFORT"
-	VehicleCategoryGreen    VehicleCategory = "GREEN"
-	VehicleCategoryPets     VehicleCategory = "PETS"
-	VehicleCategoryPackage  VehicleCategory = "PACKAGE"
-	VehicleCategoryPriority VehicleCategory = "PRIORITY"
+	VehicleCategoryConfort  VehicleCategory = "Confort"
+	VehicleCategoryGreen    VehicleCategory = "Green"
+	VehicleCategoryPets     VehicleCategory = "Pets"
+	VehicleCategoryPackage  VehicleCategory = "Package"
+	VehicleCategoryPriority VehicleCategory = "Priority"
 )
 
 var AllVehicleCategory = []VehicleCategory{
