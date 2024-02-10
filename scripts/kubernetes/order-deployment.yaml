@@ -14,7 +14,7 @@ spec:
     spec:
             containers:
             - name: order
-              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/order:v1.0.3
+              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/order:v1.0.4
               ports:
               - containerPort: 80
               env:
