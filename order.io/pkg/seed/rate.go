@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/jwtauth"
 	"github.com/lestrrat-go/jwx/jwt"
-	"identity.io/pkg/identity"
 	"order.io/pkg/mongo"
 	"order.io/pkg/order"
 )
@@ -81,7 +80,7 @@ func (s *Rate) Up() error {
 	ctx := prepateContext()
 	for _, v := range s.features {
 		result, err := s.service.FindByCode(ctx, v.Code)
-		if err != nil && errors.Is(err, identity.ErrNotFound) || result == nil {
+		if err != nil && errors.Is(err, order.ErrNotFound) || result == nil {
 			_, err := s.service.Create(ctx, v)
 			if err != nil {
 				return nil
@@ -102,7 +101,7 @@ func prepateContext(roles ...order.Role) context.Context {
 	ctx := context.Background()
 
 	token := jwt.New()
-	token.Set("id", identity.NewID().String())
+	token.Set("id", order.NewID().String())
 	user := order.User{
 		ID:   order.NewID().String(),
 		Role: order.RoleAdmin,
