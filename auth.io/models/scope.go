@@ -1,5 +1,7 @@
 package models
 
+import "context"
+
 type Scope string
 
 const (
@@ -22,3 +24,13 @@ const (
 	ScopeProfileUpdate Scope = "models:profile:update"
 	ScopeProfileRead   Scope = "models:profile:read"
 )
+
+func HasScope(ctx context.Context, scope Scope) bool {
+	scopes := ScopesFromContext(ctx)
+	for _, v := range scopes {
+		if v == scope {
+			return true
+		}
+	}
+	return false
+}

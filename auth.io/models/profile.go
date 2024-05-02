@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 )
 
 type Profile struct {
@@ -37,20 +38,6 @@ func (p *Profile) IsCompleted(role Role) bool {
 	}
 }
 
-type UpdateProfile struct {
-	Name              string `json:"name"`
-	LastName          string `json:"last_name"`
-	Dob               string `json:"dob"`
-	Phone             string `json:"phone"`
-	Photo             string `json:"photo"`
-	Gender            Gender `json:"gender"`
-	Licence           string `json:"licence"`
-	Dni               string `json:"dni"`
-	Circulation       string `json:"circulation,omitempty"`
-	TechnicInspection string `json:"technic_inspection,omitempty"`
-	PreferedCurrency  string `json:"prefered_currency,omitempty"`
-}
-
 type ProfileFilter struct {
 	Limit   int
 	Token   string
@@ -61,12 +48,12 @@ type ProfileFilter struct {
 	User    string
 }
 
-type ProfileStatus string
+type ProfileStatus int64
 
 const (
-	ProfileStatusIncompleted ProfileStatus = "INCOMPLETED"
-	ProfileStatusOnReview    ProfileStatus = "ON_REVIEW"
-	ProfileStatusCompleted   ProfileStatus = "COMPLETED"
+	ProfileStatusIncompleted ProfileStatus = iota + 1
+	ProfileStatusOnReview
+	ProfileStatusCompleted
 )
 
 var AllProfileStatus = []ProfileStatus{
@@ -84,7 +71,14 @@ func (e ProfileStatus) IsValid() bool {
 }
 
 func (e ProfileStatus) String() string {
-	return string(e)
+	switch e {
+	case ProfileStatusCompleted:
+		return "completed"
+	case ProfileStatusOnReview:
+		return "on review"
+	default:
+		return "incompleted"
+	}
 }
 
 func (e *ProfileStatus) UnmarshalGQL(v interface{}) error {
@@ -93,9 +87,13 @@ func (e *ProfileStatus) UnmarshalGQL(v interface{}) error {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = ProfileStatus(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid ProfileStatus", str)
+	switch strings.ToLower(str) {
+	case "completed":
+		*e = ProfileStatusCompleted
+	case "on review":
+		*e = ProfileStatusOnReview
+	default:
+		*e = ProfileStatusIncompleted
 	}
 	return nil
 }
@@ -105,8 +103,8 @@ func (e ProfileStatus) MarshalGQL(w io.Writer) {
 }
 
 type ProfileService interface {
-	Create(context.Context, *UpdateProfile) (*Profile, error)
-	Update(context.Context, *UpdateProfile) (*Profile, error)
+	Create(context.Context, *Profile) (*Profile, error)
+	Update(context.Context, *Profile) (*Profile, error)
 	FindByUser(context.Context) (*Profile, error)
 	FindAll(context.Context, *ProfileFilter) ([]*Profile, string, error)
 	ChangePin(ctx context.Context, old *string, pin string) (*Profile, error)

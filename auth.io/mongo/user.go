@@ -18,7 +18,7 @@ import (
 	"auth.io/redis"
 )
 
-var _ models.UserService = &UserService{}
+var _ models.UserManager = &UserService{}
 
 const RiderCollection Collections = "riders"
 const DriverCollection Collections = "drivers"
@@ -205,83 +205,6 @@ func (s *UserService) FindAll(ctx context.Context, filter *models.UserFilter) (_
 	return &models.UserList{Data: users, Token: token}, nil
 }
 
-func (s *UserService) AddFavoritePlace(ctx context.Context, name string, point models.Point) (_ *models.Location, err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.AddFavoritePlace")
-	user, err := checkRole(ctx, s.db, models.RoleRider)
-	if err != nil {
-		return nil, err
-	}
-
-	location := models.Location{
-		ID:   models.NewID().String(),
-		Name: name,
-	}
-
-	location.Geolocation = models.GeoLocation{
-		Type:        "Point",
-		Coordinates: []float64{point.Lng, point.Lat},
-		Lat:         point.Lat,
-		Long:        point.Lng,
-	}
-	user.Locations = append(user.Locations, &location)
-	if err := updateAddFavoritesPlaces(ctx, s.db, user); err != nil {
-		return nil, fmt.Errorf("unable to store the favorite palces: %w", err)
-	}
-	return &location, nil
-}
-
-func (s *UserService) FavoritePlaces(ctx context.Context) (_ []*models.Location, err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.FavoritePlaces")
-	usr, err := checkRole(ctx, s.db, models.RoleRider)
-	if err != nil {
-		return nil, err
-	}
-	return usr.Locations, nil
-}
-
-func (s *UserService) AddFavoriteVehicle(ctx context.Context, plate string, name *string) (err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.AddFavoriteVehicle")
-	if plate == "" {
-		return fmt.Errorf("plate is required")
-	}
-	usr, err := checkRole(ctx, s.db, models.RoleRider)
-	if err != nil {
-		return err
-	}
-	usr.AddFavoriteVehicle(plate, *name)
-	return nil
-}
-
-func (s *UserService) UpdatePlace(ctx context.Context, input *models.UpdatePlace) (_ *models.Location, err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.UpdatePlace")
-	user := models.UserFromContext(ctx)
-	if user == nil {
-		return nil, fmt.Errorf("unable to update the place: %w", models.ErrAccessDenied)
-	}
-	var location models.Location
-	for i := range user.Locations {
-		place := user.Locations[i]
-		if place.Name == input.Name {
-			place.Geolocation = models.GeoLocation{
-				Type:        "Point",
-				Coordinates: []float64{input.Location.Long, input.Location.Lat},
-			}
-			user.Locations[i] = place
-			break
-		}
-	}
-	return &location, nil
-}
-
-func (s *UserService) FavoriteVehicles(ctx context.Context) (_ []string, err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.FavoriteVehicles")
-	usr, err := checkRole(ctx, s.db, models.RoleRider)
-	if err != nil {
-		return nil, err
-	}
-	return usr.GetFavoriteVehicles(), nil
-}
-
 func (s *UserService) Me(ctx context.Context) (_ *models.User, err error) {
 	defer derrors.Wrap(&err, "mongo.UserService.Me")
 	usr, err := checkRole(ctx, s.db, models.Role(""))
@@ -290,67 +213,6 @@ func (s *UserService) Me(ctx context.Context) (_ *models.User, err error) {
 	}
 
 	return usr, nil
-}
-
-func (s *UserService) LastNAddress(ctx context.Context, number int) (_ []*models.Location, err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.LastNAddress")
-	usr, err := checkRole(ctx, s.db, models.RoleRider)
-	if err != nil {
-		return nil, err
-	}
-	return usr.LastNAddress(number), nil
-}
-
-func (s *UserService) UpdateProfile(ctx context.Context, request *models.UpdateProfile) (err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.UpdateProfile")
-	usr, err := checkRole(ctx, s.db, models.Role(""))
-	if err != nil {
-		return err
-	}
-
-	if usr.Profile == nil {
-		usr.Profile = &models.Profile{}
-	}
-
-	if request.Name != "" {
-		usr.Profile.Name = request.Name
-	}
-	if request.LastName != "" {
-		usr.Profile.LastName = request.LastName
-	}
-	if request.Dob != "" {
-		usr.Profile.DOB = request.Dob
-	}
-	if request.Phone != "" {
-		usr.Profile.Phone = request.Phone
-	}
-	if request.Photo != "" {
-		usr.Profile.Photo = request.Photo
-	}
-	if request.Gender != "" {
-		usr.Profile.Gender = request.Gender
-	}
-	if request.Licence != "" {
-		usr.Profile.Licence = request.Licence
-	}
-	if request.Dni != "" {
-		usr.Profile.Dni = request.Dni
-	}
-
-	if request.PreferedCurrency != "" {
-		usr.Profile.PreferedCurrency = request.PreferedCurrency
-	}
-
-	if usr.Profile.IsCompleted(usr.Role) {
-		usr.Profile.Status = models.ProfileStatusCompleted
-		usr.Status = models.UserStatusActive
-	}
-
-	if err := updateUser(ctx, s.db, usr); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *UserService) AddDevice(ctx context.Context, device string) (err error) {
@@ -397,112 +259,6 @@ func (s *UserService) Update(ctx context.Context, user *models.User) error {
 	if user.Profile.IsCompleted(user.Role) {
 		user.Profile.Status = models.ProfileStatusCompleted
 		user.Status = models.UserStatusActive
-	}
-	return updateUser(ctx, s.db, user)
-}
-
-// AddVehicle implements models.UserService.
-func (s *UserService) AddVehicle(ctx context.Context, vehicle *models.Vehicle) (err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.AddVehicle")
-	use, err := checkRole(ctx, nil, models.RoleDriver)
-	if err != nil {
-		return err
-	}
-	if vehicle.ID == "" {
-		vehicle.ID = models.NewID().String()
-	}
-	use.Vehicles = append(use.Vehicles, vehicle)
-	return updateUser(ctx, s.db, use)
-}
-
-// UpdateVehicle implements models.UserService.
-func (s *UserService) UpdateVehicle(ctx context.Context, v *models.Vehicle) (err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.UpdateVehicle")
-	use, err := checkRole(ctx, nil, models.RoleDriver)
-	if err != nil {
-		return err
-	}
-	for i, vehicle := range use.Vehicles {
-		if vehicle.ID == v.ID {
-			use.Vehicles[i] = v
-			break
-		}
-	}
-	return updateUser(ctx, s.db, use)
-}
-
-// UpdateFavoritePlace implements models.UserService.
-func (s *UserService) UpdateFavoritePlace(ctx context.Context, id string, p models.UpdatePlace) (err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.UpdateFavoritePlace")
-	use, err := checkRole(ctx, nil, models.RoleRider)
-	if err != nil {
-		return err
-	}
-	for i, location := range use.Locations {
-		if location.ID == id {
-			location.Name = p.Name
-			location.Geolocation = models.GeoLocation{
-				Type:        "Point",
-				Coordinates: []float64{p.Location.Long, p.Location.Lat},
-			}
-			use.Locations[i] = location
-			break
-		}
-	}
-	return updateUser(ctx, s.db, use)
-}
-
-// DeleteFavoritePlace implements models.UserService.
-func (s *UserService) DeleteFavoritePlace(ctx context.Context, id string) (err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.DeleteFavoritePlace")
-	use, err := checkRole(ctx, nil, models.RoleRider)
-	if err != nil {
-		return err
-	}
-	for i, location := range use.Locations {
-		if location.ID == id {
-			use.Locations = append(use.Locations[:i], use.Locations[i+1:]...)
-			break
-		}
-	}
-	return updateUser(ctx, s.db, use)
-}
-
-// DeleteVehicle implements models.UserService.
-func (s *UserService) DeleteVehicle(ctx context.Context, id string) (err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.DeleteVehicle")
-	use, err := checkRole(ctx, nil, models.RoleDriver)
-	if err != nil {
-		return err
-	}
-	for i, vehicle := range use.Vehicles {
-		if vehicle.ID == id {
-			use.Vehicles = append(use.Vehicles[:i], use.Vehicles[i+1:]...)
-			break
-		}
-	}
-	return updateUser(ctx, s.db, use)
-}
-
-// DeleteFavoriteVehicle implements models.UserService.
-func (s *UserService) DeleteFavoriteVehicle(ctx context.Context, plate string) error {
-	user, err := checkRole(ctx, nil, models.RoleRider)
-	if err != nil {
-		return err
-	}
-	user.DeleteFavoriteVehicle(plate)
-	return updateUser(ctx, s.db, user)
-}
-
-// SetActiveVehicle implements models.UserService.
-func (s *UserService) SetActiveVehicle(ctx context.Context, plate string) error {
-	user, err := checkRole(ctx, nil, models.RoleRider)
-	if err != nil {
-		return err
-	}
-
-	if !user.SetActiveVehicle(plate) {
-		return models.NewError(nil, http.StatusBadRequest, "vehicle not found")
 	}
 	return updateUser(ctx, s.db, user)
 }
@@ -556,40 +312,6 @@ func (s *UserService) RemoveDeviceToken(ctx context.Context, token string) error
 		return err
 	}
 	return updateUser(ctx, s.db, user)
-}
-
-// Vehicle implements models.UserService.
-func (s *UserService) Vehicle(ctx context.Context, vehicle string) (_ *models.Vehicle, err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.Vehicle")
-	user, err := checkRole(ctx, nil, models.RoleDriver)
-	if err != nil {
-		return nil, err
-	}
-	for _, v := range user.Vehicles {
-		if v.ID == vehicle || v.Plate == vehicle {
-			return v, nil
-		}
-	}
-	return nil, models.NewNotFound("vehicle not found")
-}
-
-// Vehicles implements models.UserService.
-func (s *UserService) Vehicles(ctx context.Context) (_ []*models.Vehicle, err error) {
-	defer derrors.Wrap(&err, "mongo.UserService.Vehicles")
-	user, err := checkRole(ctx, nil, models.RoleDriver)
-	if err != nil {
-		return nil, err
-	}
-	return user.GetVehicles(), nil
-}
-
-// FavoritePlace implements models.UserService.
-func (s *UserService) FavoritePlace(ctx context.Context, name string) (*models.Location, error) {
-	user, err := checkRole(ctx, nil, models.RoleRider)
-	if err != nil {
-		return nil, err
-	}
-	return user.GetFavoritePlace(name), nil
 }
 
 func findUserByEmail(ctx context.Context, db *DB, email string) (*models.User, error) {
@@ -688,19 +410,6 @@ func findAllUsers(ctx context.Context, db *DB, filter *models.UserFilter) ([]*mo
 		return users, "", nil
 	}
 	return nil, "", models.NewNotFound("users not found")
-}
-
-func updateAddFavoritesPlaces(ctx context.Context, db *DB, usr *models.User) error {
-	collection := RiderCollection
-	if usr.Role == models.RoleDriver {
-		collection = DriverCollection
-	}
-	f := bson.D{{Key: "$set", Value: bson.E{Key: "locations", Value: usr.Locations}}}
-	_, err := db.Collection(collection).UpdateOne(ctx, bson.D{{Key: "_id", Value: usr.ID}}, f)
-	if err != nil {
-		return fmt.Errorf("unable to update the location: %w", err)
-	}
-	return nil
 }
 
 func updateUser(ctx context.Context, db *DB, user *models.User) error {

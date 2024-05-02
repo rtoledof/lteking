@@ -12,6 +12,7 @@ var userCtxKey = &contextKey{"user_object"}
 var clientCtxKey = &contextKey{"client"}
 var jwtCtxKey = &contextKey{"jwt"}
 var tokenCtxKey = &contextKey{"token"}
+var scopesCtxKey = &contextKey{"scopes"}
 
 type contextKey struct {
 	name string
@@ -51,5 +52,14 @@ func NewContextWithToken(ctx context.Context, token string) context.Context {
 
 func TokenFromContext(ctx context.Context) string {
 	raw, _ := ctx.Value(tokenCtxKey).(string)
+	return raw
+}
+
+func NewContextWithScopes(ctx context.Context, scopes []Scope) context.Context {
+	return context.WithValue(ctx, scopesCtxKey, scopes)
+}
+
+func ScopesFromContext(ctx context.Context) []Scope {
+	raw, _ := ctx.Value(scopesCtxKey).([]Scope)
 	return raw
 }
