@@ -13,13 +13,13 @@ spec:
         app: gateway
     spec:
             containers:
-            - name: gateway
-              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/gateway:v1.0.0
+            - name: gateway.io
+              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/gateway.io:v1.0.0
               ports:
               - containerPort: 80
               env:
               - name: SUBGRAPHS
-                value: "[{ \"name\": \"auth\", \"url\": \"http://identity:5000/query\" },{ \"name\": \"wallet\", \"url\": \"http://wallet:5002/query\" },{ \"name\": \"orders\", \"url\": \"http://order:5001/query\"}]"
+                value: "[{ \"name\": \"models\", \"url\": \"http://models:5000/query\" },{ \"name\": \"wallet\", \"url\": \"http://wallet:5002/query\" },{ \"name\": \"orders\", \"url\": \"http://order:5001/query\"}]"
               resources:
                 limits:
                   cpu: "0.5"

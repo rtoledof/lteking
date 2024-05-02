@@ -3,4 +3,5 @@ node_modules
 .fleet
 __debug*
 vendor
-.env*
+.env
+.idea

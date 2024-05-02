@@ -147,7 +147,7 @@ func (r *mutationResolver) PayRide(ctx context.Context, id string, method model.
 	panic(fmt.Errorf("not implemented: PayRide - payRide"))
 }
 
-// TODO: move this to identity service
+// TODO: move this to models service
 func (r *mutationResolver) RateRider(ctx context.Context, id string, rate float64, comment *string) (*model.Response, error) {
 	panic(fmt.Errorf("not implemented: RateRider - rateRider"))
 }

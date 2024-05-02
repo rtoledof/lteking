@@ -13,8 +13,8 @@ spec:
         app: identity
     spec:
             containers:
-            - name: identity
-              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/identity:v1.0.11
+            - name: models
+              image: rssolutions.registry.jetbrains.space/p/cuba-wheeler/cubawheeler/models:v1.0.11
               ports:
               - containerPort: 80
               env:
@@ -33,7 +33,7 @@ spec:
               - name: MONGO_PORT
                 value: "27017"
               - name: MONGO_DB_NAME
-                value: "identity"
+                value: "models"
               - name: MONGO_USER
                 value: ""
               - name: MONGO_PASS
